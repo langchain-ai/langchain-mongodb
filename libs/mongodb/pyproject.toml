@@ -70,6 +70,7 @@ pytest-asyncio = "^0.21.1"
 langchain = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/langchain"}
 langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
 langchain-text-splitters = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/text-splitters"}
+mongomock = "^4.2.0.post1"
 
 [tool.poetry.group.codespell.dependencies]
 codespell = "^2.2.0"
