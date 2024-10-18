@@ -159,7 +159,7 @@ jobs:
 
       - name: Run integration tests
         env:
-          PARTNER_API_KEY: ${{ secrets.PARTNER_API_KEY }}
+          MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
         run: make integration_tests
         working-directory: ${{ inputs.working-directory }}
 
