@@ -1,4 +1,4 @@
-"""Search index commands are only supported on Atlas Clusters >=M10"""
+"""Search index commands are only supported on Atlas."""
 
 import os
 from time import sleep
@@ -20,8 +20,8 @@ def collection() -> Collection:
 
     For unit tests, MONGODB_URI should be localhost, None, or Atlas cluster <M10.
     """
-    uri = os.environ.get("MONGODB_URI")
-    client: MongoClient = MongoClient(uri)
+
+    client: MongoClient = MongoClient()
     return client["db"]["collection"]
 
 
