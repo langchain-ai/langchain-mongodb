@@ -22,7 +22,30 @@ from langchain_mongodb.utils import make_serializable
 
 class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     """MongoDB Atlas's ParentDocumentRetriever
-    uses ONE Collection for both Vector and Doc store."""
+
+    Uses ONE Collection for both Vector and Doc store.
+
+    For details, see parent classes
+        :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
+        and :class:`~langchain.retrievers.MultiVectorRetriever` for further details.
+
+    Examples:
+        >>> from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+        >>> from langchain_text_splitters import RecursiveCharacterTextSplitter
+        >>> from langchain_openai import OpenAIEmbeddings
+        >>>
+        >>> retriever = ParentDocumentRetriever.from_connection_string(
+        >>>     "mongodb+srv://<user>:<clustername>.mongodb.net",
+        >>>     OpenAIEmbeddings(model="text-embedding-3-large"),
+        >>>     RecursiveCharacterTextSplitter(chunk_size=400),
+        >>>     "example_database"
+        >>> )
+        retriever.add_documents([Document(..., technical_report_pages)
+        >>> resp = retriever.invoke("Langchain MongDB Partnership Ecosystem")
+        >>> print(resp)
+        [Document(...), ...]
+
+    """
 
     vectorstore: MongoDBAtlasVectorSearch
     """Vectorstore API to add, embed, and search through child documents"""
@@ -85,8 +108,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         embedding_model: Embeddings,
         child_splitter: TextSplitter,
         database_name: str,
-        vectorstore_name: str = "document_chunks",
-        docstore_name: str = "parent_documents",
+        collection_name: str = "document_with_chunks",
         id_key: str = "doc_id",
         **kwargs: Any,
     ) -> MongoDBAtlasParentDocumentRetriever:
@@ -96,41 +118,29 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
         and :class:`~langchain.retrievers.MultiVectorRetriever` for further details.
 
-        Using two Collections allows all
-
         Args:
             connection_string: A valid MongoDB Atlas connection URI.
             embedding_model: The text embedding model to use for the vector store.
             child_splitter: Splits documents into chunks.
                 If parent_splitter is given, the documents will have already been split.
             database_name: Name of database to connect to. Created if it does not exist.
-            vectorstore_name: Name of collection to use for chunks and embeddings.
-            docstore_name: Name of collection to use for parent documents.
+            collection_name: Name of collection to use.
+                It includes parent documents, sub-documents and their  embeddings.
             id_key: Key used to identify parent documents.
             **kwargs: Additional keyword arguments. See parent classes for more.
 
         Returns: A new MongoDBAtlasParentDocumentRetriever
-
-
-        Args:
-            connection_string: A valid MongoDB connection URI.
-            namespace: A valid MongoDB namespace (database and collection).
-            embedding_model:
-
-        Returns:
-            A new MongoDBAtlasVectorSearch instance.
         """
         client: MongoClient = MongoClient(
             connection_string,
             driver=DriverInfo(name="langchain", version=version("langchain-mongodb")),
         )
-        vectorstore_collection = client[database_name][vectorstore_name]
+        collection = client[database_name][collection_name]
         vectorstore = MongoDBAtlasVectorSearch(
-            collection=vectorstore_collection, embedding=embedding_model, **kwargs
+            collection=collection, embedding=embedding_model, **kwargs
         )
 
-        docstore_collection = client[database_name][docstore_name]
-        docstore = MongoDBDocStore(collection=docstore_collection)
+        docstore = MongoDBDocStore(collection=collection)
         docstore.collection.create_index([(id_key, pymongo.ASCENDING)])
 
         return cls(

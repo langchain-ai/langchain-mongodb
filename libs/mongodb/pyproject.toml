@@ -68,15 +68,16 @@ pytest-asyncio = "^0.21.1"
 langchain = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/langchain"}
 langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
 langchain-text-splitters = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/text-splitters"}
-langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
 mongomock = "^4.2.0.post1"
-pypdf = "^5.0.1"
+
 
 [tool.poetry.group.codespell.dependencies]
 codespell = "^2.2.0"
 
 [tool.poetry.group.test_integration.dependencies]
 langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
+langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
+pypdf = "^5.0.1"
 
 [tool.poetry.group.lint.dependencies]
 ruff = ">=0.5"
