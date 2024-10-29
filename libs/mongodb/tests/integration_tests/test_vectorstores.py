@@ -126,9 +126,10 @@ class TestMongoDBAtlasVectorSearch:
         example_documents: List[Document],
     ) -> None:
         """Test end to end construction and search."""
+
         vectorstore = PatchedMongoDBAtlasVectorSearch.from_documents(
             example_documents,
-            embedding=embeddings,
+            embedding=ConsistentFakeEmbeddings(5),
             collection=collection,
             index_name=INDEX_NAME,
         )

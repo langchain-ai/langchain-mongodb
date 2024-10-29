@@ -1,6 +1,5 @@
 """Search index commands are only supported on Atlas."""
 
-import os
 from time import sleep
 
 import pytest

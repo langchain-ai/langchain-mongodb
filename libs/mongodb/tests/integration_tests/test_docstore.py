@@ -11,7 +11,6 @@ COLLECTION_NAME = "docstore"
 
 
 def test_docstore(technical_report_pages):
-    clxn_name = COLLECTION_NAME
     client = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db.drop_collection(COLLECTION_NAME)

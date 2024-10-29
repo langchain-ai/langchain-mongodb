@@ -5,14 +5,12 @@ from typing import Any, Generator, Iterable, Iterator, List, Optional, Sequence,
 
 from langchain_core.documents import Document
 from langchain_core.stores import BaseStore
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 
 from langchain_mongodb.utils import (
     make_serializable,
-    oid_to_str,
-    str_to_oid,
 )
 
 DEFAULT_INSERT_BATCH_SIZE = 100_000
@@ -91,7 +89,7 @@ class MongoDBDocStore(BaseStore):
         """Set the values for the given keys.
 
         Args:
-            key_value_pairs (Sequence[Tuple[str, Document]]): A sequence of key-value pairs.
+            key_value_pairs: A sequence of key-value pairs.
         """
         keys, docs = zip(*key_value_pairs)
         n_docs = len(docs)

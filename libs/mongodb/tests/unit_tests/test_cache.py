@@ -43,8 +43,6 @@ class PatchedMongoDBCache(MongoDBCache):
         return self.database[self.__collection_name]
 
 
-
-
 class PatchedMongoDBAtlasSemanticCache(MongoDBAtlasSemanticCache):
     def __init__(
         self,

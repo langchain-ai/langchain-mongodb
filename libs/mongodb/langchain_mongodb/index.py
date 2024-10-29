@@ -71,22 +71,19 @@ def create_vector_search_index(
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
 
-    try:
-        result = collection.create_search_index(
-            SearchIndexModel(
-                definition=_vector_search_index_definition(
-                    dimensions=dimensions,
-                    path=path,
-                    similarity=similarity,
-                    filters=filters,
-                    **kwargs,
-                ),
-                name=index_name,
-                type="vectorSearch",
-            )
+    result = collection.create_search_index(
+        SearchIndexModel(
+            definition=_vector_search_index_definition(
+                dimensions=dimensions,
+                path=path,
+                similarity=similarity,
+                filters=filters,
+                **kwargs,
+            ),
+            name=index_name,
+            type="vectorSearch",
         )
-    except OperationFailure as e:
-        raise OperationFailure(_search_index_error_message()) from e
+    )
 
     if wait_until_complete:
         _wait_for_predicate(
