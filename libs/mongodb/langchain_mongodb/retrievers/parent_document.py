@@ -30,7 +30,9 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         and :class:`~langchain.retrievers.MultiVectorRetriever` for further details.
 
     Examples:
-        >>> from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+        >>> from langchain_mongodb.retrievers.parent_document import (
+        >>>     ParentDocumentRetriever
+        >>> )
         >>> from langchain_text_splitters import RecursiveCharacterTextSplitter
         >>> from langchain_openai import OpenAIEmbeddings
         >>>
