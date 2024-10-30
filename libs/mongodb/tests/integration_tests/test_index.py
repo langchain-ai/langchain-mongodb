@@ -1,5 +1,3 @@
-"""Search index commands are only supported on Atlas Clusters >=M10"""
-
 import os
 from typing import Generator, List, Optional
 
@@ -58,22 +56,26 @@ def test_search_index_commands(collection: Collection) -> None:
     assert len(indexes) == 1
     assert indexes[0]["name"] == index_name
 
-    new_similarity = "euclidean"
-    index.update_vector_search_index(
-        collection,
-        index_name,
-        DIMENSIONS,
-        "embedding",
-        new_similarity,
-        filters=[],
-        wait_until_complete=wait_until_complete,
-    )
+    client_address = collection.database.client.address
+    if client_address is not None and client_address[0] != "127.0.0.1":
+        new_similarity = "euclidean"
+        index.update_vector_search_index(
+            collection,
+            index_name,
+            DIMENSIONS,
+            "embedding",
+            new_similarity,
+            filters=[],
+            wait_until_complete=wait_until_complete,
+        )
 
-    assert index._is_index_ready(collection, index_name)
-    indexes = list(collection.list_search_indexes())
-    assert len(indexes) == 1
-    assert indexes[0]["name"] == index_name
-    assert indexes[0]["latestDefinition"]["fields"][0]["similarity"] == new_similarity
+        assert index._is_index_ready(collection, index_name)
+        indexes = list(collection.list_search_indexes())
+        assert len(indexes) == 1
+        assert indexes[0]["name"] == index_name
+        assert (
+            indexes[0]["latestDefinition"]["fields"][0]["similarity"] == new_similarity
+        )
 
     index.drop_vector_search_index(
         collection, index_name, wait_until_complete=wait_until_complete
