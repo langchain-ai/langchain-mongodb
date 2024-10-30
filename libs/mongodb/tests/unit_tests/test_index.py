@@ -1,5 +1,3 @@
-"""Search index commands are only supported on Atlas."""
-
 from time import sleep
 
 import pytest
@@ -9,17 +7,13 @@ from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from langchain_mongodb import index
 
-DIMENSION = 10
-TIMEOUT = 10
+DIMENSION = 5
+TIMEOUT = 120
 
 
 @pytest.fixture
 def collection() -> Collection:
-    """Depending on uri, this could point to any type of cluster.
-
-    For unit tests, MONGODB_URI should be localhost, None, or Atlas cluster <M10.
-    """
-
+    """Collection on MongoDB Cluster, not an Atlas one."""
     client: MongoClient = MongoClient()
     return client["db"]["collection"]
 

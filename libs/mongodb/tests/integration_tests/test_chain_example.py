@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from time import sleep
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document
@@ -20,7 +19,7 @@ from ..utils import PatchedMongoDBAtlasVectorSearch
 CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_chain_example"
-INDEX_NAME = "vector_index"
+INDEX_NAME = "langchain-test-chain-example-vector-index"
 DIMENSIONS = 1536
 TIMEOUT = 60.0
 INTERVAL = 0.5
@@ -87,9 +86,6 @@ def test_chain(
         "In 2020, I visited Vancouver",
     ]
     vectorstore.add_texts(texts)
-
-    # Give the index time to build (For CI)
-    sleep(TIMEOUT)
 
     query = "In the United States, what city did I visit last?"
     # One can do vector search on the vector store, using its various search types.
