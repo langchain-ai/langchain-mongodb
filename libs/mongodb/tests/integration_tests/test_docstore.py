@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 from langchain_mongodb.docstores import MongoDBDocStore
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI", "localhost:27017")
+CONNECTION_STRING = None
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "docstore"
 
