@@ -1,17 +1,16 @@
-import os
+from typing import List
 
 from langchain_core.documents import Document
 from pymongo import MongoClient
 
 from langchain_mongodb.docstores import MongoDBDocStore
 
-CONNECTION_STRING = None
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "docstore"
 
 
-def test_docstore(technical_report_pages):
-    client = MongoClient(CONNECTION_STRING)
+def test_docstore(technical_report_pages: List[Document]) -> None:
+    client: MongoClient = MongoClient()
     db = client[DB_NAME]
     db.drop_collection(COLLECTION_NAME)
     clxn = db[COLLECTION_NAME]
@@ -20,7 +19,7 @@ def test_docstore(technical_report_pages):
     assert clxn.count_documents({}) == 0
     docstore = MongoDBDocStore(collection=clxn)
 
-    docstore.mset((str(i), technical_report_pages[i]) for i in range(n_docs))
+    docstore.mset([(str(i), technical_report_pages[i]) for i in range(n_docs)])
     assert clxn.count_documents({}) == n_docs
 
     twenties = list(docstore.yield_keys(prefix="2"))

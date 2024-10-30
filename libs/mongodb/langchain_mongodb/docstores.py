@@ -98,7 +98,7 @@ class MongoDBDocStore(BaseStore):
             texts, metadatas = zip(
                 *[(doc.page_content, doc.metadata) for doc in docs[start:end]]
             )
-            self.insert_many(texts=texts, metadatas=metadatas, ids=keys[start:end])
+            self.insert_many(texts=texts, metadatas=metadatas, ids=keys[start:end])  # type: ignore
             start = end
 
     def mdelete(self, keys: Sequence[str]) -> None:
@@ -130,8 +130,8 @@ class MongoDBDocStore(BaseStore):
         self,
         texts: Union[List[str], Iterable[str]],
         metadatas: Union[List[dict], Generator[dict, Any, Any]],
-        ids: Optional[List[str]],
-    ) -> List[str]:
+        ids: List[str],
+    ) -> None:
         """Bulk insert single batch of texts, embeddings, and optionally ids.
 
         insert_many in PyMongo does not overwrite existing documents.
@@ -140,12 +140,7 @@ class MongoDBDocStore(BaseStore):
         an error will be raised for that specific document. However, other documents
         in the batch that do not have conflicting _ids will still be inserted.
         """
-        if not texts:
-            return []
-
         to_insert = [
             {"_id": i, self._text_key: t, **m} for i, t, m in zip(ids, texts, metadatas)
         ]
         self.collection.insert_many(to_insert)  # type: ignore
-
-    # TODO - Add async implementations (via AsyncIOMotorClient or AsyncMongoClient)

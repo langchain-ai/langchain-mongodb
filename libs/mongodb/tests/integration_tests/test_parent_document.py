@@ -1,7 +1,9 @@
 import os
 from importlib.metadata import version
+from typing import List
 
 import pytest
+from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
@@ -39,14 +41,18 @@ def embedding_model() -> Embeddings:
         return ConsistentFakeEmbeddings(DIMENSIONS)
 
 
-def test_1clxn_retriever(technical_report_pages, embedding_model):
+def test_1clxn_retriever(
+    technical_report_pages: List[Document], embedding_model: Embeddings
+) -> None:
     # Setup
-    client = MongoClient(
+    client: MongoClient = MongoClient(
         CONNECTION_STRING,
         driver=DriverInfo(name="langchain", version=version("langchain-mongodb")),
     )
     db = client[DB_NAME]
     combined_clxn = db[COLLECTION_NAME]
+    if COLLECTION_NAME not in db.list_collection_names():
+        db.create_collection(COLLECTION_NAME)
     # Clean up
     combined_clxn.delete_many({})
     # Create Search Index if it doesn't exist

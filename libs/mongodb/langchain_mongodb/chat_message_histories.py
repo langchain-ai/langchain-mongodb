@@ -18,11 +18,15 @@ DEFAULT_SESSION_ID_KEY = "SessionId"
 DEFAULT_HISTORY_KEY = "History"
 
 try:
-    from motor.motor_asyncio import AsyncIOMotorClient  # type: ignore
+    from motor.motor_asyncio import (
+        AsyncIOMotorClient,
+        AsyncIOMotorCollection,
+        AsyncIOMotorDatabase,
+    )
 
     _motor_available = True
 except ImportError:
-    AsyncIOMotorClient = None
+    AsyncIOMotorClient = None  # type: ignore
     _motor_available = False
     logger.warning(
         "Motor library is not installed. Asynchronous methods will fall back to using "
@@ -135,13 +139,13 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
         self.collection = self.db[collection_name]
 
         if _motor_available:
-            self.async_client = AsyncIOMotorClient(connection_string)
-            self.async_db = self.async_client[database_name]
-            self.async_collection = self.async_db[collection_name]
-        else:
-            self.async_client = None
-            self.async_db = None
-            self.async_collection = None
+            self.async_client: AsyncIOMotorClient = AsyncIOMotorClient(
+                connection_string
+            )
+            self.async_db: AsyncIOMotorDatabase = self.async_client[database_name]
+            self.async_collection: AsyncIOMotorCollection = self.async_db[
+                collection_name
+            ]
 
         if create_index:
             index_kwargs = index_kwargs or {}

@@ -40,7 +40,10 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         n_docs = self.collection.count_documents({})
         start = monotonic()
         while monotonic() - start <= TIMEOUT:
-            if len(self.similarity_search("sandwich", k=n_docs)) == n_docs:
+            if (
+                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                == n_docs
+            ):
                 return ids_inserted
             else:
                 sleep(INTERVAL)
