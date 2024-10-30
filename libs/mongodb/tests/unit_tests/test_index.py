@@ -7,8 +7,8 @@ from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from langchain_mongodb import index
 
-DIMENSION = 10
-TIMEOUT = 10
+DIMENSION = 5
+TIMEOUT = 120
 
 
 @pytest.fixture

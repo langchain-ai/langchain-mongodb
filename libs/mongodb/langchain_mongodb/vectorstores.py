@@ -235,6 +235,14 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def embeddings(self) -> Embeddings:
         return self._embedding
 
+    @property
+    def collection(self) -> Collection:
+        return self._collection
+
+    @collection.setter
+    def collection(self, value: Collection) -> None:
+        self._collection = value
+
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         scoring: dict[str, Callable] = {
             "euclidean": self._euclidean_relevance_score_fn,
@@ -761,6 +769,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         dimensions: int,
         filters: Optional[List[str]] = None,
         update: bool = False,
+        wait_until_complete: Optional[float] = None,
     ) -> None:
         """Creates a MongoDB Atlas vectorSearch index for the VectorStore
 
@@ -774,8 +783,11 @@ class MongoDBAtlasVectorSearch(VectorStore):
             filters (Optional[List[Dict[str, str]]], optional): additional filters
             for index definition.
                 Defaults to None.
-            update (bool, optional): Updates existing vectorSearch index.
-                Defaults to False.
+            update (Optional[bool]): Updates existing vectorSearch index.
+                 Defaults to False.
+            wait_until_complete (Optional[float]): If given, a TimeoutError is raised
+                if search index is not ready after this number of seconds.
+                If not given, the default, operation will not wait.
         """
         try:
             self._collection.database.create_collection(self._collection.name)
@@ -793,4 +805,5 @@ class MongoDBAtlasVectorSearch(VectorStore):
             path=self._embedding_key,
             similarity=self._relevance_score_fn,
             filters=filters or [],
+            wait_until_complete=wait_until_complete,
         )  # type: ignore [operator]
