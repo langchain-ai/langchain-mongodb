@@ -26,7 +26,7 @@ CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
 DB_NAME, COLLECTION_NAME = NAMESPACE.split(".")
 INDEX_COLLECTION_NAME = "langchain_test_vectorstores_index"
 INDEX_DB_NAME = "langchain_test_index_db"
-DIMENSIONS = 1536
+DIMENSIONS = 5
 TIMEOUT = 120.0
 INTERVAL = 0.5
 
