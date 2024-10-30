@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from time import sleep
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document

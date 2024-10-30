@@ -48,6 +48,7 @@ def embedding_openai() -> Embeddings:
 
     try:
         from langchain_openai import OpenAIEmbeddings
+
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
             model="text-embedding-3-small",
@@ -109,6 +110,7 @@ def indexed_vectorstore(
 
     vectorstore.collection.delete_many({})
 
+
 def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test VectorStoreRetriever"""
     retriever = indexed_vectorstore.as_retriever()
@@ -121,6 +123,7 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
+
 
 def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
