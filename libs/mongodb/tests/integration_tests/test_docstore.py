@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from langchain_core.documents import Document
@@ -5,12 +6,13 @@ from pymongo import MongoClient
 
 from langchain_mongodb.docstores import MongoDBDocStore
 
+CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
 DB_NAME = "langchain_test_db"
-COLLECTION_NAME = "docstore"
+COLLECTION_NAME = "langchain_test_docstore"
 
 
 def test_docstore(technical_report_pages: List[Document]) -> None:
-    client: MongoClient = MongoClient()
+    client: MongoClient = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db.drop_collection(COLLECTION_NAME)
     clxn = db[COLLECTION_NAME]
