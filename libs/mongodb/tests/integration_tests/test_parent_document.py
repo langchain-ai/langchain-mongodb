@@ -18,7 +18,7 @@ from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_parent_document_combined"
-VECTOR_INDEX_NAME = "vector_index"
+VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
 EMBEDDING_FIELD = "embedding"
 TEXT_FIELD = "page_content"
 DIMENSIONS = 1536
