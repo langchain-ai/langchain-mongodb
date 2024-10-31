@@ -22,6 +22,8 @@ disallow_untyped_defs = "True"
 python = "^3.9"
 pymongo = "^4.6.1"
 langchain-core = "^0.3"
+langchain = "^0.3"
+langchain-text-splitters = "^0.3"
 motor = "^3.5"
 
 [[tool.poetry.dependencies.numpy]]
