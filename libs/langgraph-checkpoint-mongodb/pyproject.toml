@@ -10,6 +10,7 @@ packages = [{ include = "langgraph" }]
 
 [tool.poetry.dependencies]
 python = "^3.9.0,<4.0"
+langgraph = "^0.2.38"
 langgraph-checkpoint = "^2.0.0"
 pymongo = "~4.9.0"
 motor = ">3.5.0"
@@ -23,6 +24,7 @@ pytest-asyncio = "^0.21.1"
 pytest-mock = "^3.11.1"
 pytest-watch = "^4.2.0"
 mypy = "^1.10.0"
+syrupy = "^4.0.2"
 
 
 [tool.pytest.ini_options]

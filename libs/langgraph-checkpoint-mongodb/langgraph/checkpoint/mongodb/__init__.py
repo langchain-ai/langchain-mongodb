@@ -14,12 +14,12 @@ from pymongo import MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
 
 from langgraph.checkpoint.base import (
+    WRITES_IDX_MAP,
     BaseCheckpointSaver,
     ChannelVersions,
     Checkpoint,
     CheckpointMetadata,
     CheckpointTuple,
-    WRITES_IDX_MAP,
     get_checkpoint_id,
 )
 
@@ -227,7 +227,6 @@ class MongoDBSaver(BaseCheckpointSaver):
         )
 
         for doc in result:
-
             config_values = {
                 "thread_id": doc["thread_id"],
                 "checkpoint_ns": doc["checkpoint_ns"],
