@@ -37,7 +37,6 @@ def deterministic_uuids(mocker: MockerFixture) -> MockerFixture:
 
 # checkpointer fixtures
 
-
 @pytest.fixture(scope="function")
 def checkpointer_memory():
     yield MemorySaverAssertImmutable()
@@ -45,11 +44,10 @@ def checkpointer_memory():
 
 @pytest.fixture(scope="function")
 def checkpointer_mongodb():
+    """Fresh checkpointer without any memories."""
     with MongoDBSaver.from_conn_string("mongodb://localhost:27017") as checkpointer:
-        # TODO This was where strange path-dependent behavior showed up.
-        #  Whether we dropped the db, or restarted the container.
-        #   Something funny going on with run_manager's uuids?
-        # checkpointer.client.drop_database("checkpointing_db")
+        checkpointer.clxn_chkpnt.delete_many({})
+        checkpointer.clxn_chkpnt_wrt.delete_many({})
         yield checkpointer
 
 
@@ -95,25 +93,12 @@ async def awith_store(store_name: Optional[str]) -> AsyncIterator[BaseStore]:
         raise NotImplementedError(f"Unknown store {store_name}")
 
 
-ALL_CHECKPOINTERS_SYNC = [
-    "memory",
-    "mongodb",
-    # "sqlite",
-    # "postgres",
-    # "postgres_pipe",
-    # "postgres_pool",
-]
-ALL_CHECKPOINTERS_ASYNC = [
-    "memory",
-    "mongodb_aio",
-    # "sqlite_aio",
-    # "postgres_aio",
-    # "postgres_aio_pipe",
-    # "postgres_aio_pool",
-]
-ALL_CHECKPOINTERS_ASYNC_PLUS_NONE = [
-    *ALL_CHECKPOINTERS_ASYNC,
-    None,
-]
+ALL_CHECKPOINTERS_SYNC = ["memory", "mongodb"]
+
+ALL_CHECKPOINTERS_ASYNC = ["memory", "mongodb_aio"]
+
+
+ALL_CHECKPOINTERS_ASYNC_PLUS_NONE = [*ALL_CHECKPOINTERS_ASYNC, None]
+
 ALL_STORES_SYNC = ["in_memory"]
 ALL_STORES_ASYNC = ["in_memory"]

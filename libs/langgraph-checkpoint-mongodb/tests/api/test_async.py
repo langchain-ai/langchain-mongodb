@@ -7,9 +7,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
 
-# Setup:
-# docker pull mongodb/mongodb-atlas-local:latest
-# docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-serve
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 CLXN_NAME = "sync_checkpoints"

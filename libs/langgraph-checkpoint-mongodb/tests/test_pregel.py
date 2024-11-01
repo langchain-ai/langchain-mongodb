@@ -5635,7 +5635,7 @@ def test_message_graph(
     )
 
 
-@pytest.mark.parametrize("checkpointer_name", [ALL_CHECKPOINTERS_SYNC])
+@pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_root_graph(
     deterministic_uuids: MockerFixture,
     request: pytest.FixtureRequest,
@@ -5655,10 +5655,6 @@ def test_root_graph(
     )
     from langchain_core.outputs import ChatGeneration, ChatResult
     from langchain_core.tools import tool
-
-    checkpointer: BaseCheckpointSaver = request.getfixturevalue(
-        f"checkpointer_{checkpointer_name}"
-    )
 
     class FakeFuntionChatModel(FakeMessagesListChatModel):
         def bind_functions(self, functions: list):
@@ -5856,6 +5852,10 @@ def test_root_graph(
         },
         {"agent": AIMessage(content="answer", id="ai3")},
     ]
+
+    checkpointer: BaseCheckpointSaver = request.getfixturevalue(
+        f"checkpointer_{checkpointer_name}"
+    )
 
     app_w_interrupt = workflow.compile(
         checkpointer=checkpointer,
