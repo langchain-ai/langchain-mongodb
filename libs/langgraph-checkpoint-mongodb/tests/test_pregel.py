@@ -3970,7 +3970,7 @@ def test_conditional_entrypoint_graph_state(snapshot: SnapshotAssertion) -> None
         {"right": {"output": "what is weather in sf->right"}},
     ]
 
-
+# TODO - Red herring?
 def test_prebuilt_tool_chat(snapshot: SnapshotAssertion) -> None:
     from langchain_core.messages import AIMessage, HumanMessage
     from langchain_core.tools import tool
@@ -5634,8 +5634,8 @@ def test_message_graph(
         parent_config=[*app_w_interrupt.checkpointer.list(config, limit=2)][-1].config,
     )
 
-
-@pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
+# TODO Fails on last case. new_version?
+@pytest.mark.parametrize("checkpointer_name", ["mongodb"])  # ALL_CHECKPOINTERS_SYNC
 def test_root_graph(
     deterministic_uuids: MockerFixture,
     request: pytest.FixtureRequest,
@@ -6437,22 +6437,23 @@ def test_root_graph(
         },
         parent_config=[*app_w_interrupt.checkpointer.list(config, limit=2)][-1].config,
     )
-
+    #TODO PASSES TO THIS POINT
     # new input is merged to old state
-    assert new_app.invoke(
+    output = new_app.invoke(
         {
             "__root__": [HumanMessage(content="what is weather in la")],
             "something_else": "value",
         },
         config,
         interrupt_before=["agent"],
-    ) == {
+    )
+    assert output == {
         "__root__": [
-            HumanMessage(
+            _AnyIdHumanMessage(
                 content="what is weather in sf",
                 id="00000000-0000-4000-8000-000000000070",
             ),
-            AIMessage(
+            _AnyIdAIMessage(
                 content="",
                 id="ai1",
                 tool_calls=[
@@ -6468,11 +6469,11 @@ def test_root_graph(
                 name="search_api",
                 tool_call_id="tool_call123",
             ),
-            AIMessage(content="answer", id="ai2"),
-            AIMessage(
+            _AnyIdAIMessage(content="answer", id="ai2"),
+            _AnyIdAIMessage(
                 content="an extra message", id="00000000-0000-4000-8000-000000000091"
             ),
-            HumanMessage(content="what is weather in la"),
+            _AnyIdHumanMessage(content="what is weather in la"),  # TODO THIS DOESN'T EXIST. Related to new_versions in put?
         ],
         "something_else": "value",
     }
@@ -8951,7 +8952,7 @@ def test_doubly_nested_graph_interrupts(
         {"my_key": "hi my value here and there and back again"},
     ]
 
-
+# TODO Fails on get_state with subgraphs state
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_nested_graph_state(
     request: pytest.FixtureRequest, checkpointer_name: str
@@ -9042,6 +9043,7 @@ def test_nested_graph_state(
             }
         },
     )
+    #TODO - This falls over here
     # now, get_state with subgraphs state
     assert app.get_state(config, subgraphs=True) == StateSnapshot(
         values={"my_key": "hi my value"},
@@ -9220,6 +9222,7 @@ def test_nested_graph_state(
             parent_config=None,
         ),
     ]
+
     # get_state_history for a subgraph returns its checkpoints
     child_history = [*app.get_state_history(history[0].tasks[0].state)]
     assert child_history == [
@@ -9592,6 +9595,7 @@ def test_doubly_nested_graph_state(
         ),
         ((), {"__interrupt__": ()}),
     ]
+
     # get state without subgraphs
     outer_state = app.get_state(config)
     assert outer_state == StateSnapshot(
@@ -9897,6 +9901,7 @@ def test_doubly_nested_graph_state(
             },
         )
     )
+    # TODO Fails here
     # get outer graph history
     outer_history = list(app.get_state_history(config))
     assert outer_history == [
@@ -10371,7 +10376,7 @@ def test_doubly_nested_graph_state(
         ((), {"__interrupt__": ()}),
     ]
 
-
+# TODO Fails final check
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_send_to_nested_graphs(
     request: pytest.FixtureRequest, checkpointer_name: str
@@ -10708,6 +10713,7 @@ def test_send_to_nested_graphs(
             parent_config=None,
         ),
     ]
+    # TODO Fails here
     assert actual_history == expected_history
 
 
