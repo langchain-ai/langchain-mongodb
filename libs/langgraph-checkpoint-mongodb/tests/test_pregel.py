@@ -5634,7 +5634,7 @@ def test_message_graph(
         parent_config=[*app_w_interrupt.checkpointer.list(config, limit=2)][-1].config,
     )
 
-# TODO Fails on last case. new_version?
+
 @pytest.mark.parametrize("checkpointer_name", ["mongodb"])  # ALL_CHECKPOINTERS_SYNC
 def test_root_graph(
     deterministic_uuids: MockerFixture,
@@ -5967,7 +5967,7 @@ def test_root_graph(
         },
         parent_config=[*app_w_interrupt.checkpointer.list(config, limit=2)][-1].config,
     )
-
+    # Continue where we left off with input=None. We still interrupt after agent
     assert [c for c in app_w_interrupt.stream(None, config)] == [
         {
             "tools": [
@@ -6057,6 +6057,7 @@ def test_root_graph(
     )
 
     # replaces message even if object identity is different, as long as id is the same
+    # => e.g. remove tool_calls. Notice that next is now empty.
     assert app_w_interrupt.get_state(config) == StateSnapshot(
         values=[
             _AnyIdHumanMessage(content="what is weather in sf"),
@@ -6437,7 +6438,7 @@ def test_root_graph(
         },
         parent_config=[*app_w_interrupt.checkpointer.list(config, limit=2)][-1].config,
     )
-    #TODO PASSES TO THIS POINT
+
     # new input is merged to old state
     output = new_app.invoke(
         {
@@ -6453,7 +6454,7 @@ def test_root_graph(
                 content="what is weather in sf",
                 id="00000000-0000-4000-8000-000000000070",
             ),
-            _AnyIdAIMessage(
+            AIMessage(
                 content="",
                 id="ai1",
                 tool_calls=[
@@ -6469,11 +6470,11 @@ def test_root_graph(
                 name="search_api",
                 tool_call_id="tool_call123",
             ),
-            _AnyIdAIMessage(content="answer", id="ai2"),
+            AIMessage(content="answer", id="ai2"),
             _AnyIdAIMessage(
                 content="an extra message", id="00000000-0000-4000-8000-000000000091"
             ),
-            _AnyIdHumanMessage(content="what is weather in la"),  # TODO THIS DOESN'T EXIST. Related to new_versions in put?
+            HumanMessage(content="what is weather in la"),
         ],
         "something_else": "value",
     }
