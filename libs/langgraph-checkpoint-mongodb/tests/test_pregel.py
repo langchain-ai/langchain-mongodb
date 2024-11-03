@@ -5635,7 +5635,7 @@ def test_message_graph(
     )
 
 
-@pytest.mark.parametrize("checkpointer_name", ["mongodb"])  # ALL_CHECKPOINTERS_SYNC
+@pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_root_graph(
     deterministic_uuids: MockerFixture,
     request: pytest.FixtureRequest,
