@@ -212,8 +212,9 @@ class MongoDBSaver(BaseCheckpointSaver):
         query = {}
         if config is not None:
             query = {"thread_id": config["configurable"]["thread_id"]}
-            if checkpoint_ns := config["configurable"].get("checkpoint_ns", ""):
-                query["checkpoint_ns"] = checkpoint_ns
+
+            if "checkpoint_ns" in config["configurable"]:
+                query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
 
         if filter:
             for key, value in filter.items():
@@ -235,11 +236,11 @@ class MongoDBSaver(BaseCheckpointSaver):
             serialized_writes = self.clxn_chkpnt_wrt.find(config_values)
             pending_writes = [
                 (
-                    doc["task_id"],
-                    doc["channel"],
-                    self.serde.loads_typed((doc["type"], doc["value"])),
+                    wrt["task_id"],
+                    wrt["channel"],
+                    self.serde.loads_typed((wrt["type"], wrt["value"])),
                 )
-                for doc in serialized_writes
+                for wrt in serialized_writes
             ]
 
             yield CheckpointTuple(

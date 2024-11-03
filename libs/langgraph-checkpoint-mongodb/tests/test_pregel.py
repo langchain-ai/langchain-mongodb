@@ -8953,7 +8953,7 @@ def test_doubly_nested_graph_interrupts(
         {"my_key": "hi my value here and there and back again"},
     ]
 
-# TODO Fails on get_state with subgraphs state
+
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_nested_graph_state(
     request: pytest.FixtureRequest, checkpointer_name: str
@@ -9044,7 +9044,6 @@ def test_nested_graph_state(
             }
         },
     )
-    #TODO - This falls over here
     # now, get_state with subgraphs state
     assert app.get_state(config, subgraphs=True) == StateSnapshot(
         values={"my_key": "hi my value"},
@@ -9902,7 +9901,7 @@ def test_doubly_nested_graph_state(
             },
         )
     )
-    # TODO Fails here
+
     # get outer graph history
     outer_history = list(app.get_state_history(config))
     assert outer_history == [
@@ -10377,7 +10376,7 @@ def test_doubly_nested_graph_state(
         ((), {"__interrupt__": ()}),
     ]
 
-# TODO Fails final check
+
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
 def test_send_to_nested_graphs(
     request: pytest.FixtureRequest, checkpointer_name: str
@@ -10714,7 +10713,7 @@ def test_send_to_nested_graphs(
             parent_config=None,
         ),
     ]
-    # TODO Fails here
+
     assert actual_history == expected_history
 
 
