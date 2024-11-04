@@ -14,6 +14,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import UpdateOne
 
 from langgraph.checkpoint.base import (
+    WRITES_IDX_MAP,
     BaseCheckpointSaver,
     ChannelVersions,
     Checkpoint,
@@ -124,11 +125,11 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             serialized_writes = self.clxn_chkpnt_wrt.find(config_values)
             pending_writes = [
                 (
-                    doc["task_id"],
-                    doc["channel"],
-                    self.serde.loads_typed((doc["type"], doc["value"])),
+                    wrt["task_id"],
+                    wrt["channel"],
+                    self.serde.loads_typed((wrt["type"], wrt["value"])),
                 )
-                async for doc in serialized_writes
+                async for wrt in serialized_writes
             ]
             return CheckpointTuple(
                 {"configurable": config_values},
@@ -173,8 +174,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         query = {}
         if config is not None:
             query = {"thread_id": config["configurable"]["thread_id"]}
-            if checkpoint_ns := config["configurable"].get("checkpoint_ns", ""):
-                query["checkpoint_ns"] = checkpoint_ns
+
+            if "checkpoint_ns" in config["configurable"]:
+                query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
 
         if filter:
             for key, value in filter.items():
@@ -282,7 +284,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 "checkpoint_ns": checkpoint_ns,
                 "checkpoint_id": checkpoint_id,
                 "task_id": task_id,
-                "idx": idx,
+                "idx": WRITES_IDX_MAP.get(channel, idx),
             }
             type_, serialized_value = self.serde.dumps_typed(value)
             operations.append(
