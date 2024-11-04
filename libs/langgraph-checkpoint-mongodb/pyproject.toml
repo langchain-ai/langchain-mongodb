@@ -82,3 +82,8 @@ optional = true
 
 [tool.poetry.group.dev]
 optional = true
+
+[tool.poetry.group.test_integration.dependencies]
+
+[tool.poetry.group.test_integration]
+optional = true
