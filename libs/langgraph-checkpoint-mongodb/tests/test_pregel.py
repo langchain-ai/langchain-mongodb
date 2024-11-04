@@ -1681,8 +1681,7 @@ def test_pending_writes_resume(
 def test_cond_edge_after_send() -> None:
     class Node:
         def __init__(self, name: str):
-            self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = self.name = name
 
         def __call__(self, state):
             return [self.name]
@@ -2044,7 +2043,7 @@ def test_channel_enter_exit_timing(mocker: MockerFixture) -> None:
         elif i == 1:
             assert chunk == {"output": 4}
         else:
-            assert False, "Expected only two chunks"
+            pytest.fail("Expected only two chunks")
     assert cleanup.call_count == 1, "Expected cleanup to be called once"
 
 
@@ -3969,6 +3968,7 @@ def test_conditional_entrypoint_graph_state(snapshot: SnapshotAssertion) -> None
     assert [*app.stream({"input": "what is weather in sf"})] == [
         {"right": {"output": "what is weather in sf->right"}},
     ]
+
 
 # TODO - Red herring?
 def test_prebuilt_tool_chat(snapshot: SnapshotAssertion) -> None:

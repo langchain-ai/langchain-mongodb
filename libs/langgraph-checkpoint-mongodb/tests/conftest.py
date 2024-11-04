@@ -1,7 +1,6 @@
-import sys
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from langchain_core import __version__ as core_version
@@ -36,6 +35,7 @@ def deterministic_uuids(mocker: MockerFixture) -> MockerFixture:
 
 
 # checkpointer fixtures
+
 
 @pytest.fixture(scope="function")
 def checkpointer_memory():
