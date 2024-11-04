@@ -23,6 +23,7 @@ anyio = "^4.4.0"
 pytest-asyncio = "^0.21.1"
 pytest-mock = "^3.11.1"
 pytest-watch = "^4.2.0"
+pytest-repeat = "^0.9.3"
 mypy = "^1.10.0"
 syrupy = "^4.0.2"
 
