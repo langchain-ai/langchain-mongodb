@@ -190,17 +190,32 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         )
 
         async for doc in result:
+            config_values = {
+                "thread_id": doc["thread_id"],
+                "checkpoint_ns": doc["checkpoint_ns"],
+                "checkpoint_id": doc["checkpoint_id"],
+            }
+            serialized_writes = self.clxn_chkpnt_wrt.find(config_values)
+            pending_writes = [
+                (
+                    wrt["task_id"],
+                    wrt["channel"],
+                    self.serde.loads_typed((wrt["type"], wrt["value"])),
+                )
+                async for wrt in serialized_writes
+            ]
+
             yield CheckpointTuple(
-                {
+                config={
                     "configurable": {
                         "thread_id": doc["thread_id"],
                         "checkpoint_ns": doc["checkpoint_ns"],
                         "checkpoint_id": doc["checkpoint_id"],
                     }
                 },
-                self.serde.loads_typed((doc["type"], doc["checkpoint"])),
-                self._loads_metadata(doc["metadata"]),
-                (
+                checkpoint=self.serde.loads_typed((doc["type"], doc["checkpoint"])),
+                metadata=self._loads_metadata(doc["metadata"]),
+                parent_config=(
                     {
                         "configurable": {
                             "thread_id": doc["thread_id"],
@@ -211,6 +226,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                     if doc.get("parent_checkpoint_id")
                     else None
                 ),
+                pending_writes=pending_writes,
             )
 
     async def aput(
