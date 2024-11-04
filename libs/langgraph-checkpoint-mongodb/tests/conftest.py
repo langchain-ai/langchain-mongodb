@@ -56,7 +56,8 @@ async def _checkpointer_mongodb_aio():
     async with AsyncMongoDBSaver.from_conn_string(
         "mongodb://localhost:27017"
     ) as checkpointer:
-        checkpointer.client.drop_database("checkpointing_db")
+        checkpointer.clxn_chkpnt.delete_many({})
+        checkpointer.clxn_chkpnt_wrt.delete_many({})
         yield checkpointer
 
 
@@ -73,9 +74,6 @@ async def awith_checkpointer(
             yield checkpointer
     else:
         raise NotImplementedError(f"Unknown checkpointer: {checkpointer_name}")
-
-
-# TODO - DO WE NEED TO ADD A MongoDBStore? (see PostgresStore)
 
 
 @pytest.fixture(scope="function")
