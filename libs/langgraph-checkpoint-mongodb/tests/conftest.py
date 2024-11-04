@@ -56,8 +56,8 @@ async def _checkpointer_mongodb_aio():
     async with AsyncMongoDBSaver.from_conn_string(
         "mongodb://localhost:27017"
     ) as checkpointer:
-        checkpointer.clxn_chkpnt.delete_many({})
-        checkpointer.clxn_chkpnt_wrt.delete_many({})
+        await checkpointer.clxn_chkpnt.delete_many({})
+        await checkpointer.clxn_chkpnt_wrt.delete_many({})
         yield checkpointer
 
 
