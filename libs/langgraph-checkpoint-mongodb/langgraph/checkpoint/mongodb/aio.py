@@ -1,5 +1,6 @@
 import asyncio
 import builtins
+import sys
 from contextlib import asynccontextmanager
 from typing import (
     Any,
@@ -11,7 +12,6 @@ from typing import (
     Tuple,
     Union,
 )
-import sys
 
 from langchain_core.runnables import RunnableConfig
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -31,6 +31,7 @@ if sys.version_info >= (3, 10):
     anext = builtins.anext
     aiter = builtins.aiter
 else:
+
     async def anext(cls: Any) -> Any:
         """Compatibility function until we drop 3.9 support: https://docs.python.org/3/library/functions.html#anext."""
         return await cls.__anext__()
