@@ -33,6 +33,8 @@ if __name__ == "__main__":
             for dir_ in LIB_DIRS:
                 if file.startswith(dir_):
                     dirs_to_run["test"].add(dir_)
+                if not file.startswith("libs/langgraph-checkpoint-mongodb/testing"):
+                    dirs_to_run["lint"].add(dir_)
         elif file.startswith("libs/"):
             raise ValueError(
                 f"Unknown lib: {file}. check_diff.py likely needs "
@@ -40,7 +42,7 @@ if __name__ == "__main__":
             )
 
     outputs = {
-        "dirs-to-lint": list(dirs_to_run["lint"] | dirs_to_run["test"]),
+        "dirs-to-lint": list(dirs_to_run["lint"]),
         "dirs-to-test": list(dirs_to_run["test"]),
     }
     for key, value in outputs.items():
