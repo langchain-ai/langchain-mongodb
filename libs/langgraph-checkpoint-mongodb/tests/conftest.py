@@ -21,6 +21,9 @@ IS_LANGCHAIN_CORE_030_OR_GREATER = version.parse(core_version) >= version.parse(
 )
 SHOULD_CHECK_SNAPSHOTS = IS_LANGCHAIN_CORE_030_OR_GREATER
 
+MONGODB_ATLAS_URI = os.environ.get("MONGODB_ATLAS_URI")
+DB_NAME = "langgraph_checkpoints_db"
+
 
 @pytest.fixture
 def anyio_backend():
@@ -47,8 +50,8 @@ def checkpointer_memory():
 def checkpointer_mongodb():
     """Fresh checkpointer without any memories."""
     with MongoDBSaver.from_conn_string(
-        conn_string=os.environ.get("MONGODB_ATLAS_URI"),
-        db_name="langchain_test_db",
+        conn_string=MONGODB_ATLAS_URI,
+        db_name=DB_NAME,
     ) as checkpointer:
         checkpointer.clxn_chkpnt.delete_many({})
         checkpointer.clxn_chkpnt_wrt.delete_many({})
@@ -58,8 +61,8 @@ def checkpointer_mongodb():
 @asynccontextmanager
 async def _checkpointer_mongodb_aio():
     async with AsyncMongoDBSaver.from_conn_string(
-        conn_string=os.environ.get("MONGODB_ATLAS_URI"),
-        db_name="langchain_test_db",
+        conn_string=MONGODB_ATLAS_URI,
+        db_name=DB_NAME,
     ) as checkpointer:
         await checkpointer.clxn_chkpnt.delete_many({})
         await checkpointer.clxn_chkpnt_wrt.delete_many({})
