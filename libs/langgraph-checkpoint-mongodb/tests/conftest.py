@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
 from uuid import UUID
@@ -45,7 +46,10 @@ def checkpointer_memory():
 @pytest.fixture(scope="function")
 def checkpointer_mongodb():
     """Fresh checkpointer without any memories."""
-    with MongoDBSaver.from_conn_string("mongodb://localhost:27017") as checkpointer:
+    with MongoDBSaver.from_conn_string(
+        conn_string=os.environ.get("MONGODB_ATLAS_URI"),
+        db_name="langchain_test_db",
+    ) as checkpointer:
         checkpointer.clxn_chkpnt.delete_many({})
         checkpointer.clxn_chkpnt_wrt.delete_many({})
         yield checkpointer
@@ -54,7 +58,8 @@ def checkpointer_mongodb():
 @asynccontextmanager
 async def _checkpointer_mongodb_aio():
     async with AsyncMongoDBSaver.from_conn_string(
-        "mongodb://localhost:27017"
+        conn_string=os.environ.get("MONGODB_ATLAS_URI"),
+        db_name="langchain_test_db",
     ) as checkpointer:
         await checkpointer.clxn_chkpnt.delete_many({})
         await checkpointer.clxn_chkpnt_wrt.delete_many({})

@@ -93,8 +93,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         cls,
         conn_string: str,
         db_name: str = "checkpointing_db",
-        chkpnt_clxn_name: str = "checkpoints",
-        chkpnt_wrt_clxn_name: str = "checkpoint_writes",
+        chkpnt_clxn_name: str = "checkpoints_aio",
+        chkpnt_wrt_clxn_name: str = "checkpoint_writes_aio",
         **kwargs: Any,
     ) -> AsyncIterator["AsyncMongoDBSaver"]:
         client: Optional[AsyncIOMotorClient] = None

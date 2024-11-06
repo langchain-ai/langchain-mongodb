@@ -74,7 +74,7 @@ class MongoDBSaver(BaseCheckpointSaver):
     @contextmanager
     def from_conn_string(
         cls,
-        conn_string: str,
+        conn_string: Optional[str] = None,
         db_name: str = "checkpointing_db",
         chkpnt_clxn_name: str = "checkpoints",
         chkpnt_wrt_clxn_name: str = "checkpoint_writes",
@@ -82,7 +82,7 @@ class MongoDBSaver(BaseCheckpointSaver):
     ) -> Iterator["MongoDBSaver"]:
         """Context manager to create a MongoDB checkpoint saver.
         Args:
-            conn_string: MongoDB connection string.
+            conn_string: MongoDB connection string. See [class:~pymongo.MongoClient].
             db_name: Database name. It will be created if it doesn't exist.
             chkpnt_clxn_name: Checkpoint Collection name. Created if it doesn't exist.
             chkpnt_wrt_clxn_name: Collection name of intermediate writes. Created if it doesn't exist.
