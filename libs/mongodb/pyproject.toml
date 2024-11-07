@@ -19,9 +19,12 @@ disallow_untyped_defs = "True"
 "Release Notes" = "https://github.com/langchain-ai/langchain-mongodb/releases"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-pymongo = ">=4.6.1,<5.0"
+python = "^3.9"
+pymongo = "^4.6.1"
 langchain-core = "^0.3"
+langchain = "^0.3"
+langchain-text-splitters = "^0.3"
+motor = "^3.5"
 
 [[tool.poetry.dependencies.numpy]]
 version = "^1"
@@ -57,9 +60,6 @@ optional = true
 [tool.poetry.group.lint]
 optional = true
 
-[tool.poetry.group.dev]
-optional = true
-
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.0"
 freezegun = "^1.2.2"
@@ -72,18 +72,19 @@ langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdire
 langchain-text-splitters = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/text-splitters"}
 mongomock = "^4.2.0.post1"
 
+
 [tool.poetry.group.codespell.dependencies]
 codespell = "^2.2.0"
 
 [tool.poetry.group.test_integration.dependencies]
 langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
+langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
+pypdf = "^5.0.1"
+
 [tool.poetry.group.lint.dependencies]
-ruff = "^0.5"
+ruff = ">=0.5"
 
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.10"
 simsimd = "^5.0.0"
-langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
-
-[tool.poetry.group.dev.dependencies]
 langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}

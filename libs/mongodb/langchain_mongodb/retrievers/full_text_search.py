@@ -24,8 +24,8 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     """Number of documents to return. Default is no limit"""
     filter: Optional[Dict[str, Any]] = None
     """(Optional) List of MQL match expression comparing an indexed field"""
-    show_embeddings: float = False
-    """If true, returned Document metadata will include vectors"""
+    include_scores: bool = True
+    """If True, include scores that provide measure of relative relevance"""
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -45,6 +45,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             index_name=self.search_index_name,
             limit=self.top_k,
             filter=self.filter,
+            include_scores=self.include_scores,
         )
 
         # Execution

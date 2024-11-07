@@ -5,20 +5,9 @@ from time import monotonic, sleep
 from typing import Any, Callable, Dict, List, Optional
 
 from pymongo.collection import Collection
-from pymongo.errors import OperationFailure
 from pymongo.operations import SearchIndexModel
 
 logger = logging.getLogger(__file__)
-
-
-def _search_index_error_message() -> str:
-    return (
-        "Search index operations are not currently available on shared clusters, "
-        "such as MO. They require dedicated clusters >= M10. "
-        "You may still perform vector search. "
-        "You simply must set up indexes manually. Follow the instructions here: "
-        "https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/"
-    )
 
 
 def _vector_search_index_definition(
@@ -71,22 +60,19 @@ def create_vector_search_index(
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
 
-    try:
-        result = collection.create_search_index(
-            SearchIndexModel(
-                definition=_vector_search_index_definition(
-                    dimensions=dimensions,
-                    path=path,
-                    similarity=similarity,
-                    filters=filters,
-                    **kwargs,
-                ),
-                name=index_name,
-                type="vectorSearch",
-            )
+    result = collection.create_search_index(
+        SearchIndexModel(
+            definition=_vector_search_index_definition(
+                dimensions=dimensions,
+                path=path,
+                similarity=similarity,
+                filters=filters,
+                **kwargs,
+            ),
+            name=index_name,
+            type="vectorSearch",
         )
-    except OperationFailure as e:
-        raise OperationFailure(_search_index_error_message()) from e
+    )
 
     if wait_until_complete:
         _wait_for_predicate(
@@ -114,12 +100,7 @@ def drop_vector_search_index(
     logger.info(
         "Dropping Search Index %s from Collection: %s", index_name, collection.name
     )
-    try:
-        collection.drop_search_index(index_name)
-    except OperationFailure as e:
-        if "CommandNotSupported" in str(e):
-            raise OperationFailure(_search_index_error_message()) from e
-        # else this most likely means an ongoing drop request was made so skip
+    collection.drop_search_index(index_name)
     if wait_until_complete:
         _wait_for_predicate(
             predicate=lambda: len(list(collection.list_search_indexes())) == 0,
@@ -155,24 +136,19 @@ def update_vector_search_index(
             until search index is ready.
         kwargs: Keyword arguments supplying any additional options to SearchIndexModel.
     """
-
     logger.info(
         "Updating Search Index %s from Collection: %s", index_name, collection.name
     )
-    try:
-        collection.update_search_index(
-            name=index_name,
-            definition=_vector_search_index_definition(
-                dimensions=dimensions,
-                path=path,
-                similarity=similarity,
-                filters=filters,
-                **kwargs,
-            ),
-        )
-    except OperationFailure as e:
-        raise OperationFailure(_search_index_error_message()) from e
-
+    collection.update_search_index(
+        name=index_name,
+        definition=_vector_search_index_definition(
+            dimensions=dimensions,
+            path=path,
+            similarity=similarity,
+            filters=filters,
+            **kwargs,
+        ),
+    )
     if wait_until_complete:
         _wait_for_predicate(
             predicate=lambda: _is_index_ready(collection, index_name),
@@ -193,12 +169,7 @@ def _is_index_ready(collection: Collection, index_name: str) -> bool:
     Returns:
         bool : True if the index is present and READY false otherwise
     """
-    try:
-        search_indexes = collection.list_search_indexes(index_name)
-    except OperationFailure as e:
-        raise OperationFailure(_search_index_error_message()) from e
-
-    for index in search_indexes:
+    for index in collection.list_search_indexes(index_name):
         if index["type"] == "vectorSearch" and index["status"] == "READY":
             return True
     return False
@@ -248,19 +219,14 @@ def create_fulltext_search_index(
     definition = {
         "mappings": {"dynamic": False, "fields": {field: [{"type": "string"}]}}
     }
-
-    try:
-        result = collection.create_search_index(
-            SearchIndexModel(
-                definition=definition,
-                name=index_name,
-                type="search",
-                **kwargs,
-            )
+    result = collection.create_search_index(
+        SearchIndexModel(
+            definition=definition,
+            name=index_name,
+            type="search",
+            **kwargs,
         )
-    except OperationFailure as e:
-        raise OperationFailure(_search_index_error_message()) from e
-
+    )
     if wait_until_complete:
         _wait_for_predicate(
             predicate=lambda: _is_index_ready(collection, index_name),

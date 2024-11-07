@@ -1,6 +1,5 @@
 import os
-from time import sleep
-from typing import List
+from typing import Generator, List
 
 import pytest
 from langchain_core.documents import Document
@@ -8,13 +7,17 @@ from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from langchain_mongodb import index
+from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.index import (
+    create_fulltext_search_index,
+    create_vector_search_index,
+)
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import PatchedMongoDBAtlasVectorSearch
 
 CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
 DB_NAME = "langchain_test_db"
@@ -24,12 +27,12 @@ EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = "text"
 SEARCH_INDEX_NAME = "text_index"
 
-DIMENSIONS = 1536
+DIMENSIONS = 1536  # Meets OpenAI model
 TIMEOUT = 60.0
 INTERVAL = 0.5
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def example_documents() -> List[Document]:
     return [
         Document(page_content="In 2023, I visited Paris"),
@@ -39,20 +42,22 @@ def example_documents() -> List[Document]:
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def embedding_openai() -> Embeddings:
     from langchain_openai import OpenAIEmbeddings
 
     try:
+        from langchain_openai import OpenAIEmbeddings
+
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
             model="text-embedding-3-small",
         )
     except Exception:
-        return ConsistentFakeEmbeddings(DIMENSIONS)
+        pytest.fail("test_retrievers expects OPENAI_API_KEY in os.environ")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection() -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     client: MongoClient = MongoClient(CONNECTION_STRING)
@@ -64,7 +69,7 @@ def collection() -> Collection:
     clxn.delete_many({})
 
     if not any([VECTOR_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
-        index.create_vector_search_index(
+        create_vector_search_index(
             collection=clxn,
             index_name=VECTOR_INDEX_NAME,
             dimensions=DIMENSIONS,
@@ -74,7 +79,7 @@ def collection() -> Collection:
         )
 
     if not any([SEARCH_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
-        index.create_fulltext_search_index(
+        create_fulltext_search_index(
             collection=clxn,
             index_name=SEARCH_INDEX_NAME,
             field=PAGE_CONTENT_FIELD,
@@ -84,12 +89,13 @@ def collection() -> Collection:
     return clxn
 
 
-def test_hybrid_retriever(
-    embedding_openai: Embeddings,
+@pytest.fixture(scope="module")
+def indexed_vectorstore(
     collection: Collection,
     example_documents: List[Document],
-) -> None:
-    """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
+    embedding_openai: Embeddings,
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
+    """Return a VectorStore with example document embeddings indexed."""
 
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
@@ -100,10 +106,29 @@ def test_hybrid_retriever(
 
     vectorstore.add_documents(example_documents)
 
-    sleep(TIMEOUT)  # Wait for documents to be sync'd
+    yield vectorstore
 
+    vectorstore.collection.delete_many({})
+
+
+def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
+    """Test VectorStoreRetriever"""
+    retriever = indexed_vectorstore.as_retriever()
+
+    query1 = "What was the latest city that I visited?"
+    results = retriever.invoke(query1)
+    assert len(results) == 4
+    assert "Paris" in results[0].page_content
+
+    query2 = "When was the last time I visited new orleans?"
+    results = retriever.invoke(query2)
+    assert "New Orleans" in results[0].page_content
+
+
+def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
+    """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
-        vectorstore=vectorstore,
+        vectorstore=indexed_vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
         top_k=3,
     )
@@ -119,20 +144,15 @@ def test_hybrid_retriever(
 
 
 def test_fulltext_retriever(
-    collection: Collection,
-    example_documents: List[Document],
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
-    """Test result of performing fulltext search
+    """Test result of performing fulltext search.
 
-    Independent of the VectorStore, one adds documents
-    via MongoDB's Collection API
+    The Retriever is independent of the VectorStore.
+    We use it here only to get the Collection, which we know to be indexed.
     """
-    #
 
-    collection.insert_many(
-        [{PAGE_CONTENT_FIELD: doc.page_content} for doc in example_documents]
-    )
-    sleep(TIMEOUT)  # Wait for documents to be sync'd
+    collection: Collection = indexed_vectorstore.collection
 
     retriever = MongoDBAtlasFullTextSearchRetriever(
         collection=collection,
@@ -144,33 +164,3 @@ def test_fulltext_retriever(
     results = retriever.invoke(query)
     assert "New Orleans" in results[0].page_content
     assert "score" in results[0].metadata
-
-
-def test_vector_retriever(
-    embedding_openai: Embeddings,
-    collection: Collection,
-    example_documents: List[Document],
-) -> None:
-    """Test VectorStoreRetriever"""
-
-    vectorstore = PatchedMongoDBAtlasVectorSearch(
-        collection=collection,
-        embedding=embedding_openai,
-        index_name=VECTOR_INDEX_NAME,
-        text_key=PAGE_CONTENT_FIELD,
-    )
-
-    vectorstore.add_documents(example_documents)
-
-    sleep(TIMEOUT)  # Wait for documents to be sync'd
-
-    retriever = vectorstore.as_retriever()
-
-    query1 = "What was the latest city that I visited?"
-    results = retriever.invoke(query1)
-    assert len(results) == 4
-    assert "Paris" in results[0].page_content
-
-    query2 = "When was the last time I visited new orleans?"
-    results = retriever.invoke(query2)
-    assert "New Orleans" in results[0].page_content
