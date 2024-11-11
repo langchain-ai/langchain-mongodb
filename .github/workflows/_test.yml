@@ -38,6 +38,9 @@ jobs:
         shell: bash
         run: poetry install --with test
 
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.11.0
+
       - name: Run core tests
         shell: bash
         run: |

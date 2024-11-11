@@ -46,13 +46,10 @@ def checkpointer_memory():
     yield MemorySaverAssertImmutable()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def checkpointer_mongodb():
     """Fresh checkpointer without any memories."""
-    with MongoDBSaver.from_conn_string(
-        conn_string=MONGODB_ATLAS_URI,
-        db_name=DB_NAME,
-    ) as checkpointer:
+    with MongoDBSaver.from_conn_string("mongodb://localhost:27017") as checkpointer:
         checkpointer.clxn_chkpnt.delete_many({})
         checkpointer.clxn_chkpnt_wrt.delete_many({})
         yield checkpointer
@@ -61,8 +58,7 @@ def checkpointer_mongodb():
 @asynccontextmanager
 async def _checkpointer_mongodb_aio():
     async with AsyncMongoDBSaver.from_conn_string(
-        conn_string=MONGODB_ATLAS_URI,
-        db_name=DB_NAME,
+        "mongodb://localhost:27017"
     ) as checkpointer:
         await checkpointer.clxn_chkpnt.delete_many({})
         await checkpointer.clxn_chkpnt_wrt.delete_many({})
