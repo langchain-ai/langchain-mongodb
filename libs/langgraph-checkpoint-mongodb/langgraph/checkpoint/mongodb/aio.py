@@ -334,7 +334,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                     upsert=True,
                 )
             )
-        await self.db["checkpoint_writes"].bulk_write(operations)
+        await self.clxn_chkpnt_wrt.bulk_write(operations)
 
     def _loads_metadata(self, metadata: dict[str, Any]) -> CheckpointMetadata:
         """Deserialize metadata document
