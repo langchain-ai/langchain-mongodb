@@ -375,8 +375,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
     ) -> Iterator[CheckpointTuple]:
         """List checkpoints from the database.
 
-        This method retrieves a list of checkpoint tuples from the Postgres database based
-        on the provided config. The checkpoints are ordered by checkpoint ID in descending order (newest first).
+        This method retrieves a list of checkpoint tuples from the MongoDB database
+         based on the provided config. The checkpoints are ordered by checkpoint ID in
+         descending order (newest first).
 
         Args:
             config (Optional[RunnableConfig]): Base configuration for filtering checkpoints.
@@ -400,10 +401,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database.
 
-        This method retrieves a checkpoint tuple from the Postgres database based on the
-        provided config. If the config contains a "checkpoint_id" key, the checkpoint with
-        the matching thread ID and "checkpoint_id" is retrieved. Otherwise, the latest checkpoint
-        for the given thread ID is retrieved.
+        This method retrieves a checkpoint tuple from the MongoDB database based on
+        the provided config. If the config contains a "checkpoint_id" key, the
+        checkpoint with the matching thread ID and "checkpoint_id" is retrieved.
+        Otherwise, the latest checkpoint for the given thread ID is retrieved.
 
         Args:
             config (RunnableConfig): The config to use for retrieving the checkpoint.
@@ -416,7 +417,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             # we don't check in other methods to avoid the overhead
             if asyncio.get_running_loop() is self.loop:
                 raise asyncio.InvalidStateError(
-                    "Synchronous calls to AsyncPostgresSaver are only allowed from a "
+                    "Synchronous calls to AsyncMongoDBSaver are only allowed from a "
                     "different thread. From the main thread, use the async interface."
                     "For example, use `await checkpointer.aget_tuple(...)` or `await "
                     "graph.ainvoke(...)`."
@@ -436,8 +437,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
     ) -> RunnableConfig:
         """Save a checkpoint to the database.
 
-        This method saves a checkpoint to the Postgres database. The checkpoint is associated
-        with the provided config and its parent config (if any).
+        This method saves a checkpoint to the MongoDB database. The checkpoint
+        is associated with the provided config and its parent config (if any).
 
         Args:
             config (RunnableConfig): The config to associate with the checkpoint.
