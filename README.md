@@ -1,5 +1,9 @@
 # 🦜️🔗 LangChain MongoDB
 
-This repository contains 1 package with MongoDB integrations with LangChain:
+This is a Monorepo containing partner packages of MongoDB and LangChainAI.
+It includes integrations between MongoDB, Atlas, LangChain, and LangGraph.
 
-- [langchain-mongodb](https://pypi.org/project/langchain-mongodb/)
+It contains the following packages.
+
+- `langchain-mongodb` ([PyPI](https://pypi.org/project/langchain-mongodb/))
+- `langgraph-checkpoint-mongodb`
