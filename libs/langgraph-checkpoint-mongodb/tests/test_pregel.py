@@ -3971,7 +3971,6 @@ def test_conditional_entrypoint_graph_state(snapshot: SnapshotAssertion) -> None
 
 
 # TODO - Red herring?
-@pytest.mark.skip("Remove skip. A fix for this failing test should be in another PR.")
 def test_prebuilt_tool_chat(snapshot: SnapshotAssertion) -> None:
     from langchain_core.messages import AIMessage, HumanMessage
     from langchain_core.tools import tool
