@@ -147,7 +147,9 @@ class MongoDBSaver(BaseCheckpointSaver):
         else:
             query = {"thread_id": thread_id, "checkpoint_ns": checkpoint_ns}
 
-        result = self.checkpoint_collection.find(query, sort=[("checkpoint_id", -1)], limit=1)
+        result = self.checkpoint_collection.find(
+            query, sort=[("checkpoint_id", -1)], limit=1
+        )
         for doc in result:
             config_values = {
                 "thread_id": thread_id,

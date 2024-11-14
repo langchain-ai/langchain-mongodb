@@ -145,7 +145,9 @@ def test_nested_filter() -> None:
             break
 
         # Confirm serialization structure of data in collection
-        doc: dict[str, Any] = saver.checkpoint_collection.find_one({"thread_id": thread_id})  # type: ignore
+        doc: dict[str, Any] = saver.checkpoint_collection.find_one(
+            {"thread_id": thread_id}
+        )  # type: ignore
         assert isinstance(doc["checkpoint"], bytes)
         assert (
             isinstance(doc["metadata"], dict)

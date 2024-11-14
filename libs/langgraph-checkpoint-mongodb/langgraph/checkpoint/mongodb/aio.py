@@ -136,7 +136,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         else:
             query = {"thread_id": thread_id, "checkpoint_ns": checkpoint_ns}
 
-        result = self.checkpoint_collection.find(query, sort=[("checkpoint_id", -1)], limit=1)
+        result = self.checkpoint_collection.find(
+            query, sort=[("checkpoint_id", -1)], limit=1
+        )
         async for doc in result:
             config_values = {
                 "thread_id": thread_id,
@@ -288,7 +290,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             "checkpoint_id": checkpoint_id,
         }
         # Perform your operations here
-        await self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
+        await self.checkpoint_collection.update_one(
+            upsert_query, {"$set": doc}, upsert=True
+        )
         return {
             "configurable": {
                 "thread_id": thread_id,
