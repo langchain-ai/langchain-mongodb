@@ -195,8 +195,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         """
         query = {}
         if config is not None:
-            query = {"thread_id": config["configurable"]["thread_id"]}
-
+            if "thread_id" in config["configurable"]:
+                query["thread_id"] = config["configurable"]["thread_id"]
             if "checkpoint_ns" in config["configurable"]:
                 query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
 
