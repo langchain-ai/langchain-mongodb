@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from importlib.metadata import version
-from typing import Any, List
+from typing import Any, List, Optional
 
 import pymongo
 from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
 from langchain_core.callbacks import (
+    AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
 )
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_core.runnables import run_in_executor
 from langchain_text_splitters import TextSplitter
 from pymongo import MongoClient
 from pymongo.driver_info import DriverInfo
@@ -59,7 +61,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     """Key stored in metadata pointing to parent document"""
 
     def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+        self,
+        query: str,
+        *,
+        run_manager: Optional[CallbackManagerForRetrieverRun] = None,
     ) -> List[Document]:
         query_vector = self.vectorstore._embedding.embed_query(query)
 
@@ -102,6 +107,21 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             make_serializable(res)
             docs.append(Document(page_content=text, metadata=res))
         return docs
+
+    async def _aget_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: AsyncCallbackManagerForRetrieverRun,
+    ) -> List[Document]:
+        """Asynchronous version of get_relevant_documents"""
+
+        return await run_in_executor(
+            None,
+            self._get_relevant_documents,
+            query,
+            run_manager=run_manager.get_sync(),
+        )
 
     @classmethod
     def from_connection_string(
