@@ -17,7 +17,7 @@ from langgraph.checkpoint.mongodb import MongoDBSaver
 # docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-server
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
-CLXN_NAME = "sync_checkpoints"
+COLLECTION_NAME = "sync_checkpoints"
 
 
 def test_search(input_data: Dict[str, Any]) -> None:
@@ -27,7 +27,7 @@ def test_search(input_data: Dict[str, Any]) -> None:
     for clxn_name in db.list_collection_names():
         db.drop_collection(clxn_name)
 
-    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, CLXN_NAME) as saver:
+    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:
         # save checkpoints
         saver.put(
             input_data["config_1"],
@@ -83,7 +83,7 @@ def test_search(input_data: Dict[str, Any]) -> None:
 def test_null_chars(input_data: Dict[str, Any]) -> None:
     """In MongoDB string *values* can be any valid UTF-8 including nulls.
     *Field names*, however, cannot contain nulls characters."""
-    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, CLXN_NAME) as saver:
+    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:
         null_str = "\x00abc"  # string containing null character
 
         # 1. null string in field *value*
@@ -145,7 +145,7 @@ def test_nested_filter() -> None:
             break
 
         # Confirm serialization structure of data in collection
-        doc: dict[str, Any] = saver.clxn_chkpnt.find_one({"thread_id": thread_id})  # type: ignore
+        doc: dict[str, Any] = saver.checkpoint_collection.find_one({"thread_id": thread_id})  # type: ignore
         assert isinstance(doc["checkpoint"], bytes)
         assert (
             isinstance(doc["metadata"], dict)
@@ -161,5 +161,5 @@ def test_nested_filter() -> None:
         assert chkpt_db["channel_values"] == input_message
 
         # Drop collections
-        saver.clxn_chkpnt.drop()
-        saver.clxn_chkpnt_wrt.drop()
+        saver.checkpoint_collection.drop()
+        saver.writes_collection.drop()

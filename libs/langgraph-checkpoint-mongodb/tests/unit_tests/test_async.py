@@ -9,7 +9,7 @@ from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
 
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
-CLXN_NAME = "sync_checkpoints"
+COLLECTION_NAME = "sync_checkpoints_aio"
 
 
 async def test_asearch(input_data: Dict[str, Any]) -> None:
@@ -21,7 +21,7 @@ async def test_asearch(input_data: Dict[str, Any]) -> None:
         await db.drop_collection(clxn)
 
     async with AsyncMongoDBSaver.from_conn_string(
-        MONGODB_URI, DB_NAME, CLXN_NAME
+        MONGODB_URI, DB_NAME, COLLECTION_NAME
     ) as saver:
         # save checkpoints
         await saver.aput(
@@ -81,7 +81,7 @@ async def test_null_chars(input_data: Dict[str, Any]) -> None:
     """In MongoDB string *values* can be any valid UTF-8 including nulls.
     *Field names*, however, cannot contain nulls characters."""
     async with AsyncMongoDBSaver.from_conn_string(
-        MONGODB_URI, DB_NAME, CLXN_NAME
+        MONGODB_URI, DB_NAME, COLLECTION_NAME
     ) as saver:
         null_str = "\x00abc"  # string containing null character
 

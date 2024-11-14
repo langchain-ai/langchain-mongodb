@@ -50,8 +50,8 @@ def checkpointer_mongodb():
         os.environ.get("MONGODB_URI", "mongodb://localhost:27017"),
         os.environ.get("DATABASE_NAME", "langchain_checkpoints_db"),
     ) as checkpointer:
-        checkpointer.clxn_chkpnt.delete_many({})
-        checkpointer.clxn_chkpnt_wrt.delete_many({})
+        checkpointer.checkpoint_collection.delete_many({})
+        checkpointer.writes_collection.delete_many({})
         yield checkpointer
 
 
@@ -61,8 +61,8 @@ async def _checkpointer_mongodb_aio():
         os.environ.get("MONGODB_URI", "mongodb://localhost:27017"),
         os.environ.get("DATABASE_NAME", "langchain_checkpoints_db"),
     ) as checkpointer:
-        await checkpointer.clxn_chkpnt.delete_many({})
-        await checkpointer.clxn_chkpnt_wrt.delete_many({})
+        await checkpointer.checkpoint_collection.delete_many({})
+        await checkpointer.writes_collection.delete_many({})
         yield checkpointer
 
 

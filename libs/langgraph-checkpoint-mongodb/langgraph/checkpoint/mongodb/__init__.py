@@ -30,8 +30,8 @@ class MongoDBSaver(BaseCheckpointSaver):
     Args:
         client (MongoClient): The MongoDB connection.
         db_name (Optional[str]): Database name
-        chkpnt_clxn_name (Optional[str]): Name of Collection of Checkpoints
-        chkpnt_wrt_clxn_name (Optional[str]): Name of Collection of intermediate writes.
+        checkpoint_collection_name (Optional[str]): Name of Collection of Checkpoints
+        writes_collection_name (Optional[str]): Name of Collection of intermediate writes.
 
     Examples:
 
@@ -60,15 +60,15 @@ class MongoDBSaver(BaseCheckpointSaver):
         self,
         client: MongoClient,
         db_name: str = "checkpointing_db",
-        chkpnt_clxn_name: str = "checkpoints",
-        chkpnt_wrt_clxn_name: str = "checkpoint_writes",
+        checkpoint_collection_name: str = "checkpoints",
+        writes_collection_name: str = "checkpoint_writes",
         **kwargs: Any,
     ) -> None:
         super().__init__()
         self.client = client
         self.db = self.client[db_name]
-        self.clxn_chkpnt = self.db[chkpnt_clxn_name]
-        self.clxn_chkpnt_wrt = self.db[chkpnt_wrt_clxn_name]
+        self.checkpoint_collection = self.db[checkpoint_collection_name]
+        self.writes_collection = self.db[writes_collection_name]
 
     @classmethod
     @contextmanager
@@ -76,23 +76,27 @@ class MongoDBSaver(BaseCheckpointSaver):
         cls,
         conn_string: Optional[str] = None,
         db_name: str = "checkpointing_db",
-        chkpnt_clxn_name: str = "checkpoints",
-        chkpnt_wrt_clxn_name: str = "checkpoint_writes",
+        checkpoint_collection_name: str = "checkpoints",
+        writes_collection_name: str = "checkpoint_writes",
         **kwargs: Any,
     ) -> Iterator["MongoDBSaver"]:
         """Context manager to create a MongoDB checkpoint saver.
         Args:
             conn_string: MongoDB connection string. See [class:~pymongo.MongoClient].
             db_name: Database name. It will be created if it doesn't exist.
-            chkpnt_clxn_name: Checkpoint Collection name. Created if it doesn't exist.
-            chkpnt_wrt_clxn_name: Collection name of intermediate writes. Created if it doesn't exist.
+            checkpoint_collection_name: Checkpoint Collection name. Created if it doesn't exist.
+            writes_collection_name: Collection name of intermediate writes. Created if it doesn't exist.
         Yields: A new MongoDBSaver.
         """
         client: Optional[MongoClient] = None
         try:
             client = MongoClient(conn_string)
             yield MongoDBSaver(
-                client, db_name, chkpnt_clxn_name, chkpnt_wrt_clxn_name, **kwargs
+                client,
+                db_name,
+                checkpoint_collection_name,
+                writes_collection_name,
+                **kwargs,
             )
         finally:
             if client:
@@ -143,7 +147,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         else:
             query = {"thread_id": thread_id, "checkpoint_ns": checkpoint_ns}
 
-        result = self.clxn_chkpnt.find(query, sort=[("checkpoint_id", -1)], limit=1)
+        result = self.checkpoint_collection.find(query, sort=[("checkpoint_id", -1)], limit=1)
         for doc in result:
             config_values = {
                 "thread_id": thread_id,
@@ -151,7 +155,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                 "checkpoint_id": doc["checkpoint_id"],
             }
             checkpoint = self.serde.loads_typed((doc["type"], doc["checkpoint"]))
-            serialized_writes = self.clxn_chkpnt_wrt.find(config_values)
+            serialized_writes = self.writes_collection.find(config_values)
             pending_writes = [
                 (
                     doc["task_id"],
@@ -211,8 +215,8 @@ class MongoDBSaver(BaseCheckpointSaver):
         """
         query = {}
         if config is not None:
-            query = {"thread_id": config["configurable"]["thread_id"]}
-
+            if "thread_id" in config["configurable"]:
+                query["thread_id"] = config["configurable"]["thread_id"]
             if "checkpoint_ns" in config["configurable"]:
                 query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
 
@@ -223,7 +227,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         if before is not None:
             query["checkpoint_id"] = {"$lt": before["configurable"]["checkpoint_id"]}
 
-        result = self.clxn_chkpnt.find(
+        result = self.checkpoint_collection.find(
             query, limit=0 if limit is None else limit, sort=[("checkpoint_id", -1)]
         )
 
@@ -233,7 +237,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                 "checkpoint_ns": doc["checkpoint_ns"],
                 "checkpoint_id": doc["checkpoint_id"],
             }
-            serialized_writes = self.clxn_chkpnt_wrt.find(config_values)
+            serialized_writes = self.writes_collection.find(config_values)
             pending_writes = [
                 (
                     wrt["task_id"],
@@ -313,7 +317,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "checkpoint_ns": checkpoint_ns,
             "checkpoint_id": checkpoint_id,
         }
-        self.clxn_chkpnt.update_one(upsert_query, {"$set": doc}, upsert=True)
+        self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
         return {
             "configurable": {
                 "thread_id": thread_id,
@@ -363,7 +367,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                     upsert=True,
                 )
             )
-        self.clxn_chkpnt_wrt.bulk_write(operations)
+        self.writes_collection.bulk_write(operations)
 
     def _loads_metadata(self, metadata: dict[str, Any]) -> CheckpointMetadata:
         """Deserialize metadata document
