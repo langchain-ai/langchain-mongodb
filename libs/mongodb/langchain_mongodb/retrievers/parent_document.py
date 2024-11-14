@@ -25,11 +25,24 @@ from langchain_mongodb.utils import make_serializable
 class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     """MongoDB Atlas's ParentDocumentRetriever
 
-    Uses ONE Collection for both Vector and Doc store.
+    “Parent Document Retrieval” is a common approach to enhance the performance of
+    retrieval methods in RAG by providing the LLM with a broader context to consider.
+    In essence, we divide the original documents into relatively small chunks,
+    embed each one, and store them in a vector database.
+    Using such small chunks (a sentence or a couple of sentences)
+    helps the embedding models to better reflect their meaning.
 
-    For details, see parent classes
+    In this implementation, we can store both parent and child documents in a single
+    collection while only having to compute and index embedding vectors for the chunks!
+
+    This is achieved by backing both the
+    vectorstore, :class:`~langchain_mongodb.vectorstores.MongoDBAtlasVectorSearch`
+    and the docstore  :class:`~langchain_mongodb.docstores.MongoDBDocStore`
+    by the same MongoDB Collection.
+
+    For more details, see superclasses
         :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
-        and :class:`~langchain.retrievers.MultiVectorRetriever` for further details.
+        and :class:`~langchain.retrievers.MultiVectorRetriever`.
 
     Examples:
         >>> from langchain_mongodb.retrievers.parent_document import (
