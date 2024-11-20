@@ -4,7 +4,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from langgraph.graph import END, START, StateGraph
-from tests.conftest import (
+from .conftest import (
     ALL_CHECKPOINTERS_ASYNC,
     ALL_CHECKPOINTERS_SYNC,
     awith_checkpointer,

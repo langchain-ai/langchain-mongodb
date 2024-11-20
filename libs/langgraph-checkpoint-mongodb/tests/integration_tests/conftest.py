@@ -81,7 +81,7 @@ async def awith_checkpointer(
     if checkpointer_name is None:
         yield None
     elif checkpointer_name == "memory":
-        from tests.memory_assert import MemorySaverAssertImmutable
+        from .memory_assert import MemorySaverAssertImmutable
 
         yield MemorySaverAssertImmutable()
     elif checkpointer_name == "mongodb_aio":

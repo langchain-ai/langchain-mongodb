@@ -57,13 +57,13 @@ from langgraph.prebuilt.tool_node import (
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 from langgraph.types import Interrupt
-from tests.conftest import (
+from .conftest import (
     ALL_CHECKPOINTERS_ASYNC,
     ALL_CHECKPOINTERS_SYNC,
     IS_LANGCHAIN_CORE_030_OR_GREATER,
     awith_checkpointer,
 )
-from tests.messages import _AnyIdHumanMessage, _AnyIdToolMessage
+from .messages import _AnyIdHumanMessage, _AnyIdToolMessage
 
 pytestmark = pytest.mark.anyio
 

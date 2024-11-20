@@ -15,8 +15,8 @@ from pydantic.v1 import BaseModel as BaseModelV1
 from langgraph.graph import add_messages
 from langgraph.graph.message import MessagesState
 from langgraph.graph.state import END, START, StateGraph
-from tests.conftest import IS_LANGCHAIN_CORE_030_OR_GREATER
-from tests.messages import _AnyIdHumanMessage
+from .conftest import IS_LANGCHAIN_CORE_030_OR_GREATER
+from .messages import _AnyIdHumanMessage
 
 
 def test_add_single_message():
