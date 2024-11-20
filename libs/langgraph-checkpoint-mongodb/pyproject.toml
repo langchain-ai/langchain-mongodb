@@ -29,8 +29,6 @@ dataclasses-json = "^0.6.7"
 codespell = "^2.2.0"
 ruff = "^0.6.2"
 langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
-#langgraph = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/langgraph"}
-#langgraph-checkpoint = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/checkpoint"}
 langgraph = {path = "../langgraph", develop = true}
 langgraph-checkpoint = {path = "../checkpoint", develop = true}
 
