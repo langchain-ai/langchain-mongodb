@@ -346,6 +346,9 @@ class MongoDBSaver(BaseCheckpointSaver):
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = config["configurable"]["checkpoint_id"]
+        set_method = ( # Allow replacement on existing writes only if there were errors.
+            "$set" if all(w[0] in WRITES_IDX_MAP for w in writes) else "$setOnInsert"
+        )
         operations = []
         for idx, (channel, value) in enumerate(writes):
             upsert_query = {
@@ -360,7 +363,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                 UpdateOne(
                     upsert_query,
                     {
-                        "$set": {
+                        set_method: {
                             "channel": channel,
                             "type": type_,
                             "value": serialized_value,
