@@ -230,10 +230,10 @@ def test_state_schema_default_values(kw_only_: bool):
             "val11",
         }
 
-    assert set(json_schema.get("required", set())) == expected_required
-    assert (
-        set(json_schema["properties"].keys()) == expected_required | expected_optional
-    )
+        assert set(json_schema.get("required", set())) == expected_required
+        assert (
+            set(json_schema["properties"].keys()) == expected_required | expected_optional
+        )
 
 
 def test_raises_invalid_managed():

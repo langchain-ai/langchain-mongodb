@@ -1,8 +1,7 @@
 import os
-import sys
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from langchain_core import __version__ as core_version

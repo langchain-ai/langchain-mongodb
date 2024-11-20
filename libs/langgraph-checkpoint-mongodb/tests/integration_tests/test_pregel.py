@@ -1821,7 +1821,7 @@ def test_cond_edge_after_send() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             return [self.name]
@@ -1847,7 +1847,7 @@ def test_concurrent_emit_sends() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             return (
@@ -1908,7 +1908,7 @@ def test_send_sequences() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             update = (
@@ -1989,7 +1989,7 @@ def test_send_dedupe_on_resume(
         def __init__(self, name: str):
             self.name = name
             self.ticks = 0
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             self.ticks += 1
@@ -3376,7 +3376,7 @@ def test_channel_enter_exit_timing(mocker: MockerFixture) -> None:
         elif i == 1:
             assert chunk == {"output": 4}
         else:
-            assert False, "Expected only two chunks"
+            pytest.fail("Expected only two chunks")
     assert cleanup.call_count == 1, "Expected cleanup to be called once"
 
 
@@ -7372,7 +7372,6 @@ def test_root_graph(
         AIMessage,
         BaseMessage,
         HumanMessage,
-        ToolMessage,
     )
     from langchain_core.outputs import ChatGeneration, ChatResult
     from langchain_core.tools import tool

@@ -2290,7 +2290,7 @@ async def test_cond_edge_after_send() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         async def __call__(self, state):
             return [self.name]
@@ -2317,7 +2317,7 @@ async def test_concurrent_emit_sends() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         async def __call__(self, state):
             return (
@@ -2380,7 +2380,7 @@ async def test_send_sequences(checkpointer_name: str) -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         async def __call__(self, state):
             update = (
@@ -2483,7 +2483,7 @@ async def test_send_dedupe_on_resume(checkpointer_name: str) -> None:
         def __init__(self, name: str):
             self.name = name
             self.ticks = 0
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             self.ticks += 1
@@ -3516,7 +3516,7 @@ async def test_max_concurrency(checkpointer_name: str) -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
             self.currently = 0
             self.max_currently = 0
 
@@ -3991,7 +3991,7 @@ async def test_channel_enter_exit_timing(mocker: MockerFixture) -> None:
         elif i == 1:
             assert chunk == {"output": 4}
         else:
-            assert False, "Expected only two chunks"
+            pytest.fail("Expected only two chunks")
     assert setup_sync.call_count == 0
     assert cleanup_sync.call_count == 0
     assert setup_async.call_count == 1, "Expected setup to be called once"
@@ -12246,7 +12246,7 @@ async def test_checkpointer_null_pending_writes() -> None:
     class Node:
         def __init__(self, name: str):
             self.name = name
-            setattr(self, "__name__", name)
+            self.__name__ = name
 
         def __call__(self, state):
             return [self.name]
@@ -12302,7 +12302,7 @@ async def test_store_injected_async(checkpointer_name: str, store_name: str) -> 
         assert result == {"count": 1}
         returned_doc = (await the_store.aget(("foo", "bar"), doc_id)).value
         assert returned_doc == {**doc, "from_thread": thread_1, "some_val": 0}
-        assert len((await the_store.asearch(("foo", "bar")))) == 1
+        assert len(await the_store.asearch(("foo", "bar"))) == 1
 
         # Check update on existing thread
         result = await graph.ainvoke(
@@ -12311,7 +12311,7 @@ async def test_store_injected_async(checkpointer_name: str, store_name: str) -> 
         assert result == {"count": 2}
         returned_doc = (await the_store.aget(("foo", "bar"), doc_id)).value
         assert returned_doc == {**doc, "from_thread": thread_1, "some_val": 1}
-        assert len((await the_store.asearch(("foo", "bar")))) == 1
+        assert len(await the_store.asearch(("foo", "bar"))) == 1
 
         thread_2 = str(uuid.uuid4())
 
@@ -12326,7 +12326,7 @@ async def test_store_injected_async(checkpointer_name: str, store_name: str) -> 
             "some_val": 0,
         }  # Overwrites the whole doc
         assert (
-            len((await the_store.asearch(("foo", "bar")))) == 1
+            len(await the_store.asearch(("foo", "bar"))) == 1
         )  # still overwriting the same one
 
 
@@ -12522,16 +12522,16 @@ async def test_debug_nested_subgraphs():
     history_ns = {}
     for ns in stream_ns.keys():
 
-        async def get_history():
+        async def get_history(namespace):
             history = [
                 c
                 async for c in graph.aget_state_history(
-                    {"configurable": {"thread_id": "1", "checkpoint_ns": "|".join(ns)}}
+                    {"configurable": {"thread_id": "1", "checkpoint_ns": "|".join(namespace)}}
                 )
             ]
             return history[::-1]
 
-        history_ns[ns] = await get_history()
+        history_ns[ns] = await get_history(ns)
 
     def normalize_config(config: Optional[dict]) -> Optional[dict]:
         if config is None:

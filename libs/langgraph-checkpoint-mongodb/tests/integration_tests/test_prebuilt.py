@@ -1095,14 +1095,14 @@ def test_tool_node_inject_state(schema_: Type[T]) -> None:
         if isinstance(state, dict):
             return state["foo"]
         else:
-            return getattr(state, "foo")
+            return state.foo
 
     def tool2(some_val: int, state: Annotated[T, InjectedState()]) -> str:
         """Tool 2 docstring."""
         if isinstance(state, dict):
             return state["foo"]
         else:
-            return getattr(state, "foo")
+            return state.foo
 
     def tool3(
         some_val: int,

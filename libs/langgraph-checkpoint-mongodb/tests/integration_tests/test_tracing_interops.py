@@ -1,7 +1,7 @@
 import json
 import sys
 import time
-from typing import Any, Callable, Tuple, TypedDict, TypeVar
+from typing import Any, Callable, Optional, Tuple, TypedDict, TypeVar
 from unittest.mock import MagicMock
 
 import langsmith as ls
@@ -21,8 +21,9 @@ def _get_mock_client(**kwargs: Any) -> ls.Client:
 
 def _get_calls(
     mock_client: Any,
-    verbs: set[str] = {"POST"},
+    verbs: Optional[set[str]] = None
 ) -> list:
+    verbs = {"POST"} if verbs is None else verbs
     return [
         c
         for c in mock_client.session.request.mock_calls
