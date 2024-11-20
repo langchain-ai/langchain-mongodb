@@ -36,7 +36,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: poetry install --with test
+        run: poetry install --with dev
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.11.0
