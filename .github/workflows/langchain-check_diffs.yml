@@ -31,7 +31,7 @@ jobs:
         uses: Ana06/get-changed-files@v2.2.0
       - id: set-matrix
         run: |
-          python .github/scripts/check_diff.py ${{ steps.files.outputs.all }} >> $GITHUB_OUTPUT
+          python .github/scripts/check_diff.py libs/mongodb ${{ steps.files.outputs.all }} >> $GITHUB_OUTPUT
     outputs:
       dirs-to-lint: ${{ steps.set-matrix.outputs.dirs-to-lint }}
       dirs-to-test: ${{ steps.set-matrix.outputs.dirs-to-test }}
