@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "langgraph-checkpoint-mongodb"
 version = "0.1.0"
@@ -15,7 +19,24 @@ langgraph-checkpoint = "^2.0.0"
 pymongo = "~4.9.0"
 motor = ">3.5.0"
 
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.integration_test]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
+langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
+langgraph = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/langgraph"}
+langgraph-checkpoint = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/checkpoint"}
+
+[tool.poetry.group.test.dependencies]
 pytest = "^7.2.1"
 anyio = "^4.4.0"
 pytest-asyncio = "^0.21.1"
@@ -23,14 +44,13 @@ pytest-mock = "^3.11.1"
 pytest-watch = "^4.2.0"
 pytest-repeat = "^0.9.3"
 syrupy = "^4.0.2"
-ipython = "^8.0"
-mypy = "^1.10.0"
-dataclasses-json = "^0.6.7"
-codespell = "^2.2.0"
+
+[tool.poetry.group.lint.dependencies]
 ruff = "^0.6.2"
-langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
-langgraph = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/langgraph"}
-langgraph-checkpoint = {git = "https://github.com/langchain-ai/langgraph.git", subdirectory = "libs/checkpoint"}
+mypy = "^1.10.0"
+codespell = "^2.2.0"
+
+[tool.poetry.group.integration_test.dependencies]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config --durations=5 -vv"
@@ -39,10 +59,6 @@ markers = [
     "compile: mark placeholder test used to compile integration tests without running them",
 ]
 asyncio_mode = "auto"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 lint.select = [
@@ -63,3 +79,4 @@ warn_unused_ignores = "True"
 warn_redundant_casts = "True"
 allow_redefinition = "True"
 disable_error_code = "typeddict-item, return-value"
+
