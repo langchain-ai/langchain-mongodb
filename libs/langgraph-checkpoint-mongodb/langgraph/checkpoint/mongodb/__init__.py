@@ -23,6 +23,8 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
+from .utils import prepare_metadata
+
 
 class MongoDBSaver(BaseCheckpointSaver):
     """A checkpoint saver that stores StateGraph checkpoints in a MongoDB database.
@@ -169,7 +171,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             return CheckpointTuple(
                 {"configurable": config_values},
                 checkpoint,
-                self._loads_metadata(doc["metadata"]),
+                prepare_metadata(self.serde.loads, doc["metadata"]),
                 (
                     {
                         "configurable": {
@@ -224,7 +226,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         if filter:
             for key, value in filter.items():
-                query[f"metadata.{key}"] = self._dumps_metadata(value)
+                query[f"metadata.{key}"] = prepare_metadata(self.serde.dumps, value)
 
         if before is not None:
             query["checkpoint_id"] = {"$lt": before["configurable"]["checkpoint_id"]}
@@ -258,7 +260,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                     }
                 },
                 checkpoint=self.serde.loads_typed((doc["type"], doc["checkpoint"])),
-                metadata=self._loads_metadata(doc["metadata"]),
+                metadata=prepare_metadata(self.serde.loads, doc["metadata"]),
                 parent_config=(
                     {
                         "configurable": {
@@ -312,7 +314,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
-            "metadata": self._dumps_metadata(metadata),
+            "metadata": prepare_metadata(self.serde.dumps, metadata),
         }
         upsert_query = {
             "thread_id": thread_id,
@@ -373,32 +375,3 @@ class MongoDBSaver(BaseCheckpointSaver):
                 )
             )
         self.writes_collection.bulk_write(operations)
-
-    def _loads_metadata(self, metadata: dict[str, Any]) -> CheckpointMetadata:
-        """Deserialize metadata document
-
-        metadata is stored in MongoDB collection with string keys and
-        serde serialized keys.
-        """
-        if isinstance(metadata, dict):
-            output = dict()
-            for key, value in metadata.items():
-                output[key] = self._loads_metadata(value)
-            return output
-        else:
-            return self.serde.loads(metadata)
-
-    def _dumps_metadata(
-        self, metadata: Union[CheckpointMetadata, Any]
-    ) -> Union[bytes, Dict[str, Any]]:
-        """Serialize all values in metadata dictionary.
-
-        Keep dict keys as strings for efficient filtering in MongoDB
-        """
-        if isinstance(metadata, dict):
-            output = dict()
-            for key, value in metadata.items():
-                output[key] = self._dumps_metadata(value)
-            return output
-        else:
-            return self.serde.dumps(metadata)

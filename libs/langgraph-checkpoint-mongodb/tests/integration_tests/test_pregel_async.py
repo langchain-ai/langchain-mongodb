@@ -12526,7 +12526,12 @@ async def test_debug_nested_subgraphs():
             history = [
                 c
                 async for c in graph.aget_state_history(
-                    {"configurable": {"thread_id": "1", "checkpoint_ns": "|".join(namespace)}}
+                    {
+                        "configurable": {
+                            "thread_id": "1",
+                            "checkpoint_ns": "|".join(namespace),
+                        }
+                    }
                 )
             ]
             return history[::-1]
