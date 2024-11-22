@@ -42,7 +42,7 @@ jobs:
     strategy:
       matrix:
         working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint) }}
-    uses: ./.github/workflows/_langchain-lint.yml
+    uses: ./.github/workflows/_lint.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
@@ -54,7 +54,7 @@ jobs:
     strategy:
       matrix:
         working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
-    uses: ./.github/workflows/_langchain-test.yml
+    uses: ./.github/workflows/_test.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
