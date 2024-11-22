@@ -131,9 +131,10 @@ jobs:
               "$PKG_NAME==$VERSION" \
           )
 
-          # Replace all dashes in the package name with underscores,
-          # since that's how Python imports packages with dashes in the name.
-          IMPORT_NAME="$(echo "$PKG_NAME" | sed s/-/_/g)"
+          # For langchain-mongodb, replace dashes in the package name with underscores.
+          IMPORT_NAME="${PKG_NAME//-/_}"
+          # If "langgraph-checkpoint-mongodb", it's a namespace package =>  /-/.
+          [[ "$PKG_NAME" == "langgraph-checkpoint-mongodb" ]] && IMPORT_NAME="${PKG_NAME//-/.}"
 
           poetry run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
