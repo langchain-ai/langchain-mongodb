@@ -35,6 +35,18 @@ jobs:
     outputs:
       dirs-to-lint: ${{ steps.set-matrix.outputs.dirs-to-lint }}
       dirs-to-test: ${{ steps.set-matrix.outputs.dirs-to-test }}
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+      - uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files --hook-stage=manual
   lint:
     name: cd ${{ matrix.working-directory }}
     needs: [ build ]
@@ -61,7 +73,7 @@ jobs:
 
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test]
+    needs: [build, lint, test, pre-commit]
     if: |
       always()
     runs-on: ubuntu-latest

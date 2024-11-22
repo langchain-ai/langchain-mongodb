@@ -8,7 +8,7 @@
   	tool_two_slow --> finish;
   	prepare -.-> tool_two_fast;
   	tool_two_fast --> finish;
-  
+
   '''
 # ---
 # name: test_branch_then[mongodb].1
@@ -30,7 +30,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_conditional_entrypoint_graph
@@ -113,7 +113,7 @@
   	__start__ -. &nbsp;go-left&nbsp; .-> left;
   	__start__ -. &nbsp;go-right&nbsp; .-> right;
   	left -.-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_entrypoint_graph_state
@@ -196,7 +196,7 @@
   	__start__ -. &nbsp;go-left&nbsp; .-> left;
   	__start__ -. &nbsp;go-right&nbsp; .-> right;
   	left -.-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_entrypoint_to_multiple_state_graph
@@ -258,7 +258,7 @@
   	get_weather --> __end__;
   	__start__ -.-> get_weather;
   	__start__ -.-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_graph[mongodb]
@@ -339,7 +339,7 @@
   	tools --> agent;
   	agent -. &nbsp;continue&nbsp; .-> tools;
   	agent -. &nbsp;exit&nbsp; .-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_graph[mongodb].2
@@ -359,7 +359,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_conditional_graph[mongodb].3
@@ -440,7 +440,7 @@
   	tools --> agent;
   	agent -. &nbsp;continue&nbsp; .-> tools;
   	agent -. &nbsp;exit&nbsp; .-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_graph[mongodb].5
@@ -533,7 +533,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_conditional_state_graph[mongodb]
@@ -615,7 +615,7 @@
   	tools --> agent;
   	agent -. &nbsp;continue&nbsp; .-> tools;
   	agent -. &nbsp;exit&nbsp; .-> __end__;
-  
+
   '''
 # ---
 # name: test_conditional_state_graph_with_list_edge_inputs
@@ -687,7 +687,7 @@
   	B --> __end__;
   	__start__ --> A;
   	__start__ --> B;
-  
+
   '''
 # ---
 # name: test_in_one_fan_out_state_graph_waiting_edge[mongodb]
@@ -700,7 +700,7 @@
   	retriever_two --> qa;
   	rewrite_query --> analyzer_one;
   	rewrite_query --> retriever_two;
-  
+
   '''
 # ---
 # name: test_in_one_fan_out_state_graph_waiting_edge_custom_state_class_pydantic1[mongodb]
@@ -713,7 +713,7 @@
   	retriever_two --> qa;
   	rewrite_query --> analyzer_one;
   	rewrite_query -.-> retriever_two;
-  
+
   '''
 # ---
 # name: test_in_one_fan_out_state_graph_waiting_edge_custom_state_class_pydantic1[mongodb].1
@@ -783,7 +783,7 @@
   	retriever_two --> qa;
   	rewrite_query --> analyzer_one;
   	rewrite_query -.-> retriever_two;
-  
+
   '''
 # ---
 # name: test_in_one_fan_out_state_graph_waiting_edge_custom_state_class_pydantic2[mongodb].1
@@ -853,7 +853,7 @@
   	retriever_two --> qa;
   	rewrite_query --> analyzer_one;
   	rewrite_query -.-> retriever_two;
-  
+
   '''
 # ---
 # name: test_message_graph[mongodb]
@@ -934,7 +934,7 @@
   	tools --> agent;
   	agent -. &nbsp;continue&nbsp; .-> tools;
   	agent -. &nbsp;end&nbsp; .-> __end__;
-  
+
   '''
 # ---
 # name: test_multiple_sinks_subgraphs
@@ -957,7 +957,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_nested_graph
@@ -966,7 +966,7 @@
   	__start__ --> inner;
   	inner --> side;
   	side --> __end__;
-  
+
   '''
 # ---
 # name: test_nested_graph.1
@@ -983,7 +983,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_nested_graph_xray
@@ -1138,7 +1138,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_prebuilt_tool_chat
@@ -1218,7 +1218,7 @@
   	tools --> agent;
   	agent -.-> tools;
   	agent -.-> __end__;
-  
+
   '''
 # ---
 # name: test_repeat_condition
@@ -1234,7 +1234,7 @@
   	Call_Tool -.-> Researcher;
   	Call_Tool -.-> Chart_Generator;
   	Researcher -. &nbsp;redo&nbsp; .-> Researcher;
-  
+
   '''
 # ---
 # name: test_send_react_interrupt_control[mongodb]
@@ -1249,7 +1249,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_simple_multi_edge
@@ -1261,7 +1261,7 @@
   	up --> down;
   	up --> other;
   	up --> side;
-  
+
   '''
 # ---
 # name: test_start_branch_then[mongodb]
@@ -1279,7 +1279,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_state_graph_w_config_inherited_state_keys
@@ -1313,7 +1313,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_xray_bool
@@ -1349,7 +1349,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_xray_issue
@@ -1376,7 +1376,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-  
+
   '''
 # ---
 # name: test_xray_lance
