@@ -22,7 +22,7 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
-from .utils import prepare_metadata
+from .utils import dumps_metadata, loads_metadata
 
 
 class MongoDBSaver(BaseCheckpointSaver):
@@ -170,7 +170,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             return CheckpointTuple(
                 {"configurable": config_values},
                 checkpoint,
-                prepare_metadata(self.serde.loads, doc["metadata"]),
+                loads_metadata(doc["metadata"]),
                 (
                     {
                         "configurable": {
@@ -225,7 +225,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         if filter:
             for key, value in filter.items():
-                query[f"metadata.{key}"] = prepare_metadata(self.serde.dumps, value)
+                query[f"metadata.{key}"] = dumps_metadata(value)
 
         if before is not None:
             query["checkpoint_id"] = {"$lt": before["configurable"]["checkpoint_id"]}
@@ -259,7 +259,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                     }
                 },
                 checkpoint=self.serde.loads_typed((doc["type"], doc["checkpoint"])),
-                metadata=prepare_metadata(self.serde.loads, doc["metadata"]),
+                metadata=loads_metadata(doc["metadata"]),
                 parent_config=(
                     {
                         "configurable": {
@@ -313,7 +313,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
-            "metadata": prepare_metadata(self.serde.dumps, metadata),
+            "metadata": dumps_metadata(metadata),
         }
         upsert_query = {
             "thread_id": thread_id,

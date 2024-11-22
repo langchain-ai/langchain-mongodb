@@ -1,26 +1,40 @@
 from typing import Any, Callable, Dict, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata
+from langgraph.checkpoint.serde.base import SerializerProtocol
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
+serde: SerializerProtocol = JsonPlusSerializer()
 
-def prepare_metadata(
-    prepare: Callable, metadata: Union[CheckpointMetadata, Any]
-) -> Union[bytes, Dict[str, Any]]:
-    """Recursively serialize or deserialize all values in metadata dictionary.
+def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
+    """Deserialize metadata document
 
     The CheckpointMetadata class itself cannot be stored directly in MongoDB,
     but as a dictionary it can. For efficient filtering in MongoDB,
     we keep dict keys as strings.
 
-    The `prepare` function is one of the methods, `dumps` or `loads`,
-    of :class:`~langgraph.checkpoint.serde.jsonplus.JsonPlusSerializer`.
-    On `dumps`, one goes from :class:`~langgraph.checkpoint.base.CheckpointMetadata` -> Dict[str, bytes]
-    On `loads`, one goes from `Dict[str, Any]` -> `CheckpointMetadata`.
+    metadata is stored in MongoDB collection with string keys and
+    serde serialized keys.
     """
     if isinstance(metadata, dict):
         output = dict()
         for key, value in metadata.items():
-            output[key] = prepare_metadata(prepare, value)
+            output[key] = loads_metadata(value)
         return output
     else:
-        return prepare(metadata)
+        return serde.loads(metadata)
+
+def dumps_metadata(
+    metadata: Union[CheckpointMetadata, Any]
+) -> Union[bytes, Dict[str, Any]]:
+    """Serialize all values in metadata dictionary.
+
+    Keep dict keys as strings for efficient filtering in MongoDB
+    """
+    if isinstance(metadata, dict):
+        output = dict()
+        for key, value in metadata.items():
+            output[key] = dumps_metadata(value)
+        return output
+    else:
+        return serde.dumps(metadata)
