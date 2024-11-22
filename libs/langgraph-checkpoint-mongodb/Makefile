@@ -4,8 +4,13 @@
 # TESTING AND COVERAGE
 ######################
 
-test tests:
-	poetry run pytest tests
+# Define a variable for the test file path.
+TEST_FILE ?= tests/unit_tests/
+integration_test integration_tests: TEST_FILE=tests/integration_tests/
+
+
+test tests integration_test integration_tests:
+	poetry run pytest $(TEST_FILE)
 
 ######################
 # LINTING AND FORMATTING
@@ -40,3 +45,5 @@ help:
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'
 	@echo 'test                         - run unit tests'
+	@echo 'integration_test             - run integration tests'
+	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
