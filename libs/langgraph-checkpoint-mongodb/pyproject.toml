@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "langgraph-checkpoint-mongodb"
-version = "0.1.0a0"
+version = "0.1.0a1"
 description = "Library with a MongoDB implementation of LangGraph checkpoint saver."
 authors = []
 license = "MIT"
