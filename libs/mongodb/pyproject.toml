@@ -30,21 +30,11 @@ python = ">=3.12"
 [tool.poetry.group.dev]
 optional = true
 
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.lint]
-optional = true
-
-[tool.poetry.group.integration_test]
-optional = true
-
 [tool.poetry.group.dev.dependencies]
 langchain = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/langchain"}
 langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
 langchain-text-splitters = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/text-splitters"}
-
-[tool.poetry.group.test.dependencies]
+# test
 pytest = "^7.3.0"
 freezegun = "^1.2.2"
 pytest-mock = "^3.10.0"
@@ -52,14 +42,12 @@ syrupy = "^4.0.2"
 pytest-watcher = "^0.3.4"
 pytest-asyncio = "^0.21.1"
 mongomock = "^4.2.0.post1"
-
-[tool.poetry.group.lint.dependencies]
+# lint
 ruff = ">=0.5"
 mypy = "^1.10"
 simsimd = "^5.0.0"
 codespell = "^2.2.0"
-
-[tool.poetry.group.integration_test.dependencies]
+# integration test
 langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
 langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
 pypdf = "^5.0.1"
@@ -80,5 +68,3 @@ select = ["E", "F", "I"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
-
-

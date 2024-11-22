@@ -2,9 +2,10 @@ import json
 import sys
 from typing import Dict
 
+LIB_DIRS = ["libs/mongodb", "libs/langchain-checkpoint-mongodb"]
+
 if __name__ == "__main__":
-    lib = sys.argv[1]  # library e.g.  libs/mongodb, libs/langchain-checkpoint-mongodb
-    files = sys.argv[2:] # changed files
+    files = sys.argv[1:] # changed files
 
     dirs_to_run: Dict[str, set] = {
         "lint": set(),
@@ -25,13 +26,21 @@ if __name__ == "__main__":
                 ".github/scripts/check_diff.py",
             )
         ):
-            # add lib if infra changes
-            dirs_to_run["test"].add(lib)
-            dirs_to_run["lint"].add(lib)
-            # or if any file changed in lib
-        if file.startswith(lib):
-            dirs_to_run["test"].add(lib)
-            dirs_to_run["lint"].add(lib)
+            # add all LANGCHAIN_DIRS for infra changes
+            dirs_to_run["test"].update(LIB_DIRS)
+
+        if any(file.startswith(dir_) for dir_ in LIB_DIRS):
+            for dir_ in LIB_DIRS:
+                if file.startswith(dir_):
+                    dirs_to_run["test"].add(dir_)
+                if "langgraph-checkpoint-mongodb/tests" not in file:
+                    dirs_to_run["lint"].add(dir_)
+        elif file.startswith("libs/"):
+            raise ValueError(
+                f"Unknown lib: {file}. check_diff.py likely needs "
+                "an update for this new library!"
+            )
+
     outputs = {
         "dirs-to-lint": list(dirs_to_run["lint"]),
         "dirs-to-test": list(dirs_to_run["test"]),

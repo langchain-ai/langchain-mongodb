@@ -829,7 +829,7 @@ tenacity = ">=8.1.0,!=8.4.0,<10"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/langchain"
 
 [[package]]
@@ -862,7 +862,7 @@ tenacity = ">=8.1.0,!=8.4.0,<10"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/community"
 
 [[package]]
@@ -890,7 +890,7 @@ typing-extensions = ">=4.7"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/core"
 
 [[package]]
@@ -911,7 +911,7 @@ tiktoken = ">=0.7,<1"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/partners/openai"
 
 [[package]]
@@ -930,7 +930,7 @@ langchain-core = "^0.3.15"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/text-splitters"
 
 [[package]]
@@ -2566,4 +2566,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "cefcb62a0f8396305d833d918522c2ad14f6600e6b736ab80e84c1a69a8638c5"
+content-hash = "a3ad4a424c3b998db93055c0f9684f12a978b30330caea956fa4312024d9c13c"

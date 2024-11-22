@@ -373,7 +373,7 @@ typing-extensions = ">=4.7"
 type = "git"
 url = "https://github.com/langchain-ai/langchain.git"
 reference = "HEAD"
-resolved_reference = "b3ee1f871348c0882416ba650d1cd7f2c2fd9696"
+resolved_reference = "f173b72e35979b842933774c9c4568c329a0ae8a"
 subdirectory = "libs/core"
 
 [[package]]
@@ -394,7 +394,7 @@ langgraph-sdk = "^0.1.32"
 type = "git"
 url = "https://github.com/langchain-ai/langgraph.git"
 reference = "HEAD"
-resolved_reference = "26ce731eab0b8497fde06560ed6747b314645ee9"
+resolved_reference = "3eedeac0d4d2cdce5fdaf5431083ffe4635502f0"
 subdirectory = "libs/langgraph"
 
 [[package]]
@@ -414,7 +414,7 @@ msgpack = "^1.1.0"
 type = "git"
 url = "https://github.com/langchain-ai/langgraph.git"
 reference = "HEAD"
-resolved_reference = "26ce731eab0b8497fde06560ed6747b314645ee9"
+resolved_reference = "3eedeac0d4d2cdce5fdaf5431083ffe4635502f0"
 subdirectory = "libs/checkpoint"
 
 [[package]]
@@ -1256,4 +1256,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9.0,<4.0"
-content-hash = "4721586ec6600416b6115e07cd153f085b3f252452e2cb0f4779b9e092a3682d"
+content-hash = "c910f1b1c4b864164623039f8a378da2cd11afe41edc7bffe57f29b67ceb89da"
