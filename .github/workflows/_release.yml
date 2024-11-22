@@ -71,7 +71,7 @@ jobs:
     needs:
       - build
     uses:
-      ./.github/workflows/_langchain-test_release.yml
+      ./.github/workflows/_test_release.yml
     permissions: write-all
     with:
       working-directory: ${{ inputs.working-directory }}
