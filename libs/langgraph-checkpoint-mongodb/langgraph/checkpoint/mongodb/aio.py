@@ -63,7 +63,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         >>>         config = {"configurable": {"thread_id": "1"}}
         >>>         input = 3
         >>>         output = await graph.ainvoke(input, config)
-        >>>        print(f"{input=}, {output=}")
+        >>>         print(f"{input=}, {output=}")
 
         >>> if __name__ == "__main__":
         >>>     asyncio.run(main())
