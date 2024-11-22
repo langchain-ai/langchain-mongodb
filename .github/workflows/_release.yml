@@ -11,8 +11,10 @@ on:
     inputs:
       working-directory:
         required: true
-        type: string
-        default: 'libs/mongodb'
+        options:
+          - libs/mongodb
+          - langgraph-checkpoint-mongodb
+        default: libs/mongodb
 
 env:
   PYTHON_VERSION: "3.11"
