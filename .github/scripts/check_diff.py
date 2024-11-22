@@ -2,7 +2,7 @@ import json
 import sys
 from typing import Dict
 
-LIB_DIRS = ["libs/mongodb", "libs/langchain-checkpoint-mongodb"]
+LIB_DIRS = ["libs/mongodb", "libs/langgraph-checkpoint-mongodb"]
 
 if __name__ == "__main__":
     files = sys.argv[1:] # changed files
@@ -26,7 +26,7 @@ if __name__ == "__main__":
                 ".github/scripts/check_diff.py",
             )
         ):
-            # add all LANGCHAIN_DIRS for infra changes
+            # add all LIB_DIRS for infra changes
             dirs_to_run["test"].update(LIB_DIRS)
 
         if any(file.startswith(dir_) for dir_ in LIB_DIRS):
