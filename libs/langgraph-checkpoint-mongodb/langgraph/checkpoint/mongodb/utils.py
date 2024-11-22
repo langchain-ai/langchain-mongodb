@@ -1,10 +1,11 @@
-from typing import Any, Callable, Dict, Union
+from typing import Any, Dict, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 serde: SerializerProtocol = JsonPlusSerializer()
+
 
 def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
     """Deserialize metadata document
@@ -24,8 +25,9 @@ def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
     else:
         return serde.loads(metadata)
 
+
 def dumps_metadata(
-    metadata: Union[CheckpointMetadata, Any]
+    metadata: Union[CheckpointMetadata, Any],
 ) -> Union[bytes, Dict[str, Any]]:
     """Serialize all values in metadata dictionary.
 
