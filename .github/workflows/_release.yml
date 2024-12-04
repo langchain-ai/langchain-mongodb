@@ -14,7 +14,7 @@ on:
         type: choice
         options:
           - libs/mongodb
-          - langgraph-checkpoint-mongodb
+          - libs/langgraph-checkpoint-mongodb
         default: libs/mongodb
         description: "From which folder this pipeline executes"
 
