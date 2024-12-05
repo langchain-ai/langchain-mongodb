@@ -167,7 +167,8 @@ jobs:
 
       - name: Run integration tests
         env:
-          MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
+          MONGODB_URI: ${{ secrets.MONGODB_ATLAS_URI }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: make integration_tests
         working-directory: ${{ inputs.working-directory }}
 

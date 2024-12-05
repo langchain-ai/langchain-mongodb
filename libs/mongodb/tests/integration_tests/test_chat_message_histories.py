@@ -10,7 +10,7 @@ DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_chat"
 
 # Replace these with your mongodb connection string
-connection_string = os.environ.get("MONGODB_ATLAS_URI", "")
+connection_string = os.environ.get("MONGODB_URI", "")
 
 
 def test_memory_with_message_store() -> None:

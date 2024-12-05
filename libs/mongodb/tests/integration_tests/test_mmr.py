@@ -11,7 +11,7 @@ from pymongo.collection import Collection
 
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
+CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_vectorstores"
 INDEX_NAME = "langchain-test-index-vectorstores"

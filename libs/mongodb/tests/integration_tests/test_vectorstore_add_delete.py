@@ -17,7 +17,7 @@ from langchain_mongodb.utils import oid_to_str
 
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
+CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 INDEX_NAME = "langchain-test-index-vectorstores"
 COLLECTION_NAME = "langchain_test_vectorstores"

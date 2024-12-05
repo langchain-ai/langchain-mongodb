@@ -13,7 +13,7 @@ from langchain_mongodb.cache import MongoDBAtlasSemanticCache, MongoDBCache
 
 from ..utils import ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
 
-CONN_STRING = os.environ.get("MONGODB_ATLAS_URI")
+CONN_STRING = os.environ.get("MONGODB_URI")
 INDEX_NAME = "langchain-test-index-semantic-cache"
 DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_cache"

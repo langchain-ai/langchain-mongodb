@@ -20,7 +20,7 @@ DIMENSIONS = 10
 @pytest.fixture
 def collection() -> Generator:
     """Depending on uri, this could point to any type of cluster."""
-    uri = os.environ.get("MONGODB_ATLAS_URI")
+    uri = os.environ.get("MONGODB_URI")
     client: MongoClient = MongoClient(uri)
     client[DB_NAME].create_collection(COLLECTION_NAME)
     clxn = client[DB_NAME][COLLECTION_NAME]

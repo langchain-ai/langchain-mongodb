@@ -16,7 +16,7 @@ from langchain_mongodb import index
 
 from ..utils import PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_URI")
+CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_chain_example"
 INDEX_NAME = "langchain-test-chain-example-vector-index"
@@ -61,7 +61,7 @@ def test_chain(
     Follows example in the docs: https://python.langchain.com/docs/how_to/hybrid/
 
     Requires OpenAI_API_KEY for embedding and chat model.
-    Requires INDEX_NAME to have been set up on MONGODB_ATLAS_URI
+    Requires INDEX_NAME to have been set up on MONGODB_URI
     """
 
     from langchain_openai import ChatOpenAI, OpenAIEmbeddings
