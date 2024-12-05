@@ -9,7 +9,8 @@ if __name__ == "__main__":
 
     dirs_to_run: Dict[str, set] = {
         "lint": set(),
-        "test": set(),
+        # TODO: remove before merging
+        "test": set(LIB_DIRS),
     }
 
     if len(files) == 300:
