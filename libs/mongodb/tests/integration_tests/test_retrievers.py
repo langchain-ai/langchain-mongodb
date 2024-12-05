@@ -164,10 +164,10 @@ def test_fulltext_retriever(
     )
 
     # Wait for the search index to complete.
-    stage = dict(index=SEARCH_INDEX_NAME, wildcard=dict(query="*", path=PAGE_CONTENT_FIELD, allowAnalyzedField=True))
+    search_content = dict(index=SEARCH_INDEX_NAME, wildcard=dict(query="*", path=PAGE_CONTENT_FIELD, allowAnalyzedField=True))
     n_docs = collection.count_documents({})
     while True:
-        results = collection.aggregate([stage])
+        results = collection.aggregate([{ "$search": search_content }])
         if len(list(results)) == n_docs:
             break
 
