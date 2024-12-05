@@ -1,5 +1,6 @@
 import os
 from typing import Generator, List
+from time import sleep
 
 import pytest
 from langchain_core.documents import Document
@@ -162,12 +163,13 @@ def test_fulltext_retriever(
         search_field=PAGE_CONTENT_FIELD,
     )
 
-    wait_until_complete = TIMEOUT
-    _wait_for_predicate(
-        predicate=lambda: _is_index_ready(collection, SEARCH_INDEX_NAME),
-        err=f"{SEARCH_INDEX_NAME=} did not complete in {wait_until_complete}!",
-        timeout=wait_until_complete,
-    )
+    # Wait for the search index to complete.
+    stage = dict(index=SEARCH_INDEX_NAME, wildcard=dict(query="*", path=PAGE_CONTENT_FIELD, allowAnalyzedField=True))
+    n_docs = collection.count_documents({})
+    while True:
+        results = collection.aggregate([stage])
+        if len(list(results)) == n_docs:
+            break
 
     query = "When was the last time I visited new orleans?"
     results = retriever.invoke(query)
