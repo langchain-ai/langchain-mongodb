@@ -11,6 +11,8 @@ from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
     create_vector_search_index,
+    _wait_for_predicate,
+    _is_index_ready
 )
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
@@ -158,6 +160,13 @@ def test_fulltext_retriever(
         collection=collection,
         search_index_name=SEARCH_INDEX_NAME,
         search_field=PAGE_CONTENT_FIELD,
+    )
+
+    wait_until_complete = TIMEOUT
+    _wait_for_predicate(
+        predicate=lambda: _is_index_ready(collection, SEARCH_INDEX_NAME),
+        err=f"{SEARCH_INDEX_NAME=} did not complete in {wait_until_complete}!",
+        timeout=wait_until_complete,
     )
 
     query = "When was the last time I visited new orleans?"
