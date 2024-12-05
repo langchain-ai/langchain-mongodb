@@ -1,5 +1,4 @@
 import os
-from time import monotonic, sleep
 from typing import Generator, List
 
 import pytest
@@ -98,7 +97,7 @@ def indexed_vectorstore(
 ) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Return a VectorStore with example document embeddings indexed."""
 
-    vectorstore = MongoDBAtlasVectorSearch(
+    vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
         embedding=embedding_openai,
         index_name=VECTOR_INDEX_NAME,
@@ -107,28 +106,12 @@ def indexed_vectorstore(
 
     vectorstore.add_documents(example_documents)
 
-    n_docs = collection.count_documents({})
-
-    start = monotonic()
-    found = False
-    while monotonic() - start <= TIMEOUT:
-        if (
-            len(vectorstore.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
-            == n_docs
-        ):
-            found = True
-            break
-        else:
-            sleep(INTERVAL)
-    if not found:
-        raise TimeoutError("Failed to update index")
-
     yield vectorstore
 
     vectorstore.collection.delete_many({})
 
 
-def test_vector_retriever(indexed_vectorstore: MongoDBAtlasVectorSearch) -> None:
+def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test VectorStoreRetriever"""
     retriever = indexed_vectorstore.as_retriever()
 
@@ -142,7 +125,7 @@ def test_vector_retriever(indexed_vectorstore: MongoDBAtlasVectorSearch) -> None
     assert "New Orleans" in results[0].page_content
 
 
-def test_hybrid_retriever(indexed_vectorstore: MongoDBAtlasVectorSearch) -> None:
+def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
@@ -161,7 +144,7 @@ def test_hybrid_retriever(indexed_vectorstore: MongoDBAtlasVectorSearch) -> None
 
 
 def test_fulltext_retriever(
-    indexed_vectorstore: MongoDBAtlasVectorSearch,
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
     """Test result of performing fulltext search.
 
