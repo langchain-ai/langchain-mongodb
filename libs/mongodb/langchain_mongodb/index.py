@@ -170,7 +170,7 @@ def _is_index_ready(collection: Collection, index_name: str) -> bool:
         bool : True if the index is present and READY false otherwise
     """
     for index in collection.list_search_indexes(index_name):
-        if index["type"] == "vectorSearch" and index["status"] == "READY":
+        if index["status"] == "READY":
             return True
     return False
 
