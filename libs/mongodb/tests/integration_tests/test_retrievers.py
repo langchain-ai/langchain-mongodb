@@ -11,9 +11,7 @@ from pymongo.collection import Collection
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
-    create_vector_search_index,
-    _wait_for_predicate,
-    _is_index_ready
+    create_vector_search_index
 )
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
