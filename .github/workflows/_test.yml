@@ -52,9 +52,9 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_ATLAS_URI }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
+          # if [[ "${{ github.event_name }}" == "push" ]]; then
             make integration_tests
-          fi
+          #fi
         working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files
