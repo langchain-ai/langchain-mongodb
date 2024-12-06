@@ -20,6 +20,7 @@ jobs:
     name: "make lint #${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         # Only lint on the min and max supported Python versions.
         # It's extremely unlikely that there's a lint issue on any version in between
