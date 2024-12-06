@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["*"]
   pull_request:
 
 # If another push to the same PR or branch happens while this workflow is still running,
@@ -52,6 +52,7 @@ jobs:
     needs: [ build ]
     if: ${{ needs.build.outputs.dirs-to-lint != '[]' }}
     strategy:
+      fail-fast: false
       matrix:
         working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint) }}
     uses: ./.github/workflows/_lint.yml
@@ -64,6 +65,7 @@ jobs:
     needs: [ build ]
     if: ${{ needs.build.outputs.dirs-to-test != '[]' }}
     strategy:
+      fail-fast: false
       matrix:
         working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
     uses: ./.github/workflows/_test.yml
