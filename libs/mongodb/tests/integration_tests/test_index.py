@@ -22,10 +22,14 @@ def collection() -> Generator:
     """Depending on uri, this could point to any type of cluster."""
     uri = os.environ.get("MONGODB_URI")
     client: MongoClient = MongoClient(uri)
-    client[DB_NAME].create_collection(COLLECTION_NAME)
+    if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
+    else:
+        clxn = client[DB_NAME][COLLECTION_NAME]
     clxn = client[DB_NAME][COLLECTION_NAME]
+    clxn.delete_many({})
     yield clxn
-    clxn.drop()
+    clxn.delete_many({})
 
 
 def test_search_index_drop_add_delete_commands(collection: Collection) -> None:
