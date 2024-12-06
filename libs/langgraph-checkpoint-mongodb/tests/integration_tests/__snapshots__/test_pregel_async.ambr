@@ -9,7 +9,7 @@
   	retriever_two --> qa;
   	rewrite_query --> analyzer_one;
   	rewrite_query -.-> retriever_two;
-
+  
   '''
 # ---
 # name: test_in_one_fan_out_state_graph_waiting_edge_custom_state_class_pydantic2[mongodb_aio].1
@@ -132,7 +132,7 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-
+  
   '''
 # ---
 # name: test_weather_subgraph[mongodb_aio]
@@ -157,6 +157,5 @@
   	classDef default fill:#f2f0ff,line-height:1.2
   	classDef first fill-opacity:0
   	classDef last fill:#bfb6fc
-
   '''
 # ---
