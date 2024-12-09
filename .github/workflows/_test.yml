@@ -52,12 +52,12 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_ATLAS_URI }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # if [[ "${{ github.event_name }}" == "push" ]]; then
+          if [[ "${{ github.event_name }}" == "push" ]]; then
             # Only run on the min python version.
             if [[ "${{ matrix.python-version }}" == "3.9" ]]; then
               make integration_tests
             fi
-          #fi
+          fi
         working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files
