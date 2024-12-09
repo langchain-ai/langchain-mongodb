@@ -303,6 +303,6 @@ def _wait_until(
             return retval
 
         if time.time() - start > timeout:
-            raise TimeoutError("Didn't ever %s" % success_description)
+            raise TimeoutError(f"Didn't ever {success_description}")
 
         time.sleep(interval)

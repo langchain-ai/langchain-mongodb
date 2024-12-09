@@ -105,6 +105,8 @@ from .messages import (
     _AnyIdToolMessage,
 )
 
+# mypy: ignore-errors
+
 
 # define these objects to avoid importing langchain_core.agents
 # and therefore avoid relying on core Pydantic version

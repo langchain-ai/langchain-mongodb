@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from typing import Any, Iterator, List, Optional, cast
 
@@ -8,11 +10,11 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 
 
 class FakeChatModel(GenericFakeChatModel):
-    messages: list[BaseMessage]
+    messages: list[BaseMessage]  # type:ignore[assignment]
 
     i: int = 0
 
-    def bind_tools(self, functions: list):
+    def bind_tools(self, tools: list) -> FakeChatModel:  # type:ignore[override]
         return self
 
     def _generate(

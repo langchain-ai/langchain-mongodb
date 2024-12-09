@@ -101,6 +101,8 @@ from .messages import (
     _AnyIdToolMessage,
 )
 
+# mypy: ignore-errors
+
 pytestmark = pytest.mark.anyio
 
 

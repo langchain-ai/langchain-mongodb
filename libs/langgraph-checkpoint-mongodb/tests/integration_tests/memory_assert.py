@@ -38,11 +38,11 @@ class MemorySaverAssertImmutable(MemorySaver):
 
     def put(
         self,
-        config: dict,
+        config: RunnableConfig,
         checkpoint: Checkpoint,
         metadata: CheckpointMetadata,
         new_versions: ChannelVersions,
-    ) -> None:
+    ) -> RunnableConfig:
         if self.put_sleep:
             import time
 
@@ -53,12 +53,12 @@ class MemorySaverAssertImmutable(MemorySaver):
         if saved := super().get(config):
             assert (
                 self.serde.loads_typed(
-                    self.storage_for_copies[thread_id][checkpoint_ns][saved["id"]]
+                    self.storage_for_copies[thread_id][checkpoint_ns][saved["id"]]  # type:ignore[arg-type]
                 )
                 == saved
             )
         self.storage_for_copies[thread_id][checkpoint_ns][checkpoint["id"]] = (
-            self.serde.dumps_typed(copy_checkpoint(checkpoint))
+            self.serde.dumps_typed(copy_checkpoint(checkpoint))  # type:ignore[assignment]
         )
         # call super to write checkpoint
         return super().put(config, checkpoint, metadata, new_versions)
@@ -78,7 +78,7 @@ class MemorySaverAssertCheckpointMetadata(MemorySaver):
         checkpoint: Checkpoint,
         metadata: CheckpointMetadata,
         new_versions: ChannelVersions,
-    ) -> None:
+    ) -> RunnableConfig:
         """The implementation of put() merges config["configurable"] (a run's
         configurable fields) with the metadata field. The state of the
         checkpoint metadata can be asserted to confirm that the run's
@@ -115,7 +115,12 @@ class MemorySaverAssertCheckpointMetadata(MemorySaver):
         new_versions: ChannelVersions,
     ) -> RunnableConfig:
         return await asyncio.get_running_loop().run_in_executor(
-            None, self.put, config, checkpoint, metadata, new_versions
+            None,
+            self.put,
+            config,
+            checkpoint,
+            metadata,
+            new_versions,
         )
 
 
