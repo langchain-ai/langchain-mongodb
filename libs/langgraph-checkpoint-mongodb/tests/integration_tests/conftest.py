@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncGenerator, Generator, Optional
 from uuid import UUID
 
 import pytest
@@ -11,7 +13,6 @@ from pytest_mock import MockerFixture
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
-from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
 pytest.register_assert_rewrite("tests.memory_assert")
@@ -25,7 +26,7 @@ SHOULD_CHECK_SNAPSHOTS = IS_LANGCHAIN_CORE_030_OR_GREATER
 
 
 @pytest.fixture
-def anyio_backend():
+def anyio_backend() -> str:
     return "asyncio"
 
 
@@ -41,14 +42,14 @@ def deterministic_uuids(mocker: MockerFixture) -> MockerFixture:
 
 
 @pytest.fixture(scope="function")
-def checkpointer_memory():
+def checkpointer_memory() -> Generator[BaseCheckpointSaver, None]:
     from .memory_assert import MemorySaverAssertImmutable
 
     yield MemorySaverAssertImmutable()
 
 
 @pytest.fixture
-def checkpointer_mongodb():
+def checkpointer_mongodb() -> Generator[BaseCheckpointSaver, None]:
     """Fresh checkpointer without any memories."""
     with MongoDBSaver.from_conn_string(
         os.environ.get("MONGODB_URI", "mongodb://localhost:27017"),
@@ -60,7 +61,7 @@ def checkpointer_mongodb():
 
 
 @asynccontextmanager
-async def _checkpointer_mongodb_aio():
+async def _checkpointer_mongodb_aio() -> AsyncGenerator[AsyncMongoDBSaver, None]:
     async with AsyncMongoDBSaver.from_conn_string(
         os.environ.get("MONGODB_URI", "mongodb://localhost:27017"),
         os.environ.get("DATABASE_NAME", "langchain_checkpoints_db"),
@@ -73,7 +74,7 @@ async def _checkpointer_mongodb_aio():
 @asynccontextmanager
 async def awith_checkpointer(
     checkpointer_name: Optional[str],
-) -> AsyncIterator[BaseCheckpointSaver]:
+) -> Any:
     if checkpointer_name is None:
         yield None
     elif checkpointer_name == "memory":
@@ -88,12 +89,12 @@ async def awith_checkpointer(
 
 
 @pytest.fixture(scope="function")
-def store_in_memory():
+def store_in_memory() -> Generator[InMemoryStore]:
     yield InMemoryStore()
 
 
 @asynccontextmanager
-async def awith_store(store_name: Optional[str]) -> AsyncIterator[BaseStore]:
+async def awith_store(store_name: Optional[str]) -> Any:
     if store_name is None:
         yield None
     elif store_name == "in_memory":

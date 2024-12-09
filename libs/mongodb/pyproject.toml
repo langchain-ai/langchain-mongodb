@@ -63,8 +63,15 @@ asyncio_mode = "auto"
 [tool.mypy]
 disallow_untyped_defs = "True"
 
-[tool.ruff.lint]
-select = ["E", "F", "I"]
+[tool.ruff]
+lint.select = [
+  "E",  # pycodestyle
+  "F",  # Pyflakes
+  "UP", # pyupgrade
+  "B",  # flake8-bugbear
+  "I",  # isort
+]
+lint.ignore = ["E501", "B008", "UP007", "UP006"]
 
 [tool.coverage.run]
 omit = ["tests/*"]

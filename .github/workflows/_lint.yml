@@ -96,7 +96,7 @@ jobs:
             ${{ env.WORKDIR }}/.mypy_cache_test
           key: mypy-test-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ inputs.working-directory }}-${{ hashFiles(format('{0}/poetry.lock', inputs.working-directory)) }}
 
-#      - name: Analysing the code with our lint
-#        working-directory: ${{ inputs.working-directory }}
-#        run: |
-#          make lint_tests
+      - name: Analysing the code with our lint
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          make lint_tests
