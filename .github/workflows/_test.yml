@@ -18,6 +18,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - "3.9"
@@ -52,7 +53,10 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            make integration_tests
+            # Only run on the min python version.
+            if [[ "${{ matrix.python-version }}" == "3.9" ]]; then
+              make integration_tests
+            fi
           fi
         working-directory: ${{ inputs.working-directory }}
 
