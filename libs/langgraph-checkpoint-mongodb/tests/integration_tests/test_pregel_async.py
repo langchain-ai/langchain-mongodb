@@ -9423,7 +9423,7 @@ async def test_nested_graph(snapshot: SnapshotAssertion) -> None:
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_ASYNC)
-@pytest.mark.parametrize('Test is flaky')
+@pytest.mark.skip('Test is flaky')
 async def test_stream_subgraphs_during_execution(checkpointer_name: str) -> None:
     class InnerState(TypedDict):
         my_key: Annotated[str, operator.add]
