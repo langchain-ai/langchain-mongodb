@@ -10635,7 +10635,6 @@ def test_nested_graph(snapshot: SnapshotAssertion) -> None:
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
-@pytest.mark.skip("Test is flaky")
 def test_stream_subgraphs_during_execution(
     request: pytest.FixtureRequest, checkpointer_name: str
 ) -> None:
@@ -12902,7 +12901,6 @@ def test_send_to_nested_graphs(
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
-@pytest.mark.skip('Test is flaky')
 def test_weather_subgraph(
     request: pytest.FixtureRequest, checkpointer_name: str, snapshot: SnapshotAssertion
 ) -> None:
