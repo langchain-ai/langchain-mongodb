@@ -6619,7 +6619,7 @@ def test_state_graph_packets(
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
-@pytest.mark.skip('Interrupt does not work with transactions')
+@pytest.mark.skip("Interrupt does not work with transactions")
 def test_message_graph(
     snapshot: SnapshotAssertion,
     deterministic_uuids: MockerFixture,
@@ -7360,7 +7360,7 @@ def test_message_graph(
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
-@pytest.mark.skip('Interrupt does not work with transactions')
+@pytest.mark.skip("Interrupt does not work with transactions")
 def test_root_graph(
     deterministic_uuids: MockerFixture,
     request: pytest.FixtureRequest,

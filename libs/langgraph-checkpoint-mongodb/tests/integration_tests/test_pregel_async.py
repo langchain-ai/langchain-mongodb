@@ -9425,7 +9425,7 @@ async def test_nested_graph(snapshot: SnapshotAssertion) -> None:
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_ASYNC)
-@pytest.mark.skip('Test is flaky')
+@pytest.mark.skip("Test is flaky")
 async def test_stream_subgraphs_during_execution(checkpointer_name: str) -> None:
     class InnerState(TypedDict):
         my_key: Annotated[str, operator.add]
@@ -11633,7 +11633,7 @@ async def test_send_to_nested_graphs(checkpointer_name: str) -> None:
     reason="Python 3.11+ is required for async contextvars support",
 )
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_ASYNC)
-@pytest.mark.skip('Test is flaky')
+@pytest.mark.skip("Test is flaky")
 async def test_weather_subgraph(
     checkpointer_name: str, snapshot: SnapshotAssertion
 ) -> None:
