@@ -3,7 +3,7 @@ set -eu
 
 echo "Starting the container"
 
-IMAGE=artifactory.corp.mongodb.com/dockerhub/mongodb/mongodb-atlas-local:latest
+IMAGE=mongodb-atlas-local:latest
 podman pull $IMAGE
 
 CONTAINER_ID=$(podman run --rm -d -e DO_NOT_TRACK=1 -P --health-cmd "/usr/local/bin/runner healthcheck" $IMAGE)
