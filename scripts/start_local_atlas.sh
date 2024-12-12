@@ -6,36 +6,12 @@ echo "Starting the container"
 IMAGE=mongodb/mongodb-atlas-local:latest
 podman pull $IMAGE
 
-CONTAINER_ID=$(podman run --rm -d -e DO_NOT_TRACK=1 -P $IMAGE)
+CONTAINER_ID=$(podman run --rm -d -e DO_NOT_TRACK=1 --name mongodb_atlas_local -P $IMAGE)
 
 function wait() {
   CONTAINER_ID=$1
   echo "waiting for container to become healthy..."
-  podman healthcheck run "$CONTAINER_ID"
-  for _ in $(seq 600); do
-      STATE=$(podman inspect -f '{{ .State.Health.Status }}' "$CONTAINER_ID")
-
-      case $STATE in
-          healthy)
-          echo "container is healthy"
-          return 0
-          ;;
-          unhealthy)
-          echo "container is unhealthy"
-          podman logs "$CONTAINER_ID"
-          stop
-          exit 1
-          ;;
-          *)
-          echo "Unrecognized state $STATE"
-          sleep 1
-      esac
-  done
-
-  echo "container did not get healthy within 120 seconds, quitting"
   podman logs mongodb_atlas_local
-  stop
-  exit 2
 }
 
 wait "$CONTAINER_ID"
