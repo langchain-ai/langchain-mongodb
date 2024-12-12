@@ -165,9 +165,14 @@ jobs:
         run: make tests
         working-directory: ${{ inputs.working-directory }}
 
+      - name: Start local Atlas
+        run: bash scripts/start_local_atlas.sh
+
+      - name: Get MongoDB URI
+        run: cat .local_atlas_uri >> $GITHUB_ENV
+
       - name: Run integration tests
         env:
-          MONGODB_URI: ${{ secrets.MONGODB_ATLAS_URI }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: make integration_tests
         working-directory: ${{ inputs.working-directory }}
