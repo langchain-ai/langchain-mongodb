@@ -6,7 +6,7 @@ echo "Starting the container"
 IMAGE=mongodb/mongodb-atlas-local:latest
 podman pull $IMAGE
 
-CONTAINER_ID=$(podman run --rm -d -e DO_NOT_TRACK=1 -P --health-cmd "/usr/local/bin/runner healthcheck" $IMAGE)
+CONTAINER_ID=$(podman run --rm -d -e DO_NOT_TRACK=1 -P $IMAGE)
 
 function wait() {
   CONTAINER_ID=$1
