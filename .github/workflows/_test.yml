@@ -48,9 +48,11 @@ jobs:
           make test
 
       - name: Start local Atlas
+        working-directory: .
         run: bash scripts/start_local_atlas.sh
 
       - name: Get MongoDB URI
+        working-directory: .
         run: cat .local_atlas_uri >> $GITHUB_ENV
 
       - name: Run integration tests

@@ -1,3 +1,6 @@
+#!/bin/bash
+set -eu
+
 echo "Starting the container"
 
 IMAGE=artifactory.corp.mongodb.com/dockerhub/mongodb/mongodb-atlas-local:latest
