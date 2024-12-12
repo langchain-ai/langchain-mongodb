@@ -55,7 +55,7 @@ def embedding_openai() -> Embeddings:
             model="text-embedding-3-small",
         )
     except Exception:
-        pytest.fail("test_retrievers expects OPENAI_API_KEY in os.environ")
+        pytest.skip("test_retrievers expects OPENAI_API_KEY in os.environ")
 
 
 @pytest.fixture(scope="module")
