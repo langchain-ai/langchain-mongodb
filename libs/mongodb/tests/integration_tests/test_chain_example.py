@@ -51,7 +51,7 @@ def collection() -> Collection:
 
 
 @pytest.mark.skipif(
-    os.environ.get("OPENAI_API_KEY") is not None,
+    not os.environ.get("OPENAI_API_KEY"),
     reason="Requires OpenAI for chat responses.",
 )
 def test_chain(
