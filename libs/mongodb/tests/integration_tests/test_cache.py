@@ -8,9 +8,9 @@ from langchain_core.globals import get_llm_cache, set_llm_cache
 from langchain_core.load.dump import dumps
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, Generation, LLMResult
-
-from pymongo.collection import Collection
 from pymongo import MongoClient
+from pymongo.collection import Collection
+
 from langchain_mongodb.cache import MongoDBAtlasSemanticCache, MongoDBCache
 from langchain_mongodb.index import (
     create_vector_search_index,
@@ -25,6 +25,7 @@ COLLECTION = "langchain_test_cache"
 
 DIMENSIONS = 1536  # Meets OpenAI model
 TIMEOUT = 60.0
+
 
 def random_string() -> str:
     return str(uuid.uuid4())
@@ -47,7 +48,7 @@ def collection() -> Collection:
             index_name=INDEX_NAME,
             dimensions=DIMENSIONS,
             path="embedding",
-            filters=['llm_string'],
+            filters=["llm_string"],
             similarity="cosine",
             wait_until_complete=TIMEOUT,
         )

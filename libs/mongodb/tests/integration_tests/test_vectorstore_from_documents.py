@@ -10,9 +10,11 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
 from pymongo.collection import Collection
+
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
+
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
 CONNECTION_STRING = os.environ.get("MONGODB_URI")

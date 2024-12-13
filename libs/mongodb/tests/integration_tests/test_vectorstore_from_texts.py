@@ -14,6 +14,7 @@ from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
+
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
 CONNECTION_STRING = os.environ.get("MONGODB_URI")
@@ -40,7 +41,7 @@ def collection() -> Collection:
             index_name=INDEX_NAME,
             dimensions=DIMENSIONS,
             path="embedding",
-            filters=['c'],
+            filters=["c"],
             similarity="cosine",
             wait_until_complete=60,
         )
