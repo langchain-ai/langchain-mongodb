@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Generator, List
+from typing import List
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document

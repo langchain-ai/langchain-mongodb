@@ -21,3 +21,6 @@ export CONN_STRING="mongodb://127.0.0.1:$EXPOSED_PORT/?directConnection=true"
 SCRIPT_DIR=$(realpath "$(dirname ${BASH_SOURCE[0]})")
 ROOT_DIR=$(dirname $SCRIPT_DIR)
 echo "MONGODB_URI=mongodb://127.0.0.1:$EXPOSED_PORT/?directConnection=true" > $ROOT_DIR/.local_atlas_uri
+
+# Sleep for a bit to let all services start.
+sleep 5
