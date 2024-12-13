@@ -9,7 +9,12 @@ from langchain_core.load.dump import dumps
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, Generation, LLMResult
 
+from pymongo.collection import Collection
+from pymongo import MongoClient
 from langchain_mongodb.cache import MongoDBAtlasSemanticCache, MongoDBCache
+from langchain_mongodb.index import (
+    create_vector_search_index,
+)
 
 from ..utils import ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
 
@@ -18,21 +23,48 @@ INDEX_NAME = "langchain-test-index-semantic-cache"
 DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_cache"
 
+DIMENSIONS = 1536  # Meets OpenAI model
+TIMEOUT = 60.0
 
 def random_string() -> str:
     return str(uuid.uuid4())
 
 
+@pytest.fixture(scope="module")
+def collection() -> Collection:
+    """A Collection with both a Vector and a Full-text Search Index"""
+    client: MongoClient = MongoClient(CONN_STRING)
+    if COLLECTION not in client[DATABASE].list_collection_names():
+        clxn = client[DATABASE].create_collection(COLLECTION)
+    else:
+        clxn = client[DATABASE][COLLECTION]
+
+    clxn.delete_many({})
+
+    if not any([INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
+        create_vector_search_index(
+            collection=clxn,
+            index_name=INDEX_NAME,
+            dimensions=DIMENSIONS,
+            path="embedding",
+            filters=['llm_string'],
+            similarity="cosine",
+            wait_until_complete=TIMEOUT,
+        )
+
+    return clxn
+
+
 def llm_cache(cls: Any) -> BaseCache:
     set_llm_cache(
         cls(
-            embedding=ConsistentFakeEmbeddings(dimensionality=1536),
+            embedding=ConsistentFakeEmbeddings(dimensionality=DIMENSIONS),
             connection_string=CONN_STRING,
             collection_name=COLLECTION,
             database_name=DATABASE,
             index_name=INDEX_NAME,
             score_threshold=0.5,
-            wait_until_ready=15.0,
+            wait_until_ready=TIMEOUT,
         )
     )
     assert get_llm_cache()
@@ -101,6 +133,7 @@ def test_mongodb_cache(
     prompt: Union[str, List[BaseMessage]],
     llm: Union[str, FakeLLM, FakeChatModel],
     response: List[Generation],
+    collection: Collection,
 ) -> None:
     llm_cache(cacher)
     if remove_score:
@@ -136,6 +169,7 @@ def test_mongodb_cache(
 def test_mongodb_atlas_cache_matrix(
     prompts: List[str],
     generations: List[List[str]],
+    collection: Collection,
 ) -> None:
     llm_cache(MongoDBAtlasSemanticCache)
     llm = FakeLLM()
