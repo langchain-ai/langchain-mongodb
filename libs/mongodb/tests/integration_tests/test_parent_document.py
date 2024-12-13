@@ -32,13 +32,12 @@ TIMEOUT = 60.0
 def embedding_model() -> Embeddings:
     from langchain_openai import OpenAIEmbeddings
 
-    try:
-        return OpenAIEmbeddings(
-            openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-            model="text-embedding-3-small",
-        )
-    except Exception:
+    if not os.environ.get("OPENAI_API_KEY"):
         return ConsistentFakeEmbeddings(DIMENSIONS)
+    return OpenAIEmbeddings(
+        openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
+        model="text-embedding-3-small",
+    )
 
 
 def test_1clxn_retriever(

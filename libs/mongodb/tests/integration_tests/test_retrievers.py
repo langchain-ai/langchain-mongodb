@@ -47,8 +47,8 @@ def example_documents() -> List[Document]:
 def embedding_openai() -> Embeddings:
     from langchain_openai import OpenAIEmbeddings
 
-    if os.environ.get("OPENAI_API_KEY") is None:
-         pytest.skip("test_retrievers expects OPENAI_API_KEY in os.environ")
+    if not os.environ.get("OPENAI_API_KEY"):
+        pytest.skip("test_retrievers expects OPENAI_API_KEY in os.environ")
 
     from langchain_openai import OpenAIEmbeddings
 
