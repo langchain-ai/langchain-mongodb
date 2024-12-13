@@ -45,8 +45,6 @@ def example_documents() -> List[Document]:
 
 @pytest.fixture(scope="module")
 def embedding_openai() -> Embeddings:
-    from langchain_openai import OpenAIEmbeddings
-
     if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("test_retrievers expects OPENAI_API_KEY in os.environ")
 
