@@ -2,7 +2,7 @@
 
 We welcome contributions to this project! Please follow the following guidance to setup the project for development and start contributing.
 
-### Folk and clone the repository
+### Fork and clone the repository
 
 To contribute to this project, please follow the ["fork and pull request"](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) workflow. Please do not try to push directly to this repo unless you are a maintainer.
 
