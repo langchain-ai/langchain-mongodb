@@ -272,10 +272,15 @@ jobs:
 
       - name: Create Release
         uses: ncipollo/release-action@v1
+        id: create-release
         with:
-          artifacts: "dist/*"
+          artifacts: "${{ inputs.working-directory }}/dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
           tag: ${{ inputs.working-directory }}/v${{ needs.build.outputs.version }}
           commit: main
+
+      - name: Add github release url to summary
+        run: |
+          echo "GitHub Release: ${{ steps.create-release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
