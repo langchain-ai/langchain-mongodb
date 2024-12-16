@@ -2,7 +2,7 @@ import json
 import sys
 from typing import Dict
 
-LIB_DIRS = ["libs/mongodb", "libs/langgraph-checkpoint-mongodb"]
+LIB_DIRS = ["libs/langchain-mongodb", "libs/langgraph-checkpoint-mongodb"]
 
 if __name__ == "__main__":
     files = sys.argv[1:] # changed files

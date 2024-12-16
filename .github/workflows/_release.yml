@@ -13,9 +13,9 @@ on:
         required: true
         type: choice
         options:
-          - libs/mongodb
+          - libs/langchain-mongodb
           - libs/langgraph-checkpoint-mongodb
-        default: libs/mongodb
+        default: libs/langchain-mongodb
         description: "From which folder this pipeline executes"
 
 env:
