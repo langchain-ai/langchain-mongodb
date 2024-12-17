@@ -9,10 +9,11 @@
 ## Changes in langchain-mongodb 0.3 (2024/12/13)
 
 - Added support for `MongoDBAtlasParentDocumentRetriever`.
+- Migrated to https://github.com/langchain-ai/langchain-mongodb.
 
 ## Changes in langgraph-checkpoint-mongodb 0.1 (2024/12/13)
 
-- Initial release, adds support for `MongoDBSaver`.
+- Initial release, added support for `MongoDBSaver`.
 
 ## Changes in langchain-mongodb 0.2 (2024/09/13)
 
@@ -20,4 +21,4 @@
 
 ## Changes in langchain-mongodb 0.1 (2024/02/29)
 
-- Initial release, adds support for `MongoDBAtlasVectorSearch`.
+- Initial release, added support for `MongoDBAtlasVectorSearch`.
