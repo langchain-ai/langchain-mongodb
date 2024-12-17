@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from unittest.mock import patch
 
@@ -8,25 +7,22 @@ from pymongo import MongoClient
 
 from langchain_mongodb.indexes import MongoDBRecordManager
 
-CONNECTION_STRING = os.environ["MONGODB_URI"]
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_docstore"
 NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
 
 
 @pytest.fixture
-def manager() -> MongoDBRecordManager:
+def manager(client: MongoClient) -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    client: MongoClient = MongoClient(CONNECTION_STRING)
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
     return document_manager
 
 
 @pytest_asyncio.fixture
-async def amanager() -> MongoDBRecordManager:
+async def amanager(client: MongoClient) -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    client: MongoClient = MongoClient(CONNECTION_STRING)
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
     return document_manager

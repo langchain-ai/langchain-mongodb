@@ -1,4 +1,3 @@
-import os
 from typing import Generator, List, Optional
 
 import pytest
@@ -18,10 +17,8 @@ DIMENSIONS = 10
 
 
 @pytest.fixture
-def collection() -> Generator:
+def collection(client: MongoClient) -> Generator:
     """Depending on uri, this could point to any type of cluster."""
-    uri = os.environ.get("MONGODB_URI")
-    client: MongoClient = MongoClient(uri)
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
     else:

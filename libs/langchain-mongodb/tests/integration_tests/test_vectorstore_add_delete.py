@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any, Dict, List
 
 import pytest  # type: ignore[import-not-found]
@@ -17,7 +16,6 @@ from langchain_mongodb.utils import oid_to_str
 
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 INDEX_NAME = "langchain-test-index-vectorstores"
 COLLECTION_NAME = "langchain_test_vectorstores"
@@ -25,9 +23,8 @@ DIMENSIONS = 5
 
 
 @pytest.fixture(scope="module")
-def collection() -> Collection:
-    test_client: MongoClient = MongoClient(CONNECTION_STRING)
-    return test_client[DB_NAME][COLLECTION_NAME]
+def collection(client: MongoClient) -> Collection:
+    return client[DB_NAME][COLLECTION_NAME]
 
 
 @pytest.fixture(scope="module")
