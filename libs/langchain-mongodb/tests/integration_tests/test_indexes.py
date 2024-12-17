@@ -1,5 +1,5 @@
-from datetime import datetime
 import os
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -7,17 +7,17 @@ import pytest_asyncio
 
 from langchain_mongodb.indexes import MongoDBRecordManager
 
-
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
+CONNECTION_STRING = os.environ["MONGODB_URI"]
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_docstore"
 NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
+
 
 @pytest.fixture
 def manager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
     document_manager = MongoDBRecordManager(
-        mongodb_url=CONNECTION_STRING,
+        connection_string=CONNECTION_STRING,
         db_name=DB_NAME,
         collection_name=COLLECTION_NAME,
     )
@@ -28,7 +28,7 @@ def manager() -> MongoDBRecordManager:
 async def amanager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
     document_manager = MongoDBRecordManager(
-        mongodb_url=CONNECTION_STRING,
+        connection_string=CONNECTION_STRING,
         db_name=DB_NAME,
         collection_name=COLLECTION_NAME,
     )

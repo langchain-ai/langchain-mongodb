@@ -7,8 +7,9 @@ def _get_pymongo_client(mongodb_url: str, **kwargs: Any) -> Any:
     """Get MongoClient for sync operations from the mongodb_url,
     otherwise raise error."""
     from pymongo import MongoClient
+
     try:
-        client = MongoClient(mongodb_url, **kwargs)
+        client: MongoClient = MongoClient(mongodb_url, **kwargs)
     except ValueError as e:
         raise ImportError(
             f"MongoClient string provided is not in proper format. " f"Got error: {e} "
@@ -20,8 +21,9 @@ def _get_motor_client(mongodb_url: str, **kwargs: Any) -> Any:
     """Get AsyncIOMotorClient for async operations from the mongodb_url,
     otherwise raise error."""
     from motor.motor_asyncio import AsyncIOMotorClient
+
     try:
-        client = AsyncIOMotorClient(mongodb_url, **kwargs)
+        client: AsyncIOMotorClient = AsyncIOMotorClient(mongodb_url, **kwargs)
     except ValueError as e:
         raise ImportError(
             f"AsyncIOMotorClient string provided is not in proper format. "
