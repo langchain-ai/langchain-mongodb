@@ -17,7 +17,7 @@ NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
 @pytest.fixture
 def manager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    client = MongoClient(CONNECTION_STRING)
+    client: MongoClient = MongoClient(CONNECTION_STRING)
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
     return document_manager
@@ -26,7 +26,7 @@ def manager() -> MongoDBRecordManager:
 @pytest_asyncio.fixture
 async def amanager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    client = MongoClient(CONNECTION_STRING)
+    client: MongoClient = MongoClient(CONNECTION_STRING)
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
     return document_manager
@@ -81,7 +81,7 @@ def test_update_timestamp(manager: MongoDBRecordManager) -> None:
 async def test_aupdate_timestamp(amanager: MongoDBRecordManager) -> None:
     """Test asynchronously updating records with timestamps in MongoDB."""
     with patch.object(
-        amanager, "aget_time", return_value=datetime(2024, 2, 23).timestamp()
+        amanager, "get_time", return_value=datetime(2024, 2, 23).timestamp()
     ):
         await amanager.aupdate(["key1"])
 
@@ -166,19 +166,19 @@ async def test_alist_keys(amanager: MongoDBRecordManager) -> None:
     """Test asynchronously listing keys in MongoDB."""
     await amanager.adelete_keys(await amanager.alist_keys())
     with patch.object(
-        amanager, "aget_time", return_value=datetime(2021, 1, 1).timestamp()
+        amanager, "get_time", return_value=datetime(2021, 1, 1).timestamp()
     ):
         await amanager.aupdate(["key1"])
     with patch.object(
-        amanager, "aget_time", return_value=datetime(2022, 1, 1).timestamp()
+        amanager, "get_time", return_value=datetime(2022, 1, 1).timestamp()
     ):
         await amanager.aupdate(["key2"])
     with patch.object(
-        amanager, "aget_time", return_value=datetime(2023, 1, 1).timestamp()
+        amanager, "get_time", return_value=datetime(2023, 1, 1).timestamp()
     ):
         await amanager.aupdate(["key3"])
     with patch.object(
-        amanager, "aget_time", return_value=datetime(2024, 1, 1).timestamp()
+        amanager, "get_time", return_value=datetime(2024, 1, 1).timestamp()
     ):
         await amanager.aupdate(["key4"], group_ids=["group1"])
     assert sorted(await amanager.alist_keys()) == sorted(
@@ -206,12 +206,9 @@ def test_namespace_is_used(manager: MongoDBRecordManager) -> None:
     manager.delete_keys(["key1"])
     assert sorted(manager.list_keys()) == sorted(["key2"])
     manager.update(["key3"], group_ids=["group3"])
-    assert (
-        manager._collection.find_one({"key": "key3", "namespace": NAMESPACE})[
-            "group_id"
-        ]
-        == "group3"
-    )
+    doc = manager._collection.find_one({"key": "key3", "namespace": NAMESPACE})
+    assert doc is not None
+    assert doc["group_id"] == "group3"
 
 
 async def test_anamespace_is_used(amanager: MongoDBRecordManager) -> None:
@@ -231,11 +228,9 @@ async def test_anamespace_is_used(amanager: MongoDBRecordManager) -> None:
     await amanager.adelete_keys(["key1"])
     assert sorted(await amanager.alist_keys()) == sorted(["key2"])
     await amanager.aupdate(["key3"], group_ids=["group3"])
-    assert (
-        amanager._collection.find_one(
-            {"key": "key3", "namespace": NAMESPACE}
-        )
-    )["group_id"] == "group3"
+    doc = amanager._collection.find_one({"key": "key3", "namespace": NAMESPACE})
+    assert doc is not None
+    assert doc["group_id"] == "group3"
 
 
 def test_delete_keys(manager: MongoDBRecordManager) -> None:

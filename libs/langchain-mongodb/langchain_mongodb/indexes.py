@@ -66,7 +66,7 @@ class MongoDBRecordManager(RecordManager):
             raise ValueError("Number of keys does not match number of group_ids")
 
         for key, group_id in zip(keys, group_ids):
-            self.collection.find_one_and_update(
+            self._collection.find_one_and_update(
                 {"namespace": self.namespace, "key": key},
                 {"$set": {"group_id": group_id, "updated_at": self.get_time()}},
                 upsert=True,
@@ -87,7 +87,7 @@ class MongoDBRecordManager(RecordManager):
 
     def get_time(self) -> float:
         """Get the current server time as a timestamp."""
-        server_info = self.sync_db.command("hostInfo")
+        server_info = self._collection.database.command("hostInfo")
         local_time = server_info["system"]["currentTime"]
         timestamp = local_time.timestamp()
         return timestamp
@@ -101,7 +101,7 @@ class MongoDBRecordManager(RecordManager):
         """Check if the given keys exist in the MongoDB collection."""
         existing_keys = {
             doc["key"]
-            for doc in self.sync_collection.find(
+            for doc in self._collection.find(
                 {"namespace": self.namespace, "key": {"$in": keys}}, {"key": 1}
             )
         }
@@ -130,9 +130,9 @@ class MongoDBRecordManager(RecordManager):
             query["group_id"] = {"$in": group_ids}
 
         cursor = (
-            self.sync_collection.find(query, {"key": 1}).limit(limit)
+            self._collection.find(query, {"key": 1}).limit(limit)
             if limit
-            else self.sync_collection.find(query, {"key": 1})
+            else self._collection.find(query, {"key": 1})
         )
         return [doc["key"] for doc in cursor]
 
@@ -155,7 +155,7 @@ class MongoDBRecordManager(RecordManager):
 
     def delete_keys(self, keys: Sequence[str]) -> None:
         """Delete documents from the MongoDB collection."""
-        self.sync_collection.delete_many(
+        self._collection.delete_many(
             {"namespace": self.namespace, "key": {"$in": keys}}
         )
 
