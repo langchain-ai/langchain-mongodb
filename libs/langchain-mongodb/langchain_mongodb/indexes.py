@@ -1,47 +1,19 @@
+# Based on https://github.com/langchain-ai/langchain/blob/8f5e72de057bc07df19f7d7aefb7673b64fbb1b4/libs/community/langchain_community/indexes/_document_manager.py#L58
+from __future__ import annotations
+
+import functools
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.indexing.base import RecordManager
-
-
-def _get_pymongo_client(mongodb_url: str, **kwargs: Any) -> Any:
-    """Get MongoClient for sync operations from the mongodb_url,
-    otherwise raise error."""
-    from pymongo import MongoClient
-
-    try:
-        client: MongoClient = MongoClient(mongodb_url, **kwargs)
-    except ValueError as e:
-        raise ImportError(
-            f"MongoClient string provided is not in proper format. " f"Got error: {e} "
-        ) from None
-    return client
-
-
-def _get_motor_client(mongodb_url: str, **kwargs: Any) -> Any:
-    """Get AsyncIOMotorClient for async operations from the mongodb_url,
-    otherwise raise error."""
-    from motor.motor_asyncio import AsyncIOMotorClient
-
-    try:
-        client: AsyncIOMotorClient = AsyncIOMotorClient(mongodb_url, **kwargs)
-    except ValueError as e:
-        raise ImportError(
-            f"AsyncIOMotorClient string provided is not in proper format. "
-            f"Got error: {e} "
-        ) from None
-    return client
+from langchain_core.runnables.config import run_in_executor
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class MongoDBRecordManager(RecordManager):
     """A MongoDB-based implementation of the record manager."""
 
-    def __init__(
-        self,
-        *,
-        connection_string: str,
-        db_name: str,
-        collection_name: str,
-    ) -> None:
+    def __init__(self, collection: Collection) -> None:
         """Initialize the MongoDBRecordManager.
 
         Args:
@@ -49,13 +21,27 @@ class MongoDBRecordManager(RecordManager):
             db_name: The name of the database to use.
             collection_name: The name of the collection to use.
         """
-        super().__init__(namespace=".".join([db_name, collection_name]))
-        self.sync_client = _get_pymongo_client(connection_string)
-        self.sync_db = self.sync_client[db_name]
-        self.sync_collection = self.sync_db[collection_name]
-        self.async_client = _get_motor_client(connection_string)
-        self.async_db = self.async_client[db_name]
-        self.async_collection = self.async_db[collection_name]
+        namespace = f"{collection.database.name}.{collection.name}"
+        super().__init__(namespace=namespace)
+        self._collection = collection
+
+    @classmethod
+    def from_connection_string(
+        cls, connection_string: str, namespace: str
+    ) -> MongoDBRecordManager:
+        """Construct a RecordManager from a MongoDB connection URI.
+
+        Args:
+            connection_string: A valid MongoDB connection URI.
+            namespace: A valid MongoDB namespace (in form f"{database}.{collection}")
+
+        Returns:
+            A new MongoDBRecordManager instance.
+        """
+        client: MongoClient = MongoClient(connection_string)
+        db_name, collection_name = namespace.split(".")
+        collection = client[db_name][collection_name]
+        return cls(collection=collection)
 
     def create_schema(self) -> None:
         """Create the database schema for the document manager."""
@@ -80,7 +66,7 @@ class MongoDBRecordManager(RecordManager):
             raise ValueError("Number of keys does not match number of group_ids")
 
         for key, group_id in zip(keys, group_ids):
-            self.sync_collection.find_one_and_update(
+            self.collection.find_one_and_update(
                 {"namespace": self.namespace, "key": key},
                 {"$set": {"group_id": group_id, "updated_at": self.get_time()}},
                 upsert=True,
@@ -94,22 +80,10 @@ class MongoDBRecordManager(RecordManager):
         time_at_least: Optional[float] = None,
     ) -> None:
         """Asynchronously upsert documents into the MongoDB collection."""
-        if group_ids is None:
-            group_ids = [None] * len(keys)
-
-        if len(keys) != len(group_ids):
-            raise ValueError("Number of keys does not match number of group_ids")
-
-        update_time = await self.aget_time()
-        if time_at_least and update_time < time_at_least:
-            raise ValueError("Server time is behind the expected time_at_least")
-
-        for key, group_id in zip(keys, group_ids):
-            await self.async_collection.find_one_and_update(
-                {"namespace": self.namespace, "key": key},
-                {"$set": {"group_id": group_id, "updated_at": update_time}},
-                upsert=True,
-            )
+        func = functools.partial(
+            self.update, keys, group_ids=group_ids, time_at_least=time_at_least
+        )
+        return await run_in_executor(None, func)
 
     def get_time(self) -> float:
         """Get the current server time as a timestamp."""
@@ -120,9 +94,8 @@ class MongoDBRecordManager(RecordManager):
 
     async def aget_time(self) -> float:
         """Asynchronously get the current server time as a timestamp."""
-        host_info = await self.async_collection.database.command("hostInfo")
-        local_time = host_info["system"]["currentTime"]
-        return local_time.timestamp()
+        func = functools.partial(self.get_time)
+        return await run_in_executor(None, func)
 
     def exists(self, keys: Sequence[str]) -> List[bool]:
         """Check if the given keys exist in the MongoDB collection."""
@@ -136,11 +109,8 @@ class MongoDBRecordManager(RecordManager):
 
     async def aexists(self, keys: Sequence[str]) -> List[bool]:
         """Asynchronously check if the given keys exist in the MongoDB collection."""
-        cursor = self.async_collection.find(
-            {"namespace": self.namespace, "key": {"$in": keys}}, {"key": 1}
-        )
-        existing_keys = {doc["key"] async for doc in cursor}
-        return [key in existing_keys for key in keys]
+        func = functools.partial(self.exists, keys)
+        return await run_in_executor(None, func)
 
     def list_keys(
         self,
@@ -178,20 +148,10 @@ class MongoDBRecordManager(RecordManager):
         Asynchronously list documents in the MongoDB collection
         based on the provided date range.
         """
-        query: Dict[str, Any] = {"namespace": self.namespace}
-        if before:
-            query["updated_at"] = {"$lt": before}
-        if after:
-            query["updated_at"] = {"$gt": after}
-        if group_ids:
-            query["group_id"] = {"$in": group_ids}
-
-        cursor = (
-            self.async_collection.find(query, {"key": 1}).limit(limit)
-            if limit
-            else self.async_collection.find(query, {"key": 1})
+        func = functools.partial(
+            self.list_keys, before=before, after=after, group_ids=group_ids, limit=limit
         )
-        return [doc["key"] async for doc in cursor]
+        return await run_in_executor(None, func)
 
     def delete_keys(self, keys: Sequence[str]) -> None:
         """Delete documents from the MongoDB collection."""
@@ -201,6 +161,5 @@ class MongoDBRecordManager(RecordManager):
 
     async def adelete_keys(self, keys: Sequence[str]) -> None:
         """Asynchronously delete documents from the MongoDB collection."""
-        await self.async_collection.delete_many(
-            {"namespace": self.namespace, "key": {"$in": keys}}
-        )
+        func = functools.partial(self.delete_keys, keys)
+        return await run_in_executor(None, func)
