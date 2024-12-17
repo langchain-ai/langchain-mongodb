@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from pymongo import MongoClient
 
 from langchain_mongodb.indexes import MongoDBRecordManager
 
@@ -16,22 +17,18 @@ NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
 @pytest.fixture
 def manager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    document_manager = MongoDBRecordManager(
-        connection_string=CONNECTION_STRING,
-        db_name=DB_NAME,
-        collection_name=COLLECTION_NAME,
-    )
+    client = MongoClient(CONNECTION_STRING)
+    collection = client[DB_NAME][COLLECTION_NAME]
+    document_manager = MongoDBRecordManager(collection=collection)
     return document_manager
 
 
 @pytest_asyncio.fixture
 async def amanager() -> MongoDBRecordManager:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
-    document_manager = MongoDBRecordManager(
-        connection_string=CONNECTION_STRING,
-        db_name=DB_NAME,
-        collection_name=COLLECTION_NAME,
-    )
+    client = MongoClient(CONNECTION_STRING)
+    collection = client[DB_NAME][COLLECTION_NAME]
+    document_manager = MongoDBRecordManager(collection=collection)
     return document_manager
 
 
