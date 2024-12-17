@@ -57,7 +57,7 @@ def test_update_timestamp(manager: MongoDBRecordManager) -> None:
     ):
         manager.update(["key1"])
     records = list(
-        manager.sync_collection.find({"namespace": manager.namespace, "key": "key1"})
+        manager._collection.find({"namespace": manager.namespace, "key": "key1"})
     )
 
     assert [
@@ -87,7 +87,7 @@ async def test_aupdate_timestamp(amanager: MongoDBRecordManager) -> None:
 
     records = [
         doc
-        async for doc in amanager.async_collection.find(
+        for doc in amanager._collection.find(
             {"namespace": amanager.namespace, "key": "key1"}
         )
     ]
@@ -196,7 +196,7 @@ def test_namespace_is_used(manager: MongoDBRecordManager) -> None:
     """Verify that namespace is taken into account for all operations in MongoDB."""
     manager.delete_keys(manager.list_keys())
     manager.update(["key1", "key2"], group_ids=["group1", "group2"])
-    manager.sync_collection.insert_many(
+    manager._collection.insert_many(
         [
             {"key": "key1", "namespace": "puppies", "group_id": None},
             {"key": "key3", "namespace": "puppies", "group_id": None},
@@ -207,7 +207,7 @@ def test_namespace_is_used(manager: MongoDBRecordManager) -> None:
     assert sorted(manager.list_keys()) == sorted(["key2"])
     manager.update(["key3"], group_ids=["group3"])
     assert (
-        manager.sync_collection.find_one({"key": "key3", "namespace": NAMESPACE})[
+        manager._collection.find_one({"key": "key3", "namespace": NAMESPACE})[
             "group_id"
         ]
         == "group3"
@@ -221,7 +221,7 @@ async def test_anamespace_is_used(amanager: MongoDBRecordManager) -> None:
     """
     await amanager.adelete_keys(await amanager.alist_keys())
     await amanager.aupdate(["key1", "key2"], group_ids=["group1", "group2"])
-    await amanager.async_collection.insert_many(
+    amanager._collection.insert_many(
         [
             {"key": "key1", "namespace": "puppies", "group_id": None},
             {"key": "key3", "namespace": "puppies", "group_id": None},
@@ -232,7 +232,7 @@ async def test_anamespace_is_used(amanager: MongoDBRecordManager) -> None:
     assert sorted(await amanager.alist_keys()) == sorted(["key2"])
     await amanager.aupdate(["key3"], group_ids=["group3"])
     assert (
-        await amanager.async_collection.find_one(
+        amanager._collection.find_one(
             {"key": "key3", "namespace": NAMESPACE}
         )
     )["group_id"] == "group3"
