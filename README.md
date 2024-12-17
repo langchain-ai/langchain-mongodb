@@ -21,6 +21,8 @@ It contains the following packages.
     - [MongoDBAtlasHybridSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#hybrid-search-retriever)
     - [MongoDBAtlasFullTextSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#full-text-search-retriever)
     - `MongoDBAtlasParentDocumentRetriever` - new feature, docs coming soon!
+- Indexing
+    - `MongoDBRecordManager` - new feature, docs coming soon!
 - LangGraph persistence
     - `MongoDBSaver` - new feature, docs coming soon!
 
