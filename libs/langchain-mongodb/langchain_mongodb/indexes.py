@@ -94,7 +94,8 @@ class MongoDBRecordManager(RecordManager):
             local_time = server_info["system"]["currentTime"]
             timestamp = local_time.timestamp()
         except OperationFailure:
-            with warnings.catch_warnings(action="once"):
+            with warnings.catch_warnings():
+                warnings.simplefilter("once")
                 warnings.warn("Could not get high-resolution timestamp, falling back to low-resolution", stacklevel=2)
             ping = self._collection.database['ping']
             local_time = ping['operationTime']
