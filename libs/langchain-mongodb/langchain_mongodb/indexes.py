@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.indexing.base import RecordManager
 from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.errors import OperationFailure
 
 
 class MongoDBRecordManager(RecordManager):
@@ -87,9 +89,16 @@ class MongoDBRecordManager(RecordManager):
 
     def get_time(self) -> float:
         """Get the current server time as a timestamp."""
-        server_info = self._collection.database.command("hostInfo")
-        local_time = server_info["system"]["currentTime"]
-        timestamp = local_time.timestamp()
+        try:
+            server_info = self._collection.database.command("hostInfo")
+            local_time = server_info["system"]["currentTime"]
+            timestamp = local_time.timestamp()
+        except OperationFailure:
+            with warnings.filterwarnings("once"):
+                warnings.warn("Could not get high-resolution timestamp, falling back to low-resolution", stacklevel=2)
+            ping = self._collection.database['ping']
+            local_time = ping['operationTime']
+            timestamp = float(local_time.time)
         return timestamp
 
     async def aget_time(self) -> float:
