@@ -32,9 +32,8 @@ def random_string() -> str:
 
 
 @pytest.fixture(scope="module")
-def collection() -> Collection:
+def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    client: MongoClient = MongoClient(CONN_STRING)
     if COLLECTION not in client[DATABASE].list_collection_names():
         clxn = client[DATABASE].create_collection(COLLECTION)
     else:

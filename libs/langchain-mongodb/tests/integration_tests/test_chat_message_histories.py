@@ -1,5 +1,4 @@
 import json
-import os
 
 from langchain.memory import ConversationBufferMemory  # type: ignore[import-not-found]
 from langchain_core.messages import message_to_dict
@@ -9,11 +8,8 @@ from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_chat"
 
-# Replace these with your mongodb connection string
-connection_string = os.environ.get("MONGODB_URI", "")
 
-
-def test_memory_with_message_store() -> None:
+def test_memory_with_message_store(connection_string: str) -> None:
     """Test the memory with a message store."""
     # setup MongoDB as a message store
     message_history = MongoDBChatMessageHistory(

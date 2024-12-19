@@ -20,7 +20,6 @@ from langchain_mongodb.retrievers import (
 
 from ..utils import PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_retrievers"
 VECTOR_INDEX_NAME = "vector_index"
@@ -57,9 +56,8 @@ def embedding_openai() -> Embeddings:
 
 
 @pytest.fixture(scope="module")
-def collection() -> Collection:
+def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    client: MongoClient = MongoClient(CONNECTION_STRING)
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
     else:

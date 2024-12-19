@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest  # type: ignore[import-not-found]
 from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
@@ -15,7 +13,6 @@ from langchain_mongodb.index import (
 
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_vectorstores"
 INDEX_NAME = "langchain-test-index-vectorstores"
@@ -23,9 +20,7 @@ DIMENSIONS = 5
 
 
 @pytest.fixture()
-def collection() -> Collection:
-    client: MongoClient = MongoClient(CONNECTION_STRING)
-
+def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
     else:

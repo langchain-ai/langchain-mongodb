@@ -16,7 +16,6 @@ from langchain_mongodb import index
 
 from ..utils import PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_chain_example"
 INDEX_NAME = "langchain-test-chain-example-vector-index"
@@ -26,9 +25,8 @@ INTERVAL = 0.5
 
 
 @pytest.fixture
-def collection() -> Collection:
+def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    client: MongoClient = MongoClient(CONNECTION_STRING)
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
     else:

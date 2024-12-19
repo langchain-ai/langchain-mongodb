@@ -17,7 +17,6 @@ from langchain_mongodb.retrievers import (
 
 from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_parent_document_combined"
 VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
@@ -41,11 +40,13 @@ def embedding_model() -> Embeddings:
 
 
 def test_1clxn_retriever(
-    technical_report_pages: List[Document], embedding_model: Embeddings
+    connection_string: str,
+    technical_report_pages: List[Document],
+    embedding_model: Embeddings,
 ) -> None:
     # Setup
     client: MongoClient = MongoClient(
-        CONNECTION_STRING,
+        connection_string,
         driver=DriverInfo(name="langchain", version=version("langchain-mongodb")),
     )
     db = client[DB_NAME]
