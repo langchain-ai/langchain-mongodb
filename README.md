@@ -8,7 +8,11 @@ It contains the following packages.
 - `langchain-mongodb` ([PyPI](https://pypi.org/project/langchain-mongodb/))
 - `langgraph-checkpoint-mongodb` ([PyPI](https://pypi.org/project/langgraph-checkpoint-mongodb/))
 
+**Note**: This repository replaces all MongoDB integrations currently present in the `langchain-community` package. Users are encouraged to migrate to this repository as soon as possible.
+
 ## Features
+
+### LangChain
 
 - Vector store
     -[MongoDBAtlasVectorSearch](https://python.langchain.com/docs/integrations/vectorstores/mongodb_atlas/)
@@ -23,10 +27,11 @@ It contains the following packages.
     - `MongoDBAtlasParentDocumentRetriever` - new feature, docs coming soon!
 - Indexing
     - `MongoDBRecordManager` - new feature, docs coming soon!
-- LangGraph persistence
-    - `MongoDBSaver` - new feature, docs coming soon!
 
-**Note**: This repository replaces all MongoDB integrations currently present in the `langchain-community` package. Users are encouraged to migrate to this repository as soon as possible.
+### LangGraph
+
+- Checkpointing
+    - `MongoDBSaver` - new feature, docs coming soon!
 
 ## Installation
 
