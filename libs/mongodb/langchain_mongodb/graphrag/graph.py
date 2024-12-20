@@ -1,6 +1,20 @@
-"""
+import json
+from typing import Any, Dict, List
 
-GraphRAG - ChatModel that provides responses to semantic queries.
+from langchain_core.documents import Document
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.runnables import RunnableSequence
+from pymongo.collection import Collection
+
+from langchain_mongodb.graphrag import prompts
+
+
+class MongoDBGraphStore:
+    """GraphRAG DataStore
+
+    GraphRAG is a ChatModel that provides responses to semantic queries.
     As in Vector RAG, we augment the Chat Model's training data
     with relevant information that we collect from  documents.
 
@@ -10,27 +24,24 @@ GraphRAG - ChatModel that provides responses to semantic queries.
     Chat Model as context to the query.
 
     In Graph RAG, one uses an Entity-Extraction model that converts both
-    the query, and the potentially relevant documents, into graphs
+    the query, and the potentially relevant documents, into graphs. These are
     composed of nodes that are entities (nouns) and edges that are relationships.
-    The Graph representation of each document is presented as a list of triplets
-    ( source node / entity, edge / relationship, target node / entity).
-    This is a common representation, and LLMs have no trouble interpreting it.
-
-    The idea is that the Graph can find connections between entities and
+    The idea is that the graph can find connections between entities and
      hence answer questions that require more than one connection.
 
      It is also about finding common entities in documents,
-     combining the properties found and hence provide richer context than Vector RAG,
+     combining the properties found and hence providing richer context than Vector RAG,
     especially in certain cases.
 
-    We first ingest all of our documents by entity extraction, and place these
-    into a single graph where each individual document now is a subgraph.
+    When a document is extracted, each entity is represented by a single
+    MongoDB Document, and relationships are defined in a nested field named
+    'relationships'. The schema, and an example, are described in the
+    :data:`~langchain_mongodb.graphrag.prompts.entity_context` prompts module.
 
-    When a auery is made, the model extracts the entities from it,
+    When a auery is made, the model extracts the entities and relationships from it,
     then traverses the graph starting from each of the entities found.
     The connected entities and relationships form the context
     that is included with the query to the Chat Model.
-
 
     Requirements:
         Documents
@@ -39,8 +50,6 @@ GraphRAG - ChatModel that provides responses to semantic queries.
         Query
         Chat Model
 
-
-    Query => List[Triple]
     Example Query: "Does Casey Clements work at MongoDB?"
         ==> Entities: [(name=Casey Clements, type=person), (name=MongoDB, type=Corporation)]
         ==> Relationships: [(name=EMPLOYEE), ]
@@ -54,96 +63,92 @@ GraphRAG - ChatModel that provides responses to semantic queries.
         - One would add hints or examples in their prompt to the Entity Extraction Model.
         - This is the right track. Even if we're not focussing on Entity Extraction, we care about providing an API to allow it
          ==> e.g. Could give specific types to include, and that one must pick one, or if ambiguous, throw away information.
+    """
 
+    def __init__(
+        self,
+        collection: Collection[Dict[str, Any]],
+        entity_extraction_model: BaseChatModel,
+        entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
+        query_prompt: ChatPromptTemplate = prompts.retrieval_prompt,
+    ):
+        """
+        Args:
+            collection: Collection representing an Entity Graph
+            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships
+            entity_prompt: Prompt to fill graph store with entities following schema
+            query_prompt: Prompt extracts entities and relationships as search starting points.
+        """
+        self.collection = collection
+        self.entity_extraction_model = entity_extraction_model
+        self.entity_prompt = entity_prompt
+        self.query_prompt = query_prompt
 
+    def add_documents(self, documents: Document | List[Document]):
+        """Extract entities and insert into collection.
 
-    - NOTES
-        - Query has a clear subject-object-predicate structure.  There is asymmetry.
-        - There is also asymmetry in the graph lookup as it requires a relationship, from, and to fields.
-        - So what do we search for to find our information?
-            - I am looking for documents with Casey Clements.
-                -
-
-    Example Triple: ["Casey Clements", "EMPLOYEE", "MongoDB"]
-
-
-
-    So many questions
-        - If scope includes add_triplets, do we keep track of properties as they are added?
-            - e.g. Entity types
-        - If someone asks about Casey Clements, do we want to know whether he tied his shoes?
-            ==> - With $graphLookup, we need a node, and a relationship.  <=====
-
-
-"""
-import json
-from typing import Any, Dict, List
-from pymongo.collection import Collection
-from pydantic import BaseModel
-from langchain_core.documents import Document
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.runnables import RunnableSequence
-from langchain_core.messages import AIMessage
-from langchain_core.prompts.chat import ChatPromptTemplate
-from .prompts import entity_prompt
-
-class MongoDBGraphStore(BaseModel):
-
-    collection: Collection[Dict[str, Any]]
-    """Collection representing an Entity Graph"""
-
-    entity_extraction_model: BaseChatModel
-    """LLM for converting documents into Graph of Entities and Relationships"""
-
-    entity_prompt: ChatPromptTemplate
-    """Context prompt specifically requests schema of entities"""
-    
-    def add_documents(self, documents: List[Document]):
-        # TODO
+        Each mongodb document represents a single entity.
+        Its relationships are embedded fields pointing to other entities.
+        """
+        documents = [documents] if isinstance(documents, Document) else documents
         for doc in documents:
-            entities = self.extract_entities(doc)
+            entities = self.extract_entities(doc.page_content)
             self.collection.insert_many(entities)
-        
-    
+
     def extract_entities(self, raw_document: str) -> List[Dict[str, Any]]:
+        """Extract entities and their relations using chosen prompt and LLM."""
         # Combine the llm with the prompt template to form a chain
-        chain: RunnableSequence = entity_prompt | self.entity_extraction_model
+        chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
         response: AIMessage = chain.invoke(dict(input_document=raw_document))
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and trailing ```
         json_string = response.content.lstrip("```json").rstrip("```").strip()
-        if json_string.startswith("{"):
-            json_string = f"[{json_string}]"
-        extracted_entities = json.loads(json_string)
-        return extracted_entities
-       
-    
-    
-     
-    
-    def related_entities(self, entity, relationship, depth=2):
-        """ Find nodes connected to a starting id
-        This will add a list of triplets to a new field 'related_nodes' in the start_id document.
-        """
-        
-        # TODO
-        #   - Pass in entities. Extract relationships from these
-        #   - LEVEL-UP: unwind, merge, unionWith, facet
+        extracted = json.loads(json_string)
+        return extracted["entities"]
 
-        start_id = entity["name"]
-        
-        pipeline = [
-            {"$match": {"_id": start_id}},
-            {
-                "$graphLookup": {
-                    "from": self.collection.name,
-                    "startWith": "$_id",
-                    "connectFromField": "_id",
-                    "connectToField": relationship,  # Adjust based on your schema
-                    "as": "relatedNodes",
-                    "maxDepth": depth,
-                }
-            }
-        ]
-        return list(self.collection.aggregate(pipeline))
+    def extract_entities_from_query(self, raw_document: str) -> Dict[str, List[str]]:
+        """Extract entities and relationships for similarity_search.
+
+        The second entity extraction has a different form and purpose than
+        the first as we are looking for starting points of our search and
+        paths to follow. We aim to find source nodes and edges, but no target nodes.
+        This form is common in questions.
+        For example, "Where is MongoDB located?" provides a source entity, "MongoDB"
+        and a relationship "location" but the question mark is effectively the target.
+        """
+
+        # Combine the llm with the prompt template to form a chain
+        chain: RunnableSequence = self.query_prompt | self.entity_extraction_model # TODO Add model
+        # Invoke on a document to extract entities and relationships
+        response: AIMessage = chain.invoke(dict(input_document=raw_document))
+        # Post-Process output string into list of entity json documents
+        # Strip the ```json prefix and suffix
+        json_string = response.content.lstrip("```json").rstrip("```").strip()
+        return json.loads(json_string)
+
+    def related_entities(self, entity, relationships, depth=2) -> Dict[str, Dict[str, Any]]:
+        """Find connections to an entity by following a given relationship."""
+
+        related = {}
+        for relation in relationships:
+            pipeline = [
+                {"$match": {"ID": entity}},
+                {
+                    "$graphLookup": {
+                        "from": self.collection.name,
+                        "startWith": "$ID",
+                        "connectFromField": "ID",
+                        "connectToField": f"relationships.{relation}.target",
+                        "as": "connections",
+                        "maxDepth": depth,
+                    }
+                },
+                # {"$project": {"_id": False}},
+            ]
+            result = list(self.collection.aggregate(pipeline))
+            if result:
+                result = result[0]
+                related.update({e["_id"]: e for e in result.pop("connections")})
+                related.update({result['_id']: result})
+        return related
