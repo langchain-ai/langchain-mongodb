@@ -28,7 +28,7 @@ def test_1clxn_retriever(
     connection_string: str,
     technical_report_pages: List[Document],
     embedding: Embeddings,
-    dimensions: int
+    dimensions: int,
 ) -> None:
     # Setup
     client: MongoClient = MongoClient(

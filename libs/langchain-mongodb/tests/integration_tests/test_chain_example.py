@@ -6,15 +6,15 @@ import os
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from langchain_openai import ChatOpenAI
 from langchain_mongodb import index
-from langchain_core.embeddings import Embeddings
 
 from ..utils import PatchedMongoDBAtlasVectorSearch
 
@@ -55,7 +55,8 @@ def collection(client: MongoClient) -> Collection:
     reason="Requires OpenAI for chat responses.",
 )
 def test_chain(
-    collection: Collection, embedding: Embeddings,
+    collection: Collection,
+    embedding: Embeddings,
 ) -> None:
     """Demonstrate usage of MongoDBAtlasVectorSearch in a realistic chain
 

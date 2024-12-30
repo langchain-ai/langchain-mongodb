@@ -1,6 +1,5 @@
-import os  # noqa: I001
-from typing import Generator, List
 from time import sleep, time
+from typing import Generator, List
 
 import pytest
 from langchain_core.documents import Document
