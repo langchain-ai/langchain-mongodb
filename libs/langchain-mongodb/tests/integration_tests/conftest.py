@@ -5,6 +5,9 @@ import pytest
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 from pymongo import MongoClient
+from langchain_core.embeddings import Embeddings
+from langchain_openai import OpenAIEmbeddings
+from langchain_ollama.embeddings import OllamaEmbeddings
 
 
 @pytest.fixture(scope="session")
@@ -23,3 +26,21 @@ def connection_string() -> str:
 @pytest.fixture(scope="session")
 def client(connection_string: str) -> MongoClient:
     return MongoClient(connection_string)
+
+
+@pytest.fixture(scope="session")
+def embedding() -> Embeddings:
+    if os.environ.get('OPEN_API_KEY'):
+        return OpenAIEmbeddings(
+            openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
+            model="text-embedding-3-small",
+        )
+
+    return OllamaEmbeddings(model="all-minilm:l6-v2")
+
+
+@pytest.fixture(scope="session")
+def dimensions() -> int:
+    if os.environ.get('OPEN_API_KEY'):
+        return 1536
+    return 384

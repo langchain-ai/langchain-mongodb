@@ -47,6 +47,7 @@ mypy = "^1.10"
 simsimd = "^5.0.0"
 codespell = "^2.2.0"
 # integration test
+langchain_ollama = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/ollama"}
 langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
 langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
 pypdf = "^5.0.1"

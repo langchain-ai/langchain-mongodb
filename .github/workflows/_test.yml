@@ -56,8 +56,6 @@ jobs:
         run: cat .local_atlas_uri >> $GITHUB_ENV
 
       - name: Run integration tests
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: make integration_tests
         working-directory: ${{ inputs.working-directory }}
 

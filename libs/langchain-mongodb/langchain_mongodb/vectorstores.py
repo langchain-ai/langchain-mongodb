@@ -375,7 +375,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         if not texts:
             return []
         # Compute embedding vectors
-        embeddings = self._embedding.embed_documents(texts)  # type: ignore
+        embeddings = self._embedding.embed_documents(texts)
         if ids:
             to_insert = [
                 {
