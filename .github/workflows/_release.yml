@@ -171,6 +171,15 @@ jobs:
       - name: Get MongoDB URI
         run: cat .local_atlas_uri >> $GITHUB_ENV
 
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Run Ollama
+        run: |
+          ollama serve &
+          sleep 5    # wait for the Ollama server to be ready
+          ollama pull all-minilm:l6-v2
+
       - name: Run integration tests
         run: make integration_tests
         working-directory: ${{ inputs.working-directory }}
