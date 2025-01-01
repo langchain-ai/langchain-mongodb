@@ -27,6 +27,8 @@ It contains the following packages.
     - `MongoDBAtlasParentDocumentRetriever` - new feature, docs coming soon!
 - Indexing
     - `MongoDBRecordManager` - new feature, docs coming soon!
+- Loading
+    - `MongoDBLoader` - new feature, docs coming soon!
 
 ### LangGraph
 
