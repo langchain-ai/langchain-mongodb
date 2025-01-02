@@ -26,7 +26,7 @@ lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
 lint lint_diff lint_package lint_tests:
-	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit --hook-stage manual ruff --files $(PYTHON_FILES)
+	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit run --hook-stage manual ruff --files $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && poetry run mypy $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
 format format_diff:
