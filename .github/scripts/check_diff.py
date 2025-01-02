@@ -5,7 +5,7 @@ from typing import Dict
 LIB_DIRS = ["libs/langchain-mongodb", "libs/langgraph-checkpoint-mongodb"]
 
 if __name__ == "__main__":
-    files = sys.argv[1:] # changed files
+    files = sys.argv[1:]  # changed files
 
     dirs_to_run: Dict[str, set] = {
         "lint": set(),
