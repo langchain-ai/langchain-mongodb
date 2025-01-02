@@ -42,10 +42,9 @@ pytest-watcher = "^0.3.4"
 pytest-asyncio = "^0.21.1"
 mongomock = "^4.2.0.post1"
 # lint
-ruff = ">=0.5"
+pre-commit = ">=4.0"
 mypy = "^1.10"
 simsimd = "^5.0.0"
-codespell = "^2.2.0"
 # integration test
 langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
 langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}

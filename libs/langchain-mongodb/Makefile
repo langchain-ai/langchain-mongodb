@@ -28,22 +28,11 @@ lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
 lint lint_diff lint_package lint_tests:
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff check $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff format $(PYTHON_FILES) --diff
+	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit --hook-stage manual ruff --files $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && poetry run mypy $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
 format format_diff:
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff format $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff check --select I --fix $(PYTHON_FILES)
-
-spell_check:
-	poetry run codespell --toml pyproject.toml
-
-spell_fix:
-	poetry run codespell --toml pyproject.toml -w
-
-check_imports: $(shell find langchain_mongodb -name '*.py')
-	poetry run python ./scripts/check_imports.py $^
+	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit run ruff-format --files $(PYTHON_FILES)
 
 ######################
 # HELP
@@ -51,7 +40,6 @@ check_imports: $(shell find langchain_mongodb -name '*.py')
 
 help:
 	@echo '----'
-	@echo 'check_imports                - check imports'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'
 	@echo 'test                         - run unit tests'

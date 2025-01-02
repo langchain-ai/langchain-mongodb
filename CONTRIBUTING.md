@@ -67,6 +67,16 @@ Run both of these locally before submitting a PR. The CI scripts will run these
 when you submit a PR, and you won't be able to merge changes without fixing
 issues identified by the CI.
 
+We use pre-commit for [pre-commit](https://pypi.org/project/pre-commit/) for
+automatic formatting of the codebase.
+
+To set up `pre-commit` locally, run:
+
+```bash
+brew install pre-commit
+pre-commit install
+```
+
 #### Code Formatting
 
 Formatting for this project is done via [ruff](https://docs.astral.sh/ruff/rules/).
@@ -112,20 +122,7 @@ Note that `codespell` finds common typos, so it could have false-positive (corre
 To check spelling for this project:
 
 ```bash
-make spell_check
+pre-commit run --hook-stage manual codespell
 ```
 
-To fix spelling in place:
-
-```bash
-make spell_fix
-```
-
-If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `pyproject.toml` file.
-
-```python
-[tool.codespell]
-...
-# Add here:
-ignore-words-list = 'momento,collison,ned,foor,reworkd,parth,whats,aapply,mysogyny,unsecure'
-```
+If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `.pre-commit-config.yaml` file.
