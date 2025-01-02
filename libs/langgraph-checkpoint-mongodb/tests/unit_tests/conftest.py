@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from langchain_core.runnables import RunnableConfig
@@ -13,7 +13,7 @@ from langgraph.checkpoint.base import (
 @pytest.fixture(scope="session")
 def input_data() -> dict:
     """Setup and store conveniently in a single dictionary."""
-    inputs: Dict[str, Any] = {}
+    inputs: dict[str, Any] = {}
 
     inputs["config_1"] = RunnableConfig(
         configurable=dict(thread_id="thread-1", thread_ts="1", checkpoint_ns="")

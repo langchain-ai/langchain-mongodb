@@ -1,11 +1,8 @@
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import (
     Any,
-    Dict,
-    Iterator,
     Optional,
-    Sequence,
-    Tuple,
 )
 
 from langchain_core.runnables import RunnableConfig
@@ -189,7 +186,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         self,
         config: Optional[RunnableConfig],
         *,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: Optional[dict[str, Any]] = None,
         before: Optional[RunnableConfig] = None,
         limit: Optional[int] = None,
     ) -> Iterator[CheckpointTuple]:
@@ -200,7 +197,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (RunnableConfig): The config to use for listing the checkpoints.
-            filter (Optional[Dict[str, Any]]): Additional filtering criteria for metadata. Defaults to None.
+            filter (Optional[dict[str, Any]]): Additional filtering criteria for metadata. Defaults to None.
             before (Optional[RunnableConfig]): If provided, only checkpoints before the specified checkpoint ID are returned. Defaults to None.
             limit (Optional[int]): The maximum number of checkpoints to return. Defaults to None.
 
@@ -332,7 +329,7 @@ class MongoDBSaver(BaseCheckpointSaver):
     def put_writes(
         self,
         config: RunnableConfig,
-        writes: Sequence[Tuple[str, Any]],
+        writes: Sequence[tuple[str, Any]],
         task_id: str,
     ) -> None:
         """Store intermediate writes linked to a checkpoint.
@@ -341,7 +338,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (RunnableConfig): Configuration of the related checkpoint.
-            writes (Sequence[Tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
+            writes (Sequence[tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
             task_id (str): Identifier for the task creating the writes.
         """
         thread_id = config["configurable"]["thread_id"]
