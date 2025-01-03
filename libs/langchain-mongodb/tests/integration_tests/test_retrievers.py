@@ -25,7 +25,9 @@ COLLECTION_NAME = "langchain_test_retrievers"
 VECTOR_INDEX_NAME = "vector_index"
 EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = "text"
+PAGE_CONTENT_FIELD_NESTED = "title.text"
 SEARCH_INDEX_NAME = "text_index"
+SEARCH_INDEX_NAME_NESTED = "text_index_nested"
 
 DIMENSIONS = 1536  # Meets OpenAI model
 TIMEOUT = 60.0
@@ -83,6 +85,14 @@ def collection(client: MongoClient) -> Collection:
             wait_until_complete=TIMEOUT,
         )
 
+    if not any([SEARCH_INDEX_NAME_NESTED == ix["name"] for ix in clxn.list_search_indexes()]):
+        create_fulltext_search_index(
+            collection=clxn,
+            index_name=SEARCH_INDEX_NAME_NESTED,
+            field=PAGE_CONTENT_FIELD_NESTED,
+            wait_until_complete=TIMEOUT,
+        )
+
     return clxn
 
 
@@ -99,6 +109,28 @@ def indexed_vectorstore(
         embedding=embedding_openai,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
+    )
+
+    vectorstore.add_documents(example_documents)
+
+    yield vectorstore
+
+    vectorstore.collection.delete_many({})
+
+
+@pytest.fixture(scope="module")
+def indexed_nested_vectorstore(
+    collection: Collection,
+    example_documents: List[Document],
+    embedding_openai: Embeddings,
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
+    """Return a VectorStore with example document embeddings indexed."""
+
+    vectorstore = PatchedMongoDBAtlasVectorSearch(
+        collection=collection,
+        embedding=embedding_openai,
+        index_name=VECTOR_INDEX_NAME,
+        text_key=PAGE_CONTENT_FIELD_NESTED,
     )
 
     vectorstore.add_documents(example_documents)
@@ -127,6 +159,24 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
+        top_k=3,
+    )
+
+    query1 = "What was the latest city that I visited?"
+    results = retriever.invoke(query1)
+    assert len(results) == 3
+    assert "Paris" in results[0].page_content
+
+    query2 = "When was the last time I visited new orleans?"
+    results = retriever.invoke(query2)
+    assert "New Orleans" in results[0].page_content
+
+
+def test_hybrid_retriever_nested(indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
+    """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_nested_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME_NESTED,
         top_k=3,
     )
 
