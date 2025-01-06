@@ -24,7 +24,7 @@ cd libs/langchain-mongodb
 Install langchain-mongodb development requirements (for running langchain, running examples, linting, formatting, tests, and coverage):
 
 ```bash
-poetry install --with dev
+make install
 ```
 
 Then verify the installation.
@@ -77,28 +77,9 @@ brew install pre-commit
 pre-commit install
 ```
 
-#### Code Formatting
+#### Manual Linting and Formatting
 
-Formatting for this project is done via [ruff](https://docs.astral.sh/ruff/rules/).
-
-To run format:
-
-```bash
-make format
-```
-
-Additionally, you can run the formatter only on the files that have been modified in your current branch
-as compared to the master branch using the `format_diff` command. This is especially useful when you have
-made changes to a subset of the project and want to ensure your changes are properly formatted without
-affecting the rest of the codebase.
-
-```bash
-make format_diff
-```
-
-#### Linting
-
-Linting for this project is done via a combination of [ruff](https://docs.astral.sh/ruff/rules/) and [mypy](http://mypy-lang.org/).
+Linting and formatting for this project is done via a combination of [ruff](https://docs.astral.sh/ruff/rules/) and [mypy](http://mypy-lang.org/).
 
 To run lint:
 
@@ -106,10 +87,10 @@ To run lint:
 make lint
 ```
 
-In addition, you can run the linter only on the files that have been modified in your current branch as compared to the master branch using the `lint_diff` command. This can be very helpful when you've made changes to only certain parts of the project and want to ensure your changes meet the linting standards without having to check the entire codebase.
+To run the type checker:
 
 ```bash
-make lint_diff
+make typing
 ```
 
 We recognize linting can be annoying - if you do not want to do it, please contact a project maintainer, and they can help you with it. We do not want this to be a blocker for good code getting contributed.
@@ -122,7 +103,7 @@ Note that `codespell` finds common typos, so it could have false-positive (corre
 To check spelling for this project:
 
 ```bash
-pre-commit run --hook-stage manual codespell
+make codespell
 ```
 
 If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `.pre-commit-config.yaml` file.

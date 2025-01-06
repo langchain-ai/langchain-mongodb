@@ -1,5 +1,11 @@
 .PHONY: test lint format help
 
+# Default target executed when no arguments are given to make.
+all: help
+
+install:
+	poetry install --with dev
+
 ######################
 # TESTING AND COVERAGE
 ######################
@@ -16,21 +22,14 @@ test tests integration_test integration_tests:
 # LINTING AND FORMATTING
 ######################
 
-# Define a variable for Python and notebook files.
-PYTHON_FILES=.
-MYPY_CACHE=.mypy_cache
-lint format: PYTHON_FILES=.
-lint_diff format_diff: PYTHON_FILES=$(shell git diff --name-only --relative --diff-filter=d main . | grep -E '\.py$$|\.ipynb$$')
-lint_package: PYTHON_FILES=langgraph
-lint_tests: PYTHON_FILES=tests
-lint_tests: MYPY_CACHE=.mypy_cache_test
+lint:
+	poetry run pre-commit run ruff --files .
 
-lint lint_diff lint_package lint_tests:
-	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit run --hook-stage manual ruff --files $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && poetry run mypy $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
+typing:
+	poetry run mypy --files .
 
-format format_diff:
-	[ "$(PYTHON_FILES)" = "" ] || poetry run pre-commit run ruff-format --files $(PYTHON_FILES)
+codespell:
+	pre-commit run --hook-stage manual codespell --files .
 
 ######################
 # HELP
@@ -38,8 +37,9 @@ format format_diff:
 
 help:
 	@echo '----'
-	@echo 'format                       - run code formatters'
-	@echo 'lint                         - run linters'
+	@echo 'install                      - install the package in dev mode'
+	@echo 'lint                         - run linter and formatter'
+	@echo 'typing                       - run type check'
 	@echo 'test                         - run unit tests'
 	@echo 'integration_test             - run integration tests'
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
