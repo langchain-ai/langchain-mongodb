@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata
 from langgraph.checkpoint.serde.base import SerializerProtocol
@@ -28,7 +28,7 @@ def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
 
 def dumps_metadata(
     metadata: Union[CheckpointMetadata, Any],
-) -> Union[bytes, Dict[str, Any]]:
+) -> Union[bytes, dict[str, Any]]:
     """Serialize all values in metadata dictionary.
 
     Keep dict keys as strings for efficient filtering in MongoDB

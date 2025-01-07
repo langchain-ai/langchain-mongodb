@@ -1,16 +1,9 @@
 import asyncio
 import builtins
 import sys
+from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
-from typing import (
-    Any,
-    AsyncIterator,
-    Dict,
-    Iterator,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -178,7 +171,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self,
         config: Optional[RunnableConfig],
         *,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: Optional[dict[str, Any]] = None,
         before: Optional[RunnableConfig] = None,
         limit: Optional[int] = None,
     ) -> AsyncIterator[CheckpointTuple]:
@@ -189,7 +182,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (Optional[RunnableConfig]): Base configuration for filtering checkpoints.
-            filter (Optional[Dict[str, Any]]): Additional filtering criteria for metadata.
+            filter (Optional[dict[str, Any]]): Additional filtering criteria for metadata.
             before (Optional[RunnableConfig]): If provided, only checkpoints before the specified checkpoint ID are returned. Defaults to None.
             limit (Optional[int]): Maximum number of checkpoints to return.
 
@@ -305,7 +298,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
     async def aput_writes(
         self,
         config: RunnableConfig,
-        writes: Sequence[Tuple[str, Any]],
+        writes: Sequence[tuple[str, Any]],
         task_id: str,
     ) -> None:
         """Store intermediate writes linked to a checkpoint asynchronously.
@@ -314,7 +307,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (RunnableConfig): Configuration of the related checkpoint.
-            writes (Sequence[Tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
+            writes (Sequence[tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
             task_id (str): Identifier for the task creating the writes.
         """
         thread_id = config["configurable"]["thread_id"]
@@ -364,7 +357,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (Optional[RunnableConfig]): Base configuration for filtering checkpoints.
-            filter (Optional[Dict[str, Any]]): Additional filtering criteria for metadata.
+            filter (Optional[dict[str, Any]]): Additional filtering criteria for metadata.
             before (Optional[RunnableConfig]): If provided, only checkpoints before the specified checkpoint ID are returned. Defaults to None.
             limit (Optional[int]): Maximum number of checkpoints to return.
 
@@ -448,7 +441,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         Args:
             config (RunnableConfig): Configuration of the related checkpoint.
-            writes (Sequence[Tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
+            writes (Sequence[tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
             task_id (str): Identifier for the task creating the writes.
         """
         return asyncio.run_coroutine_threadsafe(

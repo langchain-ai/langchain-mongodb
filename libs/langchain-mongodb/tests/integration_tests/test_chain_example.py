@@ -6,9 +6,11 @@ import os
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
@@ -54,6 +56,7 @@ def collection(client: MongoClient) -> Collection:
 )
 def test_chain(
     collection: Collection,
+    embedding: Embeddings,
 ) -> None:
     """Demonstrate usage of MongoDBAtlasVectorSearch in a realistic chain
 
@@ -63,16 +66,9 @@ def test_chain(
     Requires INDEX_NAME to have been set up on MONGODB_URI
     """
 
-    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-
-    embedding_openai = OpenAIEmbeddings(
-        openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-        model="text-embedding-3-small",
-    )
-
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
-        embedding=embedding_openai,
+        embedding=embedding,
         index_name=INDEX_NAME,
         text_key="page_content",
     )

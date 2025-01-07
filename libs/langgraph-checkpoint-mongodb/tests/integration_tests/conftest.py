@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Generator, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 import pytest

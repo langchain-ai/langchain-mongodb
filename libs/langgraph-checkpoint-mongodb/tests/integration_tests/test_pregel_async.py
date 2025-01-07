@@ -5,20 +5,15 @@ import re
 import sys
 import uuid
 from collections import Counter
+from collections.abc import AsyncGenerator, AsyncIterator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import replace
 from time import perf_counter
 from typing import (
     Annotated,
     Any,
-    AsyncGenerator,
-    AsyncIterator,
-    Dict,
-    Generator,
-    List,
     Literal,
     Optional,
-    Tuple,
     TypedDict,
     Union,
     cast,
@@ -123,7 +118,7 @@ async def test_checkpoint_errors() -> None:
 
     class FaultyPutWritesCheckpointer(MemorySaver):
         async def aput_writes(
-            self, config: RunnableConfig, writes: List[Tuple[str, Any]], task_id: str
+            self, config: RunnableConfig, writes: list[tuple[str, Any]], task_id: str
         ) -> RunnableConfig:
             raise ValueError("Faulty put_writes")
 
@@ -1955,7 +1950,7 @@ async def test_pending_writes_resume(
         value: Annotated[int, operator.add]
 
     class AwhileMaker:
-        def __init__(self, sleep: float, rtn: Union[Dict, Exception]) -> None:
+        def __init__(self, sleep: float, rtn: Union[dict, Exception]) -> None:
             self.sleep = sleep
             self.rtn = rtn
             self.reset()
@@ -12294,9 +12289,10 @@ async def test_store_injected_async(checkpointer_name: str, store_name: str) -> 
     builder = StateGraph(State)
     builder.add_node("node", node)
     builder.add_edge("__start__", "node")
-    async with awith_checkpointer(checkpointer_name) as checkpointer, awith_store(
-        store_name
-    ) as the_store:
+    async with (
+        awith_checkpointer(checkpointer_name) as checkpointer,
+        awith_store(store_name) as the_store,
+    ):
         graph = builder.compile(store=the_store, checkpointer=checkpointer)
 
         thread_1 = str(uuid.uuid4())

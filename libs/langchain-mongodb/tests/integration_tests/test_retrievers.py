@@ -1,6 +1,5 @@
-import os  # noqa: I001
-from typing import Generator, List
 from time import sleep, time
+from typing import Generator, List
 
 import pytest
 from langchain_core.documents import Document
@@ -27,7 +26,6 @@ EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = "text"
 SEARCH_INDEX_NAME = "text_index"
 
-DIMENSIONS = 1536  # Meets OpenAI model
 TIMEOUT = 60.0
 INTERVAL = 0.5
 
@@ -43,20 +41,7 @@ def example_documents() -> List[Document]:
 
 
 @pytest.fixture(scope="module")
-def embedding_openai() -> Embeddings:
-    if not os.environ.get("OPENAI_API_KEY"):
-        pytest.skip("test_retrievers expects OPENAI_API_KEY in os.environ")
-
-    from langchain_openai import OpenAIEmbeddings
-
-    return OpenAIEmbeddings(
-        openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-        model="text-embedding-3-small",
-    )
-
-
-@pytest.fixture(scope="module")
-def collection(client: MongoClient) -> Collection:
+def collection(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
@@ -69,7 +54,7 @@ def collection(client: MongoClient) -> Collection:
         create_vector_search_index(
             collection=clxn,
             index_name=VECTOR_INDEX_NAME,
-            dimensions=DIMENSIONS,
+            dimensions=dimensions,
             path="embedding",
             similarity="cosine",
             wait_until_complete=TIMEOUT,
@@ -90,13 +75,13 @@ def collection(client: MongoClient) -> Collection:
 def indexed_vectorstore(
     collection: Collection,
     example_documents: List[Document],
-    embedding_openai: Embeddings,
+    embedding: Embeddings,
 ) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Return a VectorStore with example document embeddings indexed."""
 
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
-        embedding=embedding_openai,
+        embedding=embedding,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
     )
@@ -112,7 +97,7 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     """Test VectorStoreRetriever"""
     retriever = indexed_vectorstore.as_retriever()
 
-    query1 = "What was the latest city that I visited?"
+    query1 = "When did I visit France?"
     results = retriever.invoke(query1)
     assert len(results) == 4
     assert "Paris" in results[0].page_content
@@ -130,7 +115,7 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
         top_k=3,
     )
 
-    query1 = "What was the latest city that I visited?"
+    query1 = "What did I visit France?"
     results = retriever.invoke(query1)
     assert len(results) == 3
     assert "Paris" in results[0].page_content
