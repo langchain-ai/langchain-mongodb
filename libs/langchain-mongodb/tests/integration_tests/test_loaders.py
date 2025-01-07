@@ -1,13 +1,13 @@
 from typing import Dict, List
 
 from langchain_core.documents import Document
-
-from langchain_mongodb.loaders import MongoDBLoader
 from pymongo import MongoClient
 
+from langchain_mongodb.loaders import MongoDBLoader
 
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_loader"
+
 
 def raw_docs() -> List[Dict]:
     return [
@@ -21,11 +21,11 @@ def expected_documents() -> List[Document]:
     return [
         Document(
             page_content="2 2",
-            metadata={'_id': '2', "database": DB_NAME, "collection": COLLECTION_NAME},
+            metadata={"_id": "2", "database": DB_NAME, "collection": COLLECTION_NAME},
         ),
         Document(
             page_content="3 2",
-            metadata={'_id': '3', "database": DB_NAME, "collection": COLLECTION_NAME},
+            metadata={"_id": "3", "database": DB_NAME, "collection": COLLECTION_NAME},
         ),
     ]
 

@@ -1,14 +1,14 @@
 # Based on https://github.com/langchain-ai/langchain/blob/edbe7d5f5e0dcc771c1f53a49bb784a3960ce448/libs/community/langchain_community/document_loaders/mongodb.py
 from __future__ import annotations
+
 import logging
 from typing import Dict, List, Optional, Sequence
 
+from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from langchain_core.runnables.config import run_in_executor
-from langchain_community.document_loaders.base import BaseLoader
-
-from pymongo.collection import Collection
 from pymongo import MongoClient
+from pymongo.collection import Collection
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,8 @@ class MongoDBLoader(BaseLoader):
 
     @classmethod
     def from_connection_string(
-        cls, connection_string: str,
+        cls,
+        connection_string: str,
         db_name: str,
         collection_name: str,
         *,
@@ -79,11 +80,16 @@ class MongoDBLoader(BaseLoader):
         """
         client = MongoClient(connection_string)
         collection = client[db_name][collection_name]
-        return MongoDBLoader(collection, filter_criteria=filter_criteria, field_names=field_names, metadata_names=metadata_names, include_db_collection_in_metadata=include_db_collection_in_metadata)
+        return MongoDBLoader(
+            collection,
+            filter_criteria=filter_criteria,
+            field_names=field_names,
+            metadata_names=metadata_names,
+            include_db_collection_in_metadata=include_db_collection_in_metadata,
+        )
 
     def load(self) -> List[Document]:
-        """Load data into Document objects.
-        """
+        """Load data into Document objects."""
         result = []
         total_docs = self.collection.count_documents(self.filter_criteria)
 
