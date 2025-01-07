@@ -30,7 +30,7 @@ def client(connection_string: str) -> MongoClient:
 
 @pytest.fixture(scope="session")
 def embedding() -> Embeddings:
-    if os.environ.get("OPEN_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
             model="text-embedding-3-small",
@@ -41,6 +41,6 @@ def embedding() -> Embeddings:
 
 @pytest.fixture(scope="session")
 def dimensions() -> int:
-    if os.environ.get("OPEN_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY"):
         return 1536
     return 384
