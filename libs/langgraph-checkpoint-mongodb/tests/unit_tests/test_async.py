@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from bson.errors import InvalidDocument
@@ -12,7 +12,7 @@ DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "sync_checkpoints_aio"
 
 
-async def test_asearch(input_data: Dict[str, Any]) -> None:
+async def test_asearch(input_data: dict[str, Any]) -> None:
     # Clear collections if they exist
     client: AsyncIOMotorClient = AsyncIOMotorClient(MONGODB_URI)
     db = client[DB_NAME]
@@ -77,7 +77,7 @@ async def test_asearch(input_data: Dict[str, Any]) -> None:
         } == {"", "inner"}
 
 
-async def test_null_chars(input_data: Dict[str, Any]) -> None:
+async def test_null_chars(input_data: dict[str, Any]) -> None:
     """In MongoDB string *values* can be any valid UTF-8 including nulls.
     *Field names*, however, cannot contain nulls characters."""
     async with AsyncMongoDBSaver.from_conn_string(
