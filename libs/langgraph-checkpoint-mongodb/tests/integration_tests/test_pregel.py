@@ -59,7 +59,7 @@ from langgraph.constants import (
     START,
 )
 from langgraph.errors import InvalidUpdateError, MultipleSubgraphsError, NodeInterrupt
-from langgraph.graph import END, Graph, GraphCommand, StateGraph
+from langgraph.graph import END, Graph, StateGraph
 from langgraph.graph.message import MessageGraph, MessagesState, add_messages
 from langgraph.managed.shared_value import SharedValue
 from langgraph.prebuilt.chat_agent_executor import (
@@ -1920,8 +1920,8 @@ def test_send_sequences() -> None:
 
     def send_for_fun(state):
         return [
-            Send("2", GraphCommand(send=Send("2", 3))),
-            Send("2", GraphCommand(send=Send("2", 4))),
+            Send("2", Command(send=Send("2", 3))),
+            Send("2", Command(send=Send("2", 4))),
             "3.1",
         ]
 
@@ -1995,15 +1995,15 @@ def test_send_dedupe_on_resume(
                 if isinstance(state, list)
                 else ["|".join((self.name, str(state)))]
             )
-            if isinstance(state, GraphCommand):
+            if isinstance(state, Command):
                 return replace(state, update=update)
             else:
                 return update
 
     def send_for_fun(state):
         return [
-            Send("2", GraphCommand(send=Send("2", 3))),
-            Send("2", GraphCommand(send=Send("flaky", 4))),
+            Send("2", Command(send=Send("2", 3))),
+            Send("2", Command(send=Send("flaky", 4))),
             "3.1",
         ]
 
@@ -2781,8 +2781,8 @@ def test_send_react_interrupt_control(
         tool_calls=[ToolCall(name="foo", args={"hi": [1, 2, 3]}, id=AnyStr())],
     )
 
-    def agent(state) -> GraphCommand[Literal["foo"]]:
-        return GraphCommand(
+    def agent(state) -> Command[Literal["foo"]]:
+        return Command(
             update={"messages": ai_message},
             send=[Send(call["name"], call) for call in ai_message.tool_calls],
         )

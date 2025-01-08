@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "langgraph-checkpoint>=2.0.0",
-    "langgraph>=0.2.38",
+    "langgraph>=0.2.55",
     "pymongo~=4.9.0",
     "motor>3.5.0",
 ]
