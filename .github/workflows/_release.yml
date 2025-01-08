@@ -180,7 +180,6 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
 
       - name: Run unit tests with minimum dependency versions
-        if: ${{ steps.min-version.outputs.min-versions != '' }}
         run: |
           uv sync --resolution=lowest-direct
           just tests

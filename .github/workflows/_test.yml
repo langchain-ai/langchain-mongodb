@@ -62,6 +62,12 @@ jobs:
         run: just integration_tests
         working-directory: ${{ inputs.working-directory }}
 
+      - name: Run unit tests with minimum dependency versions
+        run: |
+          uv sync --resolution=lowest-direct
+          just tests
+        working-directory: ${{ inputs.working-directory }}
+
       - name: Ensure the tests did not create any additional files
         shell: bash
         run: |

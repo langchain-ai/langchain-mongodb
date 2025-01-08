@@ -162,7 +162,7 @@ def test_graph_validation() -> None:
     workflow = Graph()
     workflow.add_node("agent", logic)
     workflow.set_finish_point("agent")
-    with pytest.raises(ValueError, match="not reachable"):
+    with pytest.raises(ValueError, match="add at least one edge"):
         workflow.compile()
 
     workflow = Graph()
@@ -214,18 +214,6 @@ def test_graph_validation() -> None:
     workflow.add_node("tools", logic)
     workflow.add_node("extra", logic)
     workflow.set_entry_point("agent")
-    workflow.add_conditional_edges("agent", logic, {"continue": "tools", "exit": END})
-    workflow.add_edge("tools", "agent")
-    with pytest.raises(
-        ValueError, match="Node `extra` is not reachable"
-    ):  # extra is not reachable
-        workflow.compile()
-
-    workflow = Graph()
-    workflow.add_node("agent", logic)
-    workflow.add_node("tools", logic)
-    workflow.add_node("extra", logic)
-    workflow.set_entry_point("agent")
     workflow.add_conditional_edges("agent", logic)
     workflow.add_edge("tools", "agent")
     # Accept, even though extra is dead-end
@@ -237,14 +225,6 @@ def test_graph_validation() -> None:
     def node_a(state: State) -> State:
         # typo
         return {"hell": "world"}
-
-    builder = StateGraph(State)
-    builder.add_node("a", node_a)
-    builder.set_entry_point("a")
-    builder.set_finish_point("a")
-    graph = builder.compile()
-    with pytest.raises(InvalidUpdateError):
-        graph.invoke({"hello": "there"})
 
     graph = StateGraph(State)
     graph.add_node("start", lambda x: x)
@@ -1920,8 +1900,8 @@ def test_send_sequences() -> None:
 
     def send_for_fun(state):
         return [
-            Send("2", Command(send=Send("2", 3))),
-            Send("2", Command(send=Send("2", 4))),
+            Send("2", Command(goto=Send("2", 3))),
+            Send("2", Command(goto=Send("2", 4))),
             "3.1",
         ]
 
@@ -1942,8 +1922,8 @@ def test_send_sequences() -> None:
         == [
             "0",
             "1",
-            "2|Command(send=Send(node='2', arg=3))",
-            "2|Command(send=Send(node='2', arg=4))",
+            "2|Command(goto=Send(node='2', arg=3))",
+            "2|Command(goto=Send(node='2', arg=4))",
             "2|3",
             "2|4",
             "3",
@@ -1954,8 +1934,8 @@ def test_send_sequences() -> None:
             "0",
             "1",
             "3.1",
-            "2|Command(send=Send(node='2', arg=3))",
-            "2|Command(send=Send(node='2', arg=4))",
+            "2|Command(goto=Send(node='2', arg=3))",
+            "2|Command(goto=Send(node='2', arg=4))",
             "3",
             "2|3",
             "2|4",
@@ -2002,8 +1982,8 @@ def test_send_dedupe_on_resume(
 
     def send_for_fun(state):
         return [
-            Send("2", Command(send=Send("2", 3))),
-            Send("2", Command(send=Send("flaky", 4))),
+            Send("2", Command(goto=Send("2", 3))),
+            Send("2", Command(goto=Send("flaky", 4))),
             "3.1",
         ]
 
@@ -2025,8 +2005,8 @@ def test_send_dedupe_on_resume(
     assert graph.invoke(["0"], thread1, debug=1) == [
         "0",
         "1",
-        "2|Command(send=Send(node='2', arg=3))",
-        "2|Command(send=Send(node='flaky', arg=4))",
+        "2|Command(goto=Send(node='2', arg=3))",
+        "2|Command(goto=Send(node='flaky', arg=4))",
         "2|3",
     ]
     assert builder.nodes["2"].runnable.func.ticks == 3
@@ -2041,8 +2021,8 @@ def test_send_dedupe_on_resume(
     assert graph.invoke(None, thread1, debug=1) == [
         "0",
         "1",
-        "2|Command(send=Send(node='2', arg=3))",
-        "2|Command(send=Send(node='flaky', arg=4))",
+        "2|Command(goto=Send(node='2', arg=3))",
+        "2|Command(goto=Send(node='flaky', arg=4))",
         "2|3",
         "flaky|4",
         "3",
@@ -2064,8 +2044,8 @@ def test_send_dedupe_on_resume(
                 values=[
                     "0",
                     "1",
-                    "2|Command(send=Send(node='2', arg=3))",
-                    "2|Command(send=Send(node='flaky', arg=4))",
+                    "2|Command(goto=Send(node='2', arg=3))",
+                    "2|Command(goto=Send(node='flaky', arg=4))",
                     "2|3",
                     "flaky|4",
                     "3",
@@ -2100,8 +2080,8 @@ def test_send_dedupe_on_resume(
                 values=[
                     "0",
                     "1",
-                    "2|Command(send=Send(node='2', arg=3))",
-                    "2|Command(send=Send(node='flaky', arg=4))",
+                    "2|Command(goto=Send(node='2', arg=3))",
+                    "2|Command(goto=Send(node='flaky', arg=4))",
                     "2|3",
                     "flaky|4",
                 ],
@@ -2118,8 +2098,8 @@ def test_send_dedupe_on_resume(
                     "writes": {
                         "1": ["1"],
                         "2": [
-                            ["2|Command(send=Send(node='2', arg=3))"],
-                            ["2|Command(send=Send(node='flaky', arg=4))"],
+                            ["2|Command(goto=Send(node='2', arg=3))"],
+                            ["2|Command(goto=Send(node='flaky', arg=4))"],
                             ["2|3"],
                         ],
                         "flaky": ["flaky|4"],
@@ -2204,7 +2184,7 @@ def test_send_dedupe_on_resume(
                         error=None,
                         interrupts=(),
                         state=None,
-                        result=["2|Command(send=Send(node='2', arg=3))"],
+                        result=["2|Command(goto=Send(node='2', arg=3))"],
                     ),
                     PregelTask(
                         id=AnyStr(),
@@ -2218,7 +2198,7 @@ def test_send_dedupe_on_resume(
                         error=None,
                         interrupts=(),
                         state=None,
-                        result=["2|Command(send=Send(node='flaky', arg=4))"],
+                        result=["2|Command(goto=Send(node='flaky', arg=4))"],
                     ),
                     PregelTask(
                         id=AnyStr(),
@@ -2784,7 +2764,7 @@ def test_send_react_interrupt_control(
     def agent(state) -> Command[Literal["foo"]]:
         return Command(
             update={"messages": ai_message},
-            send=[Send(call["name"], call) for call in ai_message.tool_calls],
+            goto=[Send(call["name"], call) for call in ai_message.tool_calls],
         )
 
     foo_called = 0
