@@ -60,7 +60,7 @@ jobs:
 
       - name: Run unit tests with minimum dependency versions
         run: |
-          uv sync --resolution=lowest-direct
+          uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
           just test
         working-directory: ${{ inputs.working-directory }}
 

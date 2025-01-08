@@ -8,7 +8,6 @@ default:
   @just --list
 
 install:
-	uv venv
 	uv sync
 
 [group('test')]
