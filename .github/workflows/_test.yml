@@ -37,13 +37,9 @@ jobs:
         shell: bash
         run: just install
 
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.11.0
-
       - name: Run core tests
         shell: bash
-        run: |
-          just test
+        run: just test
 
       - name: Start local Atlas
         working-directory: .
@@ -65,7 +61,7 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --resolution=lowest-direct
-          just tests
+          just test
         working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files

@@ -156,9 +156,6 @@ jobs:
             --extra-index-url https://test.pypi.org/simple/ \
             "$PKG_NAME==$VERSION"
 
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.11.0
-
       - name: Run unit tests
         run: just tests
         working-directory: ${{ inputs.working-directory }}
@@ -182,7 +179,7 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --resolution=lowest-direct
-          just tests
+          just test
         working-directory: ${{ inputs.working-directory }}
 
   publish:
