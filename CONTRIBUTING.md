@@ -35,6 +35,24 @@ Then verify the installation.
 just test
 ```
 
+In order to run the integration tests, you'll also need a `MONGODB_URI` for MongoDB Atlas, as well
+as either an `OPENAI_API_KEY` or a configured local version of [ollama](https://ollama.com/download).
+
+We have a convenience script to start a local Atlas instance, which requires `podman`:
+
+```bash
+scripts/start_local_atlas.sh
+```
+
+This will create a `.local_atlas_uri` file that has the `MONGODB_URI` set.  The `justfiles` are configured
+to read the environment variable from this file.
+
+If using `ollama`, we have a convenience script to download the library used in our tests:
+
+```bash
+scripts/setup_ollama.sh
+```
+
 ### Testing
 
 Unit tests cover modular logic that does not require calls to outside APIs.

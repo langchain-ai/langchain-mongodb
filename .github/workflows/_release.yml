@@ -170,7 +170,7 @@ jobs:
         run: |
           ollama serve &
           sleep 5    # wait for the Ollama server to be ready
-          ollama pull all-minilm:l6-v2
+          bash scripts/setup_ollama.sh
 
       - name: Run integration tests
         run: just integration_tests
