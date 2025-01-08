@@ -11,7 +11,7 @@ install:
 	poetry install --with dev
 
 [group('test')]
-integration_test:
+integration_tests:
 	poetry run pytest tests/integration_tests/
 
 [group('test')]
