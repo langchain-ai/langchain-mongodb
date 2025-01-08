@@ -35,9 +35,8 @@ pytest-watch = "^4.2.0"
 pytest-repeat = "^0.9.3"
 syrupy = "^4.0.2"
 # lint
-ruff = "^0.6.2"
+pre-commit = ">=4.0"
 mypy = "^1.10.0"
-codespell = "^2.2.0"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config --durations=5 -vv"

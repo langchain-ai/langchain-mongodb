@@ -1,8 +1,6 @@
-import os
 from importlib.metadata import version
 from typing import List
 
-import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -15,34 +13,22 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasParentDocumentRetriever,
 )
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import PatchedMongoDBAtlasVectorSearch
 
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_parent_document_combined"
 VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
 EMBEDDING_FIELD = "embedding"
 TEXT_FIELD = "page_content"
-DIMENSIONS = 1536
 SIMILARITY = "cosine"
 TIMEOUT = 60.0
-
-
-@pytest.fixture
-def embedding_model() -> Embeddings:
-    from langchain_openai import OpenAIEmbeddings
-
-    if not os.environ.get("OPENAI_API_KEY"):
-        return ConsistentFakeEmbeddings(DIMENSIONS)
-    return OpenAIEmbeddings(
-        openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-        model="text-embedding-3-small",
-    )
 
 
 def test_1clxn_retriever(
     connection_string: str,
     technical_report_pages: List[Document],
-    embedding_model: Embeddings,
+    embedding: Embeddings,
+    dimensions: int,
 ) -> None:
     # Setup
     client: MongoClient = MongoClient(
@@ -61,7 +47,7 @@ def test_1clxn_retriever(
         create_vector_search_index(
             collection=combined_clxn,
             index_name=VECTOR_INDEX_NAME,
-            dimensions=DIMENSIONS,
+            dimensions=dimensions,
             path=EMBEDDING_FIELD,
             similarity=SIMILARITY,
             wait_until_complete=TIMEOUT,
@@ -69,7 +55,7 @@ def test_1clxn_retriever(
     # Create Vector and Doc Stores
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=combined_clxn,
-        embedding=embedding_model,
+        embedding=embedding,
         index_name=VECTOR_INDEX_NAME,
         text_key=TEXT_FIELD,
         embedding_key=EMBEDDING_FIELD,
@@ -87,11 +73,6 @@ def test_1clxn_retriever(
     # invoke the retriever with a query
     question = "What percentage of the Uniform Bar Examination can GPT4 pass?"
     responses = retriever.invoke(question)
-
-    if not os.environ.get("OPENAI_API_KEY"):
-        assert len(responses) >= 1
-        assert isinstance(responses[0].metadata["page"], int)
-        return
 
     assert len(responses) == 3
     assert all("GPT-4" in doc.page_content for doc in responses)

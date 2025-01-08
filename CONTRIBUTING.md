@@ -15,7 +15,9 @@ Install Poetry: **[documentation on how to install it](https://python-poetry.org
 
 ### Local Development Dependencies
 
-The project configuration and the makefile for running dev commands are located under the `libs/langchain-mongodb` or `libs/langgraph-checkpoint-mongodb` directories.
+The project configuration and the `justfile` for running dev commands are located under the `libs/langchain-mongodb` or `libs/langgraph-checkpoint-mongodb` directories.
+
+`just` can be [installed](https://just.systems/man/en/packages.html) from many package managers, including `brew`.
 
 ```bash
 cd libs/langchain-mongodb
@@ -24,13 +26,13 @@ cd libs/langchain-mongodb
 Install langchain-mongodb development requirements (for running langchain, running examples, linting, formatting, tests, and coverage):
 
 ```bash
-poetry install --with dev
+just install
 ```
 
 Then verify the installation.
 
 ```bash
-make test
+just test
 ```
 
 ### Testing
@@ -41,7 +43,7 @@ If you add new logic, please add a unit test.
 To run unit tests:
 
 ```bash
-make test
+just test
 ```
 
 Integration tests cover the end-to-end service calls as much as possible.
@@ -53,7 +55,7 @@ this, please raise an issue.
 To run the integration tests:
 
 ```bash
-make integration_test
+just integration_test
 ```
 
 ### Formatting and Linting
@@ -67,39 +69,30 @@ Run both of these locally before submitting a PR. The CI scripts will run these
 when you submit a PR, and you won't be able to merge changes without fixing
 issues identified by the CI.
 
-#### Code Formatting
+We use pre-commit for [pre-commit](https://pypi.org/project/pre-commit/) for
+automatic formatting of the codebase.
 
-Formatting for this project is done via [ruff](https://docs.astral.sh/ruff/rules/).
-
-To run format:
-
-```bash
-make format
-```
-
-Additionally, you can run the formatter only on the files that have been modified in your current branch
-as compared to the master branch using the `format_diff` command. This is especially useful when you have
-made changes to a subset of the project and want to ensure your changes are properly formatted without
-affecting the rest of the codebase.
+To set up `pre-commit` locally, run:
 
 ```bash
-make format_diff
+brew install pre-commit
+pre-commit install
 ```
 
-#### Linting
+#### Manual Linting and Formatting
 
-Linting for this project is done via a combination of [ruff](https://docs.astral.sh/ruff/rules/) and [mypy](http://mypy-lang.org/).
+Linting and formatting for this project is done via a combination of [ruff](https://docs.astral.sh/ruff/rules/) and [mypy](http://mypy-lang.org/).
 
 To run lint:
 
 ```bash
-make lint
+just lint
 ```
 
-In addition, you can run the linter only on the files that have been modified in your current branch as compared to the master branch using the `lint_diff` command. This can be very helpful when you've made changes to only certain parts of the project and want to ensure your changes meet the linting standards without having to check the entire codebase.
+To run the type checker:
 
 ```bash
-make lint_diff
+just typing
 ```
 
 We recognize linting can be annoying - if you do not want to do it, please contact a project maintainer, and they can help you with it. We do not want this to be a blocker for good code getting contributed.
@@ -112,20 +105,7 @@ Note that `codespell` finds common typos, so it could have false-positive (corre
 To check spelling for this project:
 
 ```bash
-make spell_check
+just codespell
 ```
 
-To fix spelling in place:
-
-```bash
-make spell_fix
-```
-
-If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `pyproject.toml` file.
-
-```python
-[tool.codespell]
-...
-# Add here:
-ignore-words-list = 'momento,collison,ned,foor,reworkd,parth,whats,aapply,mysogyny,unsecure'
-```
+If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `.pre-commit-config.yaml` file.

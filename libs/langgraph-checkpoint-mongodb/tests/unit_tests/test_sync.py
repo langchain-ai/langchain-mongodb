@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from bson.errors import InvalidDocument
@@ -20,7 +20,7 @@ DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "sync_checkpoints"
 
 
-def test_search(input_data: Dict[str, Any]) -> None:
+def test_search(input_data: dict[str, Any]) -> None:
     # Clear collections if they exist
     client: MongoClient = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
@@ -80,7 +80,7 @@ def test_search(input_data: Dict[str, Any]) -> None:
         } == {"", "inner"}
 
 
-def test_null_chars(input_data: Dict[str, Any]) -> None:
+def test_null_chars(input_data: dict[str, Any]) -> None:
     """In MongoDB string *values* can be any valid UTF-8 including nulls.
     *Field names*, however, cannot contain nulls characters."""
     with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:

@@ -5,6 +5,7 @@
 ## Changes in version 0.4 (YYYY/MM/DD)
 
 - Added support for `MongoDBRecordManager`.
+- Added support for `MongoDBLoader`.
 
 ## Changes in version 0.3 (2024/12/13)
 
