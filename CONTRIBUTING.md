@@ -7,11 +7,11 @@ We welcome contributions to this project! Please follow the following guidance t
 To contribute to this project, please follow the ["fork and pull request"](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) workflow. Please do not try to push directly to this repo unless you are a maintainer.
 
 
-### Dependency Management: Poetry and other env/dependency managers
+### Dependency Management: uv and other env/dependency managers
 
-This project utilizes [Poetry](https://python-poetry.org/) v1.7.1+ as a dependency manager.
+This project utilizes [uv](https://docs.astral.sh/uv/) v0.5.15+ as a dependency manager.
 
-Install Poetry: **[documentation on how to install it](https://python-poetry.org/docs/#installation)**.
+Install uv: **[documentation on how to install it](https://docs.astral.sh/uv/getting-started/installation/)**.
 
 ### Local Development Dependencies
 

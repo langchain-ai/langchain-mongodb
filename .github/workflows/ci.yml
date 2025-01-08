@@ -16,9 +16,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  POETRY_VERSION: "1.7.1"
-
 jobs:
   build:
     runs-on: ubuntu-latest

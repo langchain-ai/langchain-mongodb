@@ -8,9 +8,6 @@ on:
         type: string
         description: "From which folder this pipeline executes"
 
-env:
-  POETRY_VERSION: "1.7.1"
-
 jobs:
   build:
     defaults:
@@ -27,13 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
-          cache-key: core
+          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       - uses: extractions/setup-just@v2
 
@@ -52,10 +48,6 @@ jobs:
       - name: Start local Atlas
         working-directory: .
         run: bash scripts/start_local_atlas.sh
-
-      - name: Get MongoDB URI
-        working-directory: .
-        run: cat .local_atlas_uri >> $GITHUB_ENV
 
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh

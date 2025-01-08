@@ -1,55 +1,42 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[build-system]
+requires = ["hatchling>1.24"]
+build-backend = "hatchling.build"
+
+[project]
 name = "langchain-mongodb"
 version = "0.3.0"
 description = "An integration package connecting MongoDB and LangChain"
-authors = []
 readme = "README.md"
-repository = "https://github.com/langchain-ai/langchain-mongodb"
-license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "langchain-core>=0.3",
+    "langchain>=0.3",
+    "pymongo>=4.6.1",
+    "langchain-text-splitters>=0.3",
+    "numpy>=1.26",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-pymongo = "^4.6.1"
-langchain-core = "^0.3"
-langchain = "^0.3"
-langchain-text-splitters = "^0.3"
-
-[[tool.poetry.dependencies.numpy]]
-version = "^1"
-python = "<3.12"
-
-[[tool.poetry.dependencies.numpy]]
-version = "^1.26.0"
-python = ">=3.12"
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-langchain = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/langchain"}
-langchain-core = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/core"}
-langchain-text-splitters = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/text-splitters"}
-# test
-pytest = "^7.3.0"
-freezegun = "^1.2.2"
-pytest-mock = "^3.10.0"
-syrupy = "^4.0.2"
-pytest-watcher = "^0.3.4"
-pytest-asyncio = "^0.21.1"
-mongomock = "^4.2.0.post1"
-# lint
-pre-commit = ">=4.0"
-mypy = "^1.10"
-simsimd = "^5.0.0"
-# integration test
-langchain_ollama = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/ollama"}
-langchain-openai = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/partners/openai"}
-langchain-community = {git = "https://github.com/langchain-ai/langchain.git", subdirectory = "libs/community"}
-pypdf = "^5.0.1"
+[dependency-groups]
+dev = [
+    "freezegun>=1.2.2",
+    "langchain>=0.3.14",
+    "langchain-core>=0.3.29",
+    "langchain-text-splitters>=0.3.5",
+    "pytest-mock>=3.10.0",
+    "pytest>=7.3.0",
+    "syrupy>=4.0.2",
+    "pytest-watcher>=0.3.4",
+    "pytest-asyncio>=0.21.1",
+    "mongomock>=4.2.0.post1",
+    "pre-commit>=4.0",
+    "mypy>=1.10",
+    "simsimd>=5.0.0",
+    "langchain-ollama>=0.2.2",
+    "langchain-openai>=0.2.14",
+    "langchain-community>=0.3.14",
+    "pypdf>=5.0.1",
+]
 
 [tool.pytest.ini_options]
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
@@ -60,7 +47,7 @@ markers = [
 asyncio_mode = "auto"
 
 [tool.mypy]
-disallow_untyped_defs = "True"
+disallow_untyped_defs = true
 
 [tool.ruff]
 lint.select = [

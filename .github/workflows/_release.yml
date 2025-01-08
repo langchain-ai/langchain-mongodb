@@ -20,7 +20,6 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "1.7.1"
 
 jobs:
   build:
@@ -34,13 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
-          cache-key: release
+          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       # We want to keep this build stage *separate* from the release stage,
       # so that there's no sharing of permissions between them.
@@ -54,7 +52,7 @@ jobs:
       # > from the publish job.
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
-        run: poetry build
+        run: uv build
         working-directory: ${{ inputs.working-directory }}
 
       - name: Upload build
@@ -68,8 +66,8 @@ jobs:
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         run: |
-          echo pkg-name="$(poetry version | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-          echo version="$(poetry version --short)" >> $GITHUB_OUTPUT
+          echo pkg-name="$(hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
+          echo version="$(hatch version)" >> $GITHUB_OUTPUT
 
   test-pypi-publish:
     needs:
@@ -102,12 +100,10 @@ jobs:
       # - The package is published, and it breaks on the missing dependency when
       #   used in the real world.
 
-      - name: Set up Python + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
 
       - name: Import published package
         shell: bash
@@ -125,12 +121,12 @@ jobs:
         # - attempt install again after 5 seconds if it fails because there is
         #   sometimes a delay in availability on test pypi
         run: |
-          poetry run pip install \
+          uv run pip install \
             --extra-index-url https://test.pypi.org/simple/ \
             "$PKG_NAME==$VERSION" || \
           ( \
             sleep 5 && \
-            poetry run pip install \
+            uv run pip install \
               --extra-index-url https://test.pypi.org/simple/ \
               "$PKG_NAME==$VERSION" \
           )
@@ -140,7 +136,7 @@ jobs:
           # If "langgraph-checkpoint-mongodb", it's a namespace package =>  /-/.
           [[ "$PKG_NAME" == "langgraph-checkpoint-mongodb" ]] && IMPORT_NAME="${PKG_NAME//-/.}"
 
-          poetry run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
+          uv run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
       - uses: extractions/setup-just@v2
 
@@ -156,7 +152,7 @@ jobs:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          poetry run pip install \
+          uv run pip install \
             --extra-index-url https://test.pypi.org/simple/ \
             "$PKG_NAME==$VERSION"
 
@@ -169,9 +165,6 @@ jobs:
 
       - name: Start local Atlas
         run: bash scripts/start_local_atlas.sh
-
-      - name: Get MongoDB URI
-        run: cat .local_atlas_uri >> $GITHUB_ENV
 
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
@@ -186,21 +179,10 @@ jobs:
         run: just integration_tests
         working-directory: ${{ inputs.working-directory }}
 
-      - name: Get minimum versions
-        working-directory: ${{ inputs.working-directory }}
-        id: min-version
-        run: |
-          poetry run pip install packaging
-          min_versions="$(poetry run python $GITHUB_WORKSPACE/.github/scripts/get_min_versions.py pyproject.toml)"
-          echo "min-versions=$min_versions" >> "$GITHUB_OUTPUT"
-          echo "min-versions=$min_versions"
-
       - name: Run unit tests with minimum dependency versions
         if: ${{ steps.min-version.outputs.min-versions != '' }}
-        env:
-          MIN_VERSIONS: ${{ steps.min-version.outputs.min-versions }}
         run: |
-          poetry run pip install $MIN_VERSIONS
+          uv sync --resolution=lowest-direct
           just tests
         working-directory: ${{ inputs.working-directory }}
 
@@ -225,13 +207,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
-          cache-key: release
+          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       - uses: actions/download-artifact@v4
         with:
@@ -266,13 +247,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
-          cache-key: releaseartifact@v4
+          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       - uses: actions/download-artifact@v4
         with:
