@@ -17,15 +17,7 @@ if __name__ == "__main__":
         raise ValueError("Max diff reached. Please manually run CI on changed libs.")
 
     for file in files:
-        if any(
-            file.startswith(dir_)
-            for dir_ in (
-                ".github/workflows",
-                ".github/tools",
-                ".github/actions",
-                ".github/scripts/check_diff.py",
-            )
-        ):
+        if any(file.startswith(dir_) for dir_ in (".github", "scripts")):
             # add all LIB_DIRS for infra changes
             dirs_to_run["test"].update(LIB_DIRS)
             dirs_to_run["lint"].add(LIB_DIRS)
