@@ -70,7 +70,9 @@ def collection(client: MongoClient, dimensions: int) -> Collection:
             wait_until_complete=TIMEOUT,
         )
 
-    if not any([SEARCH_INDEX_NAME_NESTED == ix["name"] for ix in clxn.list_search_indexes()]):
+    if not any(
+        [SEARCH_INDEX_NAME_NESTED == ix["name"] for ix in clxn.list_search_indexes()]
+    ):
         create_fulltext_search_index(
             collection=clxn,
             index_name=SEARCH_INDEX_NAME_NESTED,
@@ -157,7 +159,9 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     assert "New Orleans" in results[0].page_content
 
 
-def test_hybrid_retriever_nested(indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
+def test_hybrid_retriever_nested(
+    indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch,
+) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_nested_vectorstore,
