@@ -15,7 +15,9 @@ Install Poetry: **[documentation on how to install it](https://python-poetry.org
 
 ### Local Development Dependencies
 
-The project configuration and the makefile for running dev commands are located under the `libs/langchain-mongodb` or `libs/langgraph-checkpoint-mongodb` directories.
+The project configuration and the `justfile` for running dev commands are located under the `libs/langchain-mongodb` or `libs/langgraph-checkpoint-mongodb` directories.
+
+`just` can be [installed](https://just.systems/man/en/packages.html) from many package managers, including `brew`.
 
 ```bash
 cd libs/langchain-mongodb
@@ -24,13 +26,13 @@ cd libs/langchain-mongodb
 Install langchain-mongodb development requirements (for running langchain, running examples, linting, formatting, tests, and coverage):
 
 ```bash
-make install
+just install
 ```
 
 Then verify the installation.
 
 ```bash
-make test
+just test
 ```
 
 ### Testing
@@ -41,7 +43,7 @@ If you add new logic, please add a unit test.
 To run unit tests:
 
 ```bash
-make test
+just test
 ```
 
 Integration tests cover the end-to-end service calls as much as possible.
@@ -53,7 +55,7 @@ this, please raise an issue.
 To run the integration tests:
 
 ```bash
-make integration_test
+just integration_test
 ```
 
 ### Formatting and Linting
@@ -84,13 +86,13 @@ Linting and formatting for this project is done via a combination of [ruff](http
 To run lint:
 
 ```bash
-make lint
+just lint
 ```
 
 To run the type checker:
 
 ```bash
-make typing
+just typing
 ```
 
 We recognize linting can be annoying - if you do not want to do it, please contact a project maintainer, and they can help you with it. We do not want this to be a blocker for good code getting contributed.
@@ -103,7 +105,7 @@ Note that `codespell` finds common typos, so it could have false-positive (corre
 To check spelling for this project:
 
 ```bash
-make codespell
+just codespell
 ```
 
 If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `.pre-commit-config.yaml` file.

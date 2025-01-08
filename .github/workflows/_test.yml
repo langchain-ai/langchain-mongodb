@@ -23,7 +23,7 @@ jobs:
         python-version:
           - "3.9"
           - "3.12"
-    name: "make test #${{ matrix.python-version }}"
+    name: "run test #${{ matrix.python-version }}"
     steps:
       - uses: actions/checkout@v4
 
@@ -35,9 +35,11 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           cache-key: core
 
+      - uses: extractions/setup-just@v2
+
       - name: Install dependencies
         shell: bash
-        run: make install
+        run: just install
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.11.0
@@ -45,7 +47,7 @@ jobs:
       - name: Run core tests
         shell: bash
         run: |
-          make test
+          just test
 
       - name: Start local Atlas
         working-directory: .
@@ -65,7 +67,7 @@ jobs:
           ollama pull all-minilm:l6-v2
 
       - name: Run integration tests
-        run: make integration_tests
+        run: just integration_tests
         working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files

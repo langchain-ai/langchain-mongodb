@@ -142,8 +142,10 @@ jobs:
 
           poetry run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
+      - uses: extractions/setup-just@v2
+
       - name: Import test dependencies
-        run: make install
+        run: just install
         working-directory: ${{ inputs.working-directory }}
 
       # Overwrite the local version of the package with the test PyPI version.
@@ -162,7 +164,7 @@ jobs:
         uses: supercharge/mongodb-github-action@1.11.0
 
       - name: Run unit tests
-        run: make tests
+        run: just tests
         working-directory: ${{ inputs.working-directory }}
 
       - name: Start local Atlas
@@ -181,7 +183,7 @@ jobs:
           ollama pull all-minilm:l6-v2
 
       - name: Run integration tests
-        run: make integration_tests
+        run: just integration_tests
         working-directory: ${{ inputs.working-directory }}
 
       - name: Get minimum versions
@@ -199,7 +201,7 @@ jobs:
           MIN_VERSIONS: ${{ steps.min-version.outputs.min-versions }}
         run: |
           poetry run pip install $MIN_VERSIONS
-          make tests
+          just tests
         working-directory: ${{ inputs.working-directory }}
 
   publish:
