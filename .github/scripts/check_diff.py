@@ -20,7 +20,7 @@ if __name__ == "__main__":
         if any(file.startswith(dir_) for dir_ in (".github", "scripts")):
             # add all LIB_DIRS for infra changes
             dirs_to_run["test"].update(LIB_DIRS)
-            dirs_to_run["lint"].add(LIB_DIRS)
+            dirs_to_run["lint"].update(LIB_DIRS)
 
         if any(file.startswith(dir_) for dir_ in LIB_DIRS):
             for dir_ in LIB_DIRS:
