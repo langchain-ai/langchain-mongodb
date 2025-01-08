@@ -33,7 +33,6 @@ if __name__ == "__main__":
             for dir_ in LIB_DIRS:
                 if file.startswith(dir_):
                     dirs_to_run["test"].add(dir_)
-                if "langgraph-checkpoint-mongodb/tests" not in file:
                     dirs_to_run["lint"].add(dir_)
         elif file.startswith("libs/"):
             raise ValueError(
