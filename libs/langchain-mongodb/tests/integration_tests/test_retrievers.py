@@ -21,6 +21,7 @@ from ..utils import PatchedMongoDBAtlasVectorSearch
 
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_retrievers"
+COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"
 VECTOR_INDEX_NAME = "vector_index"
 EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = "text"
@@ -76,10 +77,10 @@ def collection(client: MongoClient, dimensions: int) -> Collection:
 @pytest.fixture(scope="module")
 def collection_nested(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
-        clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
+    if COLLECTION_NAME_NESTED not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION_NAME_NESTED)
     else:
-        clxn = client[DB_NAME][COLLECTION_NAME]
+        clxn = client[DB_NAME][COLLECTION_NAME_NESTED]
 
     clxn.delete_many({})
 
