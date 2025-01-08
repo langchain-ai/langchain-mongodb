@@ -109,13 +109,13 @@ def indexed_vectorstore(
 def indexed_nested_vectorstore(
     collection: Collection,
     example_documents: List[Document],
-    embedding_openai: Embeddings,
+    embedding: Embeddings,
 ) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Return a VectorStore with example document embeddings indexed."""
 
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
-        embedding=embedding_openai,
+        embedding=embedding,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD_NESTED,
     )
@@ -169,7 +169,7 @@ def test_hybrid_retriever_nested(
         top_k=3,
     )
 
-    query1 = "What was the latest city that I visited?"
+    query1 = "What did I visit France?"
     results = retriever.invoke(query1)
     assert len(results) == 3
     assert "Paris" in results[0].page_content
