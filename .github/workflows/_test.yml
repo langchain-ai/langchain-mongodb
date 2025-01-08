@@ -76,6 +76,5 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
-          just test || git checkout uv.lock
-          git checkout uv.lock
+          just test
         working-directory: ${{ inputs.working-directory }}
