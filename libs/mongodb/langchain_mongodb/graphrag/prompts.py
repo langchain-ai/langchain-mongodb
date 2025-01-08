@@ -14,7 +14,7 @@ from pymongo.collection import Collection
 
 entity_schema = """
 A valid json document with a single top-level key 'entities'.
-It's value should be an array of the entities inferred. 
+Its value should be an array of the entities inferred. 
  
 Each Entity will be represented by a single JSON Document. It will have the following fields.
 * ID: A unique identifier for the entity (e.g., UUID, name).
@@ -57,7 +57,7 @@ Each Entity will be represented by a single JSON Document. It will have the foll
 extraction_context = """
 # CONTEXT:
 ## Overview
-You are a top-tier algorithm designed for extracting information to build a knowledge graph in structured formats 
+You are a top-tier algorithm designed to extract information from plain text to build knowledge graphs in a structured format 
 of entities and their relationships.
 INPUT: You will be provided a text document.
 Try to capture as much information from the text as possible without sacrificing accuracy.

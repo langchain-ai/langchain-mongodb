@@ -27,10 +27,10 @@ class MongoDBGraphStore:
     the query, and the potentially relevant documents, into graphs. These are
     composed of nodes that are entities (nouns) and edges that are relationships.
     The idea is that the graph can find connections between entities and
-     hence answer questions that require more than one connection.
+    hence answer questions that require more than one connection.
 
-     It is also about finding common entities in documents,
-     combining the properties found and hence providing richer context than Vector RAG,
+    It is also about finding common entities in documents,
+    combining the properties found and hence providing richer context than Vector RAG,
     especially in certain cases.
 
     When a document is extracted, each entity is represented by a single
@@ -119,7 +119,7 @@ class MongoDBGraphStore:
         """
 
         # Combine the llm with the prompt template to form a chain
-        chain: RunnableSequence = self.query_prompt | self.entity_extraction_model # TODO Add model
+        chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
         response: AIMessage = chain.invoke(dict(input_document=raw_document))
         # Post-Process output string into list of entity json documents
@@ -152,3 +152,9 @@ class MongoDBGraphStore:
                 related.update({e["_id"]: e for e in result.pop("connections")})
                 related.update({result['_id']: result})
         return related
+
+
+# TODO
+#   - similarity_search
+#   - Retriever
+#   - GraphChain
