@@ -13,7 +13,7 @@ install:
 
 [group('test')]
 integration_tests:
-	uv pytest tests/integration_tests/
+	uv run pytest tests/integration_tests/
 
 [group('test')]
 test *args="tests/unit_tests":
