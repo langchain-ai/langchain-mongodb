@@ -26,6 +26,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
     outputs:
       pkg-name: ${{ steps.check-version.outputs.pkg-name }}
       version: ${{ steps.check-version.outputs.version }}
@@ -53,7 +57,6 @@ jobs:
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
         run: uv build
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Upload build
         uses: actions/upload-artifact@v4
@@ -64,7 +67,6 @@ jobs:
       - name: Check Version
         id: check-version
         shell: bash
-        working-directory: ${{ inputs.working-directory }}
         run: |
           echo pkg-name="$(hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
           echo version="$(hatch version)" >> $GITHUB_OUTPUT
@@ -84,6 +86,9 @@ jobs:
       - build
       - test-pypi-publish
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v4
 
@@ -107,7 +112,6 @@ jobs:
 
       - name: Import published package
         shell: bash
-        working-directory: ${{ inputs.working-directory }}
         env:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
           VERSION: ${{ needs.build.outputs.version }}
@@ -142,11 +146,9 @@ jobs:
 
       - name: Import test dependencies
         run: just install
-        working-directory: ${{ inputs.working-directory }}
 
       # Overwrite the local version of the package with the test PyPI version.
       - name: Import published package (again)
-        working-directory: ${{ inputs.working-directory }}
         shell: bash
         env:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
@@ -158,15 +160,16 @@ jobs:
 
       - name: Run unit tests
         run: just tests
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Start local Atlas
+        working-directory: .
         run: bash scripts/start_local_atlas.sh
 
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
 
       - name: Run Ollama
+        working-directory: .
         run: |
           ollama serve &
           sleep 5    # wait for the Ollama server to be ready
@@ -174,14 +177,12 @@ jobs:
 
       - name: Run integration tests
         run: just integration_tests
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Run unit tests with minimum dependency versions
         run: |
-          uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
+          uv sync --python=${{ env.PYTHON_VERSION }} --resolution=lowest-direct
           just test || git checkout uv.lock
           git checkout uv.lock
-        working-directory: ${{ inputs.working-directory }}
 
   publish:
     needs:

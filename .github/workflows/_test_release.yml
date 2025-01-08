@@ -15,7 +15,9 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     outputs:
       pkg-name: ${{ steps.check-version.outputs.pkg-name }}
       version: ${{ steps.check-version.outputs.version }}
@@ -43,7 +45,6 @@ jobs:
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
         run: uv build
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Upload build
         uses: actions/upload-artifact@v4
@@ -54,7 +55,6 @@ jobs:
       - name: Check Version
         id: check-version
         shell: bash
-        working-directory: ${{ inputs.working-directory }}
         run: |
           echo pkg-name="$(hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
           echo version="$(hatch version)" >> $GITHUB_OUTPUT

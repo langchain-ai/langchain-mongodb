@@ -52,6 +52,7 @@ jobs:
         run: curl -fsSL https://ollama.com/install.sh | sh
 
       - name: Run Ollama
+        working-directory: .
         run: |
           ollama serve &
           sleep 5    # wait for the Ollama server to be ready
@@ -59,7 +60,6 @@ jobs:
 
       - name: Run integration tests
         run: just integration_tests
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files
         shell: bash
@@ -77,4 +77,3 @@ jobs:
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
           just test
-        working-directory: ${{ inputs.working-directory }}
