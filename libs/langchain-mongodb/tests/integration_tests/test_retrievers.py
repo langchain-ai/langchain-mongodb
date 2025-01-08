@@ -70,6 +70,29 @@ def collection(client: MongoClient, dimensions: int) -> Collection:
             wait_until_complete=TIMEOUT,
         )
 
+    return clxn
+
+
+@pytest.fixture(scope="module")
+def collection_nested(client: MongoClient, dimensions: int) -> Collection:
+    """A Collection with both a Vector and a Full-text Search Index"""
+    if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
+    else:
+        clxn = client[DB_NAME][COLLECTION_NAME]
+
+    clxn.delete_many({})
+
+    if not any([VECTOR_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
+        create_vector_search_index(
+            collection=clxn,
+            index_name=VECTOR_INDEX_NAME,
+            dimensions=dimensions,
+            path="embedding",
+            similarity="cosine",
+            wait_until_complete=TIMEOUT,
+        )
+
     if not any(
         [SEARCH_INDEX_NAME_NESTED == ix["name"] for ix in clxn.list_search_indexes()]
     ):
@@ -98,7 +121,6 @@ def indexed_vectorstore(
         text_key=PAGE_CONTENT_FIELD,
     )
 
-    vectorstore.collection.delete_many({})
     vectorstore.add_documents(example_documents)
 
     yield vectorstore
@@ -108,20 +130,19 @@ def indexed_vectorstore(
 
 @pytest.fixture(scope="module")
 def indexed_nested_vectorstore(
-    collection: Collection,
+    collection_nested: Collection,
     example_documents: List[Document],
     embedding: Embeddings,
 ) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Return a VectorStore with example document embeddings indexed."""
 
     vectorstore = PatchedMongoDBAtlasVectorSearch(
-        collection=collection,
+        collection=collection_nested,
         embedding=embedding,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD_NESTED,
     )
 
-    vectorstore.collection.delete_many({})
     vectorstore.add_documents(example_documents)
 
     yield vectorstore
