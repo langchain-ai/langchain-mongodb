@@ -8,7 +8,7 @@ default:
   @just --list
 
 install:
-	uv sync
+	uv sync --frozen
 
 [group('test')]
 integration_tests:

@@ -68,7 +68,6 @@ jobs:
 
           STATUS="$(git status)"
           echo "$STATUS"
-          git diff
 
           # grep will exit non-zero if the target message isn't found,
           # and `set -e` above will cause the step to fail.
