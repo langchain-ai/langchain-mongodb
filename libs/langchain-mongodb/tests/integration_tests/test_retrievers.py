@@ -98,6 +98,7 @@ def indexed_vectorstore(
         text_key=PAGE_CONTENT_FIELD,
     )
 
+    vectorstore.collection.delete_many({})
     vectorstore.add_documents(example_documents)
 
     yield vectorstore
@@ -120,6 +121,7 @@ def indexed_nested_vectorstore(
         text_key=PAGE_CONTENT_FIELD_NESTED,
     )
 
+    vectorstore.collection.delete_many({})
     vectorstore.add_documents(example_documents)
 
     yield vectorstore

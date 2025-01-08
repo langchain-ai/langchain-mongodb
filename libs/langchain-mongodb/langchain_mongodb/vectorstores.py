@@ -758,6 +758,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         # Format
         for res in cursor:
+            if self._text_key not in res:
+                continue
             text = res.pop(self._text_key)
             score = res.pop("score")
             make_serializable(res)
