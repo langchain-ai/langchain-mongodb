@@ -53,6 +53,13 @@ jobs:
           name: test-dist
           path: ${{ inputs.working-directory }}/dist/
 
+      - name: Check Version
+        id: check-version
+        shell: bash
+        run: |
+          echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
+          echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
+
   publish:
     needs:
       - build

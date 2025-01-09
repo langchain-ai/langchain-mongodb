@@ -69,8 +69,9 @@ jobs:
         id: check-version
         shell: bash
         run: |
-          echo pkg-name="$(hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
-          echo version="$(hatch version)" >> $GITHUB_OUTPUT
+          set -eu
+          echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
+          echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
 
   test-pypi-publish:
     needs:
@@ -111,13 +112,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Check Version
-        id: check-version
-        shell: bash
-        run: |
-          echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
-          echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
 
       - name: Import published package
         shell: bash
