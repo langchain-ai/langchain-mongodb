@@ -32,7 +32,7 @@ just install
 Then verify the installation.
 
 ```bash
-just test
+just tests
 ```
 
 In order to run the integration tests, you'll also need a `MONGODB_URI` for MongoDB Atlas, as well
@@ -61,7 +61,7 @@ If you add new logic, please add a unit test.
 To run unit tests:
 
 ```bash
-just test
+just tests
 ```
 
 Integration tests cover the end-to-end service calls as much as possible.
@@ -73,7 +73,7 @@ this, please raise an issue.
 To run the integration tests:
 
 ```bash
-just integration_test
+just integration_tests
 ```
 
 ### Formatting and Linting

@@ -43,7 +43,7 @@ jobs:
 
       - name: Run core tests
         shell: bash
-        run: just test
+        run: just tests
 
       - name: Start local Atlas
         working-directory: .
@@ -77,4 +77,4 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
-          just test
+          just tests

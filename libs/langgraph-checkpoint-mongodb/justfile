@@ -15,7 +15,7 @@ integration_tests:
 	uv run pytest tests/integration_tests/
 
 [group('test')]
-test *args="tests/unit_tests":
+tests *args="tests/unit_tests":
 	uv run pytest {{args}}
 
 [group('test')]

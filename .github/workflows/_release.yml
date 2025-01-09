@@ -184,8 +184,7 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${PYTHON_VERSION} --resolution=lowest-direct
-          just test || git checkout uv.lock
-          git checkout uv.lock
+          just tests
 
   publish:
     needs:
