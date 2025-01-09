@@ -53,13 +53,6 @@ jobs:
           name: test-dist
           path: ${{ inputs.working-directory }}/dist/
 
-      - name: Check Version
-        id: check-version
-        shell: bash
-        run: |
-          echo pkg-name="$(hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
-          echo version="$(hatch version)" >> $GITHUB_OUTPUT
-
   publish:
     needs:
       - build

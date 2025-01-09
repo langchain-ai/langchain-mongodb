@@ -112,6 +112,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Check Version
+        id: check-version
+        shell: bash
+        run: |
+          echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
+          echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
+
       - name: Import published package
         shell: bash
         env:
