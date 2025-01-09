@@ -36,7 +36,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -91,7 +92,8 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       # We explicitly *don't* set up caching here. This ensures our tests are
       # maximally sensitive to catching breakage.
       #
@@ -180,7 +182,7 @@ jobs:
 
       - name: Run unit tests with minimum dependency versions
         run: |
-          uv sync --python=${{ env.PYTHON_VERSION }} --resolution=lowest-direct
+          uv sync --python=${PYTHON_VERSION} --resolution=lowest-direct
           just test || git checkout uv.lock
           git checkout uv.lock
 
@@ -204,6 +206,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -244,7 +248,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -269,5 +274,7 @@ jobs:
           commit: main
 
       - name: Add github release url to summary
+        env:
+          RELEASE_URL: ${{ steps.create-release.outputs.html_url }}
         run: |
-          echo "GitHub Release: ${{ steps.create-release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub Release: ${RELEASE_URL}" >> $GITHUB_STEP_SUMMARY
