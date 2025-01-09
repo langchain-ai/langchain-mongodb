@@ -57,6 +57,7 @@ jobs:
         id: check-version
         shell: bash
         run: |
+          set -eu
           echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
           echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
 
