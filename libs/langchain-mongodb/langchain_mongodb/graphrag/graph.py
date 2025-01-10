@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.documents import Document
@@ -8,8 +9,11 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnableSequence
 from pymongo import UpdateOne
 from pymongo.collection import Collection
+from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import prompts
+
+logger = logging.getLogger(__name__)
 
 
 class MongoDBGraphStore:
@@ -85,16 +89,23 @@ class MongoDBGraphStore:
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
 
-    def add_documents(self, documents: Union[Document, List[Document]]):
+    def add_documents(
+        self, documents: Union[Document, List[Document]]
+    ) -> List[BulkWriteResult]:
         """Extract entities and upsert into the collection.
 
-        Each MongoDB document represents a single entity.
-        Its relationships and properties are treated consistently.
+        Each entity is represented by a single MongoDB Document.
+        Existing entities identified in documents will be updated.
+
+        Args:
+            documents: list of textual documents and associated metadata.
+        Returns: list containing metadata on entities inserted and updated, one value for each input document
         """
         documents = [documents] if isinstance(documents, Document) else documents
+        results = []
         for doc in documents:
             entities = self.extract_entities(doc.page_content)
-
+            logger.debug(f"Entities found: {[e["ID"] for e in entities]}")
             # Create update operations for each entity
             operations = []
             for entity in entities:
@@ -123,8 +134,8 @@ class MongoDBGraphStore:
 
             # Execute bulk write for the entities
             if operations:
-                self.collection.bulk_write(operations)
-            # TODO - $return ids.
+                results.append(self.collection.bulk_write(operations))
+        return results
 
     def extract_entities(
         self, raw_document: str, **kwargs: Any

@@ -4,10 +4,11 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-# TODO - Parameterize this to constrain
+# TODO -
+#  Parameterize this to constrain
 #  - entity types
 #  - relationships types,
-
+#  Add spaceholder for examples
 
 entity_schema = """
 A valid json document with a single top-level key 'entities'.

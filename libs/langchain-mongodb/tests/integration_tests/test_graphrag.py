@@ -81,7 +81,8 @@ def query():
 
 def test_graph_store(graph_store, documents, query):
     # Add entities to the collection by extracting from documents
-    graph_store.add_documents(documents)
+    bulkwrite_results = graph_store.add_documents(documents)
+    assert len(bulkwrite_results) == len(documents)
     extracted_entities = list(graph_store.collection.find({}))
     assert len(extracted_entities) > 2
 
