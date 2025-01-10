@@ -1,9 +1,6 @@
-import json
 import os
-from typing import Dict, List
 
 import pytest
-
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
@@ -11,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb.graphrag.graph import MongoDBGraphStore
-from langchain_mongodb.graphrag.prompts import entity_prompt
+from langchain_mongodb.graphrag.prompts import entity_prompt, query_prompt
 
 MONGODB_URI = os.environ.get("MONGODB_URI")
 DB_NAME = "langchain_test_db"
@@ -19,17 +16,43 @@ COLLECTION_NAME = "langchain_test_graphrag"
 
 
 @pytest.fixture(scope="module")
-def raw_document():
-    return Document(page_content="""
-Mohammed Akbar, Casey Sneddon, and Dara Achariya live in adjacent homes on 86th street in Rivertown. Mohammed is a data scientist who works remotely for ACME, an investment bank. Known for his love of board games, he often hosts game nights where the trio gathers to relax.
-Casey is a backend engineer at Sprockets LLC. His garage doubles as a workshop where tech gadgets and tennis racquets share space. Casey and Dara are married. Dara, an HR specialist also at Sprockets, has a knack for organizing both work teams and weekend tennis matches.
-Despite being single, Mohammed is an integral part of the group’s activities. He will often play doubles tennis together with Casey, his wife, and their mutual friend Njeri, a local university student studying Computer Science.
-""")
+def raw_documents():
+    return [
+        Document(
+            page_content="""
+ACME Corporation Expands Renewable Energy Efforts
+
+New York, NY — ACME Corporation, a leading player in renewable energy and logistics,
+has announced a partnership with GreenTech Ltd. to launch the SolarGrid Initiative.
+This ambitious project aims to expand solar panel networks in rural areas,
+addressing energy inequity while supporting sustainable development.
+
+John Doe, ACME’s Chief Technology Officer, emphasized the importance of collaboration in tackling climate change.
+“GreenTech’s expertise in solar technology makes them an ideal partner,” Doe said,
+adding that the initiative builds on the companies’ successful partnership, which began in 2021.
+"""
+        ),
+        Document(
+            page_content="""
+GreenTech Ltd. Leads SolarGrid Initiative
+
+San Francisco, CA — GreenTech Ltd. has emerged as a leader in renewable energy projects with the SolarGrid Initiative,
+a collaboration with ACME Corporation. Jane Smith, the project’s Lead Manager, highlighted its ambitious goal:
+providing affordable solar energy to underserved communities.
+
+GreenTech, headquartered in San Francisco, has worked closely with ACME since their partnership began in May 2021.
+“Together, we’re combining innovation and impact,” Smith stated.
+
+The project is set to expand across multiple regions, marking a milestone in the renewable energy sector.
+"""
+        ),
+    ]
 
 
 @pytest.fixture(scope="module")
 def query():
-    return "Sprockets LLC is looking to hire a new employee in Rivertown.  Casey Sneddon is an employee there. Does he have any friends that might be good candidates?"
+    return "What is the connection between ACME Corporation and GreenTech Ltd.?"
+
 
 @pytest.fixture(scope="module")
 def collection() -> Collection:
@@ -51,24 +74,29 @@ def entity_extraction_model() -> BaseChatModel:
 
 @pytest.fixture(scope="module")
 def graph_store(collection, entity_extraction_model) -> MongoDBGraphStore:
-    return MongoDBGraphStore(collection, entity_extraction_model, entity_prompt)
+    return MongoDBGraphStore(
+        collection, entity_extraction_model, entity_prompt, query_prompt
+    )
 
 
 def test_query_prompt(graph_store, query):
-    query_entities = graph_store.extract_entities_from_query(query)
-    assert len(query_entities) == 2
-    assert set(query_entities["Casey Sneddon"]) == {'friend', 'employee'}
+    query_entities = graph_store.extract_entity_names(query)
+    assert set(query_entities) == {"ACME Corporation", "GreenTech Ltd."}
 
-def test_graph_store(graph_store, raw_document, query):
-    graph_store.add_documents(raw_document)
+
+def test_graph_store(graph_store, raw_documents, query):
+    # Add entities to the collection by extracting from documents
+    graph_store.add_documents(raw_documents)
     extracted_entities = list(graph_store.collection.find({}))
-    assert len(extracted_entities) > 1
+    assert len(extracted_entities) > 2
 
-    # TODO - Update API of this to similarity_search(query, **)
-    query_entities = graph_store.extract_entities_from_query(query)
-    assert query_entities is not None
+    query_entity_names = graph_store.extract_entity_names(query)
+    assert query_entity_names is not None
 
-    related = {}
-    for entity, relationships in query_entities.items():
-        related.update(graph_store.related_entities(entity, relationships))
-    assert len(related) > 0
+    related_entities = graph_store.related_entities(query_entity_names)
+    assert len(related_entities) > 0
+
+    answer = graph_store.respond_to_query(query, related_entities)
+    assert answer is not None
+    assert isinstance(answer, str)
+    assert "partner" in answer.lower()

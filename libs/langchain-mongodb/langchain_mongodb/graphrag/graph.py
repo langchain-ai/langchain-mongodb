@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -38,7 +38,7 @@ class MongoDBGraphStore:
     'relationships'. The schema, and an example, are described in the
     :data:`~langchain_mongodb.graphrag.prompts.entity_context` prompts module.
 
-    When a auery is made, the model extracts the entities and relationships from it,
+    When a query is made, the model extracts the entities and relationships from it,
     then traverses the graph starting from each of the entities found.
     The connected entities and relationships form the context
     that is included with the query to the Chat Model.
@@ -70,7 +70,7 @@ class MongoDBGraphStore:
         collection: Collection[Dict[str, Any]],
         entity_extraction_model: BaseChatModel,
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
-        query_prompt: ChatPromptTemplate = prompts.retrieval_prompt,
+        query_prompt: ChatPromptTemplate = prompts.query_prompt,
     ):
         """
         Args:
@@ -94,8 +94,12 @@ class MongoDBGraphStore:
         for doc in documents:
             entities = self.extract_entities(doc.page_content)
             self.collection.insert_many(entities)
+            # TODO - $merge documents.
+            # TODO - $return ids.
 
-    def extract_entities(self, raw_document: str) -> List[Dict[str, Any]]:
+    def extract_entities(
+        self, raw_document: str, **kwargs: Any
+    ) -> List[Dict[str, Any]]:
         """Extract entities and their relations using chosen prompt and LLM."""
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
@@ -103,58 +107,112 @@ class MongoDBGraphStore:
         response: AIMessage = chain.invoke(dict(input_document=raw_document))
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and trailing ```
-        json_string = response.content.lstrip("```json").rstrip("```").strip()
+        json_string = (
+            response.content.removeprefix("```json").removesuffix("```").strip()
+        )
         extracted = json.loads(json_string)
         return extracted["entities"]
 
-    def extract_entities_from_query(self, raw_document: str) -> Dict[str, List[str]]:
-        """Extract entities and relationships for similarity_search.
+    def extract_entity_names(self, raw_document: str, **kwargs: Any) -> List[str]:
+        """Extract entity names from a document for similarity_search.
 
         The second entity extraction has a different form and purpose than
         the first as we are looking for starting points of our search and
-        paths to follow. We aim to find source nodes and edges, but no target nodes.
-        This form is common in questions.
-        For example, "Where is MongoDB located?" provides a source entity, "MongoDB"
-        and a relationship "location" but the question mark is effectively the target.
+        paths to follow. We aim to find source nodes,  but no target nodes or edges.
         """
-
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
         response: AIMessage = chain.invoke(dict(input_document=raw_document))
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and suffix
-        json_string = response.content.lstrip("```json").rstrip("```").strip()
+        json_string = (
+            response.content.removeprefix("```json").removesuffix("```").strip()
+        )
         return json.loads(json_string)
 
-    def related_entities(self, entity, relationships, depth=2) -> Dict[str, Dict[str, Any]]:
+    def find_entity_by_name(self, name: str) -> Optional[List[dict]]:
+        return list(self.collection.find({"ID": name}))
+
+    def related_entities(
+        self, starting_entities: List[str], depth=3
+    ) -> List[Dict[str, Any]]:
         """Find connections to an entity by following a given relationship."""
 
-        related = {}
-        for relation in relationships:
-            pipeline = [
-                {"$match": {"ID": entity}},
-                {
-                    "$graphLookup": {
-                        "from": self.collection.name,
-                        "startWith": "$ID",
-                        "connectFromField": "ID",
-                        "connectToField": f"relationships.{relation}.target",
-                        "as": "connections",
-                        "maxDepth": depth,
-                    }
-                },
-                # {"$project": {"_id": False}},
-            ]
-            result = list(self.collection.aggregate(pipeline))
-            if result:
-                result = result[0]
-                related.update({e["_id"]: e for e in result.pop("connections")})
-                related.update({result['_id']: result})
-        return related
+        pipeline = [
+            # Match the starting entity by ID
+            {"$match": {"ID": {"$in": starting_entities}}},
+            {
+                "$graphLookup": {
+                    "from": self.collection.name,
+                    "startWith": {
+                        # Extract all relationship targets dynamically
+                        "$reduce": {
+                            "input": {"$objectToArray": "$relationships"},
+                            "initialValue": [],
+                            "in": {"$concatArrays": ["$$value", "$$this.v.target"]},
+                        }
+                    },
+                    "connectFromField": "ID",  # Match on entity ID
+                    "connectToField": "ID",  # Use the target entity's ID
+                    "as": "connections",  # Output field for related entities
+                    "maxDepth": depth,  # Adjust based on traversal needs
+                }
+            },
+            # Unwind the connections array to process each connection as its own document
+            {"$unwind": "$connections"},
+            # Replace the root with the connection document
+            {"$replaceRoot": {"newRoot": "$connections"}},
+            # Exclude MongoDB's internal `_id` field
+            {"$project": {"_id": 0}},
+        ]
+        return list(self.collection.aggregate(pipeline))
+
+    def respond_to_query(self, query, related_entities):
+        """Respond to query given information found in related entities."""
+        # TODO Examine API of this (and other) methods
+        from .prompts import entity_schema, rag_prompt
+
+        # Combine the llm with the prompt template to form a chain
+        chain: RunnableSequence = rag_prompt | self.entity_extraction_model
+        # Invoke with query
+        response: AIMessage = chain.invoke(
+            dict(
+                query=query,
+                related_entities=related_entities,
+                entity_schema=entity_schema,
+            )
+        )
+        return response.content
+
+    def similarity_search(self, query: str, depth: Optional[int] = None) -> List:
+        """Find entities related to the input string
+        1. Use LLM & Prompt to find entities.
+            - What can we do at this point with the other semantics of the query (e.g. verbs)?
+        2. For each entity, use $match to find them in collection.
+            For each result get its relationships.
+            For each relationship, call $graphLookup to find related entities.
+        3. With all the found entities provided as context, send the query to the chatbot.
+
+        Args:
+            query:
+            depth:
+
+        Returns:
+
+        """
+        raise NotImplementedError
 
 
 # TODO
+#   - Merge entities extracted from different documents
+#   - Change ID to 'name' or ID to _id
+#   - Update Design Doc
+#   - Add: Constraints
+#       - relationships
+#       - entity types
+#   - Add schema validation
+#   - Should I add an Entity class?
 #   - similarity_search
 #   - Retriever
 #   - GraphChain
