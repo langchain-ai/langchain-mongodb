@@ -4,8 +4,10 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-# TODO - Parameterize this to constrain relationships.ChatPromptTemplate.from_messages([extraction_context]) a la https://github.com/datastax/ragstack-ai/blob/main/libs/knowledge-graph/ragstack_knowledge_graph/runnables.py
-# TODO - Examine whether relationships with a list of dicts makes sense. It's there to add properties to the relationship but will it work with graphLookup?
+# TODO - Parameterize this to constrain
+#  - entity types
+#  - relationships types,
+
 
 entity_schema = """
 A valid json document with a single top-level key 'entities'.

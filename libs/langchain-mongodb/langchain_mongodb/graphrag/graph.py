@@ -1,11 +1,12 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnableSequence
+from pymongo import UpdateOne
 from pymongo.collection import Collection
 
 from langchain_mongodb.graphrag import prompts
@@ -84,17 +85,45 @@ class MongoDBGraphStore:
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
 
-    def add_documents(self, documents: Document | List[Document]):
-        """Extract entities and insert into collection.
+    def add_documents(self, documents: Union[Document, List[Document]]):
+        """Extract entities and upsert into the collection.
 
-        Each mongodb document represents a single entity.
-        Its relationships are embedded fields pointing to other entities.
+        Each MongoDB document represents a single entity.
+        Its relationships and properties are treated consistently.
         """
         documents = [documents] if isinstance(documents, Document) else documents
         for doc in documents:
             entities = self.extract_entities(doc.page_content)
-            self.collection.insert_many(entities)
-            # TODO - $merge documents.
+
+            # Create update operations for each entity
+            operations = []
+            for entity in entities:
+                operations.append(
+                    UpdateOne(
+                        filter={"ID": entity["ID"]},  # Match on ID
+                        update={
+                            "$setOnInsert": {  # Set if upsert
+                                "ID": entity["ID"],
+                                "type": entity["type"],
+                            },
+                            "$addToSet": {  # Update without overwriting
+                                **{
+                                    f"properties.{k}": v
+                                    for k, v in entity.get("properties", {}).items()
+                                },
+                                **{
+                                    f"relationships.{k}": {"$each": v}
+                                    for k, v in entity.get("relationships", {}).items()
+                                },
+                            },
+                        },
+                        upsert=True,  # Insert if document doesn't exist
+                    )
+                )
+
+            # Execute bulk write for the entities
+            if operations:
+                self.collection.bulk_write(operations)
             # TODO - $return ids.
 
     def extract_entities(

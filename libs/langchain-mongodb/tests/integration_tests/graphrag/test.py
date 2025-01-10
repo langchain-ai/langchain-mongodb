@@ -16,7 +16,32 @@ COLLECTION_NAME = "langchain_test_graphrag"
 
 
 @pytest.fixture(scope="module")
-def raw_documents():
+def collection() -> Collection:
+    client = MongoClient(MONGODB_URI)
+    db = client[DB_NAME]
+    collection = db[COLLECTION_NAME]
+    collection.delete_many({})
+    return collection
+
+
+@pytest.mark.skipif(
+    "OPENAI_API_KEY" not in os.environ, reason="Requires OpenAI for chat responses."
+)
+@pytest.fixture(scope="module")
+def entity_extraction_model() -> BaseChatModel:
+    """LLM for converting documents into Graph of Entities and Relationships"""
+    return ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+
+
+@pytest.fixture(scope="module")
+def graph_store(collection, entity_extraction_model) -> MongoDBGraphStore:
+    return MongoDBGraphStore(
+        collection, entity_extraction_model, entity_prompt, query_prompt
+    )
+
+
+@pytest.fixture(scope="module")
+def documents():
     return [
         Document(
             page_content="""
@@ -54,49 +79,18 @@ def query():
     return "What is the connection between ACME Corporation and GreenTech Ltd.?"
 
 
-@pytest.fixture(scope="module")
-def collection() -> Collection:
-    client = MongoClient(MONGODB_URI)
-    db = client[DB_NAME]
-    collection = db[COLLECTION_NAME]
-    collection.delete_many({})
-    return collection
-
-
-@pytest.mark.skipif(
-    "OPENAI_API_KEY" not in os.environ, reason="Requires OpenAI for chat responses."
-)
-@pytest.fixture(scope="module")
-def entity_extraction_model() -> BaseChatModel:
-    """LLM for converting documents into Graph of Entities and Relationships"""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
-
-
-@pytest.fixture(scope="module")
-def graph_store(collection, entity_extraction_model) -> MongoDBGraphStore:
-    return MongoDBGraphStore(
-        collection, entity_extraction_model, entity_prompt, query_prompt
-    )
-
-
-def test_query_prompt(graph_store, query):
-    query_entities = graph_store.extract_entity_names(query)
-    assert set(query_entities) == {"ACME Corporation", "GreenTech Ltd."}
-
-
-def test_graph_store(graph_store, raw_documents, query):
+def test_graph_store(graph_store, documents, query):
     # Add entities to the collection by extracting from documents
-    graph_store.add_documents(raw_documents)
+    graph_store.add_documents(documents)
     extracted_entities = list(graph_store.collection.find({}))
     assert len(extracted_entities) > 2
 
     query_entity_names = graph_store.extract_entity_names(query)
-    assert query_entity_names is not None
+    assert set(query_entity_names) == {"ACME Corporation", "GreenTech Ltd."}
 
     related_entities = graph_store.related_entities(query_entity_names)
-    assert len(related_entities) > 0
+    assert len(related_entities) >= 4
 
     answer = graph_store.respond_to_query(query, related_entities)
-    assert answer is not None
     assert isinstance(answer, str)
     assert "partner" in answer.lower()
