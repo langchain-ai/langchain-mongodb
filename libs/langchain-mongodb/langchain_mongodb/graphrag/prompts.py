@@ -4,12 +4,6 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-# TODO -
-#  Parameterize this to constrain
-#  - entity types
-#  - relationships types,
-#  Add spaceholder for examples
-
 entity_schema = """
 A valid json document with a single top-level key 'entities'.
 Its value should be an array of the entities inferred.
@@ -261,17 +255,21 @@ entity_prompt = ChatPromptTemplate.from_messages(
 query_prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessagePromptTemplate.from_template(query_context_entities_only),
-        HumanMessagePromptTemplate.from_template(
-            "INPUT: {input_document}"
-        ),  # todo why INPUT?
+        HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
 
 
-# TODO NEXT: Try out asking a question given the related entities extracted
 rag_prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessagePromptTemplate.from_template(rag_template),
         HumanMessagePromptTemplate.from_template("{query}"),
     ]
 )
+
+
+# TODO -
+#  Parameterize this to constrain
+#  - entity types
+#  - relationships types,
+#  Add spaceholder for examples

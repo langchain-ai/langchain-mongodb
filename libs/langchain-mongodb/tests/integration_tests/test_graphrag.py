@@ -84,7 +84,7 @@ def query_connection():
     return "What is the connection between ACME Corporation and GreenTech Ltd.?"
 
 
-def test_add_docs_store(graph_store, documents, query_connection):
+def test_add_docs_store(graph_store):
     # Add entities to the collection by extracting from documents
     extracted_entities = list(graph_store.collection.find({}))
     assert 4 <= len(extracted_entities) < 8
@@ -109,16 +109,20 @@ def test_related_entities(graph_store):
     assert len(no_entities) == 0
 
 
+def test_respond_to_query(graph_store, query_connection):
+    """Displays querying an existing Knowledge Graph Database"""
+    # 1. Find the entity names in the query
+    query_entity_names = graph_store.extract_entity_names(query_connection)
+    assert set(query_entity_names) == {"ACME Corporation", "GreenTech Ltd."}
+    # 2.  Find these entities and traverse graph to find those closely related
+    related = graph_store.related_entities(query_entity_names)
+    answer = graph_store.respond_to_query(query_connection, related)
+    assert isinstance(answer, str)
+    assert "partner" in answer.lower()
+
+
 def test_similarity_search(graph_store, query_connection):
     pass
-
-
-def test_respond_to_query(graph_store, query_connection):
-    pass
-
-    # answer = graph_store.respond_to_query(query_connection)
-    # assert isinstance(answer, str)
-    # assert "partner" in answer.lower()
 
 
 @pytest.mark.skip("TODO")
@@ -133,12 +137,12 @@ def test_validator(documents, entity_extraction_model):
     assert len(bulkwrite_results) == len(documents)
 
 
-def test_multihop_questions(graph_store, documents):
-    questions = [
+@pytest.fixture(scope="module")
+def multihop_questions(graph_store, documents):
+    return [
         "What is the connection between ACME Corporation and GreenTech Ltd.?",
         "Who is leading the SolarGrid Initiative, and what is their role?",
         "Which organizations are participating in the SolarGrid Initiative?",
         "What is John Doe’s role in ACME’s renewable energy projects?",
         "Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?",
     ]
-    assert questions
