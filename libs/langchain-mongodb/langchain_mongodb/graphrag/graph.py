@@ -11,7 +11,7 @@ from pymongo import UpdateOne
 from pymongo.collection import Collection
 from pymongo.results import BulkWriteResult
 
-from langchain_mongodb.graphrag import prompts
+from langchain_mongodb.graphrag import prompts, schema
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,7 @@ class MongoDBGraphStore:
         entity_extraction_model: BaseChatModel,
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
+        validate: bool = False,
     ):
         """
         Args:
@@ -84,10 +85,19 @@ class MongoDBGraphStore:
             entity_prompt: Prompt to fill graph store with entities following schema
             query_prompt: Prompt extracts entities and relationships as search starting points.
         """
-        self.collection = collection
+
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
+        if validate:
+            db = collection.database
+            collection_name = collection.name
+            collection.drop()
+            self.collection = db.create_collection(
+                collection_name, validator=self.entity_schema
+            )
+        else:
+            self.collection = collection
 
     def add_documents(
         self, documents: Union[Document, List[Document]]
@@ -104,9 +114,10 @@ class MongoDBGraphStore:
         documents = [documents] if isinstance(documents, Document) else documents
         results = []
         for doc in documents:
+            # Call LLM to find all Entities in doc
             entities = self.extract_entities(doc.page_content)
             logger.debug(f"Entities found: {[e["ID"] for e in entities]}")
-            # Create update operations for each entity
+            # Insert new, or combine with existing, entity
             operations = []
             for entity in entities:
                 operations.append(
@@ -128,7 +139,7 @@ class MongoDBGraphStore:
                                 },
                             },
                         },
-                        upsert=True,  # Insert if document doesn't exist
+                        upsert=True,
                     )
                 )
 
@@ -243,16 +254,19 @@ class MongoDBGraphStore:
         """
         raise NotImplementedError
 
+    @property
+    def entity_schema(self):
+        return schema.entity_schema
+
 
 # TODO
-#   - Merge entities extracted from different documents
-#   - Change ID to 'name' or ID to _id
+#   - Add: similarity_search
+#   - Add: Retriever
+#   - Add: GraphChain
+#   - Change ID to 'name' or ID to _id?
 #   - Update Design Doc
 #   - Add: Constraints
 #       - relationships
 #       - entity types
-#   - Add schema validation
+#   - Add schema validation. Does this need to be done during collection creation?!
 #   - Should I add an Entity class?
-#   - similarity_search
-#   - Retriever
-#   - GraphChain
