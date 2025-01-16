@@ -3,6 +3,7 @@ import os
 import pytest
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -109,30 +110,26 @@ def test_related_entities(graph_store):
     assert len(no_entities) == 0
 
 
-def test_respond_to_query(graph_store, query_connection):
+def test_chat_response(graph_store, query_connection):
     """Displays querying an existing Knowledge Graph Database"""
-    # 1. Find the entity names in the query
-    query_entity_names = graph_store.extract_entity_names(query_connection)
-    assert set(query_entity_names) == {"ACME Corporation", "GreenTech Ltd."}
-    # 2.  Find these entities and traverse graph to find those closely related
-    related = graph_store.related_entities(query_entity_names)
-    answer = graph_store.respond_to_query(query_connection, related)
-    assert isinstance(answer, str)
-    assert "partner" in answer.lower()
+    answer = graph_store.chat_response(query_connection)
+    assert isinstance(answer, AIMessage)
+    assert "partner" in answer.content.lower()
 
 
 def test_similarity_search(graph_store, query_connection):
-    pass
-
-
-@pytest.mark.skip("TODO")
-def test_validator(documents, entity_extraction_model):
-    clxn_name = "langchain_test_validated_entities"
-    client = MongoClient(MONGODB_URI)
-    clxn = client[DB_NAME][clxn_name]
-    store = MongoDBGraphStore(
-        clxn, entity_extraction_model, entity_prompt, query_prompt, validate=True
+    docs = graph_store.similarity_search(query_connection)
+    assert len(docs) >= 4
+    assert all(
+        set(d.keys()) == {"ID", "type", "relationships", "properties"} for d in docs
     )
+
+
+# @pytest.mark.skip("TODO")
+def test_validator(documents, entity_extraction_model):
+    client = MongoClient(MONGODB_URI)
+    clxn = client[DB_NAME]["langchain_test_validated_entities"]
+    store = MongoDBGraphStore(clxn, entity_extraction_model, validate=True)
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
 

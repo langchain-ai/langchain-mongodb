@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -13,7 +13,13 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import prompts, schema
 
+from .prompts import output_format, rag_prompt
+
 logger = logging.getLogger(__name__)
+
+# Represents an entity in the knowledge graph with ID, type, properties, and relationships fields
+# See .schema for full schema
+Entity: TypeAlias = Dict[str, Any]
 
 
 class MongoDBGraphStore:
@@ -72,10 +78,11 @@ class MongoDBGraphStore:
 
     def __init__(
         self,
-        collection: Collection[Dict[str, Any]],
+        collection: Collection,
         entity_extraction_model: BaseChatModel,
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
+        max_depth: int = 2,
         validate: bool = False,
     ):
         """
@@ -84,20 +91,32 @@ class MongoDBGraphStore:
             entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships
             entity_prompt: Prompt to fill graph store with entities following schema
             query_prompt: Prompt extracts entities and relationships as search starting points.
+            max_depth: Maximum recursion depth in graph traversal.
+            validate: If True, entity schema will be validated on every insert or update.
         """
-
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
+        self.max_depth = max_depth
         if validate:
             db = collection.database
             collection_name = collection.name
             collection.drop()
             self.collection = db.create_collection(
-                collection_name, validator=self.entity_schema
+                collection_name,
+                validator={"$jsonSchema": self.entity_schema},
             )
         else:
             self.collection = collection
+
+    @property
+    def entity_schema(self):
+        """JSON Schema Object of Entities. Will be applied if validate is True.
+
+        See Also:
+            `$jsonSchema <https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/>`_
+        """
+        return schema.entity_schema
 
     def add_documents(
         self, documents: Union[Document, List[Document]]
@@ -109,7 +128,8 @@ class MongoDBGraphStore:
 
         Args:
             documents: list of textual documents and associated metadata.
-        Returns: list containing metadata on entities inserted and updated, one value for each input document
+        Returns:
+            List containing metadata on entities inserted and updated, one value for each input document
         """
         documents = [documents] if isinstance(documents, Document) else documents
         results = []
@@ -148,10 +168,14 @@ class MongoDBGraphStore:
                 results.append(self.collection.bulk_write(operations))
         return results
 
-    def extract_entities(
-        self, raw_document: str, **kwargs: Any
-    ) -> List[Dict[str, Any]]:
-        """Extract entities and their relations using chosen prompt and LLM."""
+    def extract_entities(self, raw_document: str, **kwargs: Any) -> List[Entity]:
+        """Extract entities and their relations using chosen prompt and LLM.
+
+        Args:
+            raw_document: A single text document as a string. Typically prose.
+        Returns:
+            List of Entity dictionaries.
+        """
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
@@ -170,6 +194,11 @@ class MongoDBGraphStore:
         The second entity extraction has a different form and purpose than
         the first as we are looking for starting points of our search and
         paths to follow. We aim to find source nodes,  but no target nodes or edges.
+
+        Args:
+            raw_document: A single text document as a string. Typically prose.
+        Returns:
+            List of entity names / IDs.
         """
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
@@ -182,16 +211,30 @@ class MongoDBGraphStore:
         )
         return json.loads(json_string)
 
-    def find_entity_by_name(self, name: str) -> Optional[List[dict]]:
+    def find_entity_by_name(self, name: str) -> Optional[List[Entity]]:
+        """Utility to get Entity dict from Knowledge Graph / Collection.
+        Args:
+            name: ID string to look for
+        Returns:
+            List of Entity dicts if any match name
+        """
         return list(self.collection.find({"ID": name}))
 
     def related_entities(
-        self, starting_entities: List[str], depth=3
-    ) -> List[Dict[str, Any]]:
-        """Find connections to an entity by following a given relationship."""
+        self, starting_entities: List[str], max_depth=3
+    ) -> List[Entity]:
+        """Traverse Graph along relationship edges to find connected entities.
 
+        Args:
+            starting_entities: Traversal begins with documents whose IDs match these strings.
+            max_depth: Recursion continues until no more matching documents are found,
+            or until the operation reaches a recursion depth specified by the maxDepth parameter
+
+        Returns:
+            List of connected entities.
+        """
         pipeline = [
-            # Match the starting entity by ID
+            # Begin by finding starting points.
             {"$match": {"ID": {"$in": starting_entities}}},
             {
                 "$graphLookup": {
@@ -207,66 +250,89 @@ class MongoDBGraphStore:
                     "connectFromField": "ID",  # Match on entity ID
                     "connectToField": "ID",  # Use the target entity's ID
                     "as": "connections",  # Output field for related entities
-                    "maxDepth": depth,  # Adjust based on traversal needs
+                    "maxDepth": max_depth or self.max_depth, # Cap traversal depth
                 }
             },
             # Unwind the connections array to process each connection as its own document
             {"$unwind": "$connections"},
             # Replace the root with the connection document
             {"$replaceRoot": {"newRoot": "$connections"}},
+            # Remove duplicates
+            {
+                "$group": {
+                    "_id": "$ID",  # Group by `ID`
+                    "document": {"$first": "$$ROOT"},  # Keep the first
+                }
+            },
+            # Restore the original document structure
+            {"$replaceRoot": {"newRoot": "$document"}},
             # Exclude MongoDB's internal `_id` field
             {"$project": {"_id": 0}},
         ]
         return list(self.collection.aggregate(pipeline))
 
-    def respond_to_query(self, query, related_entities):
-        """Respond to query given information found in related entities."""
-        # TODO Examine API of this (and other) methods
-        from .prompts import entity_schema, rag_prompt
+    def similarity_search(self, input_document: str) -> List[Entity]:
+        """Retrieve list of connected Entities found via traversal of KnowledgeGraph.
 
-        # Combine the llm with the prompt template to form a chain
-        chain: RunnableSequence = rag_prompt | self.entity_extraction_model
-        # Invoke with query
-        response: AIMessage = chain.invoke(
-            dict(
-                query=query,
-                related_entities=related_entities,
-                entity_schema=entity_schema,
-            )
-        )
-        return response.content
+        1. Use LLM & Prompt to find entities within the input_document itself.
+        2. Find Entity Nodes that match those found in the input_document.
+        3. Traverse the graph using these as starting points.
 
-    def similarity_search(self, query: str, depth: Optional[int] = None) -> List:
-        """Find entities related to the input string
-        1. Use LLM & Prompt to find entities.
-            - What can we do at this point with the other semantics of the query (e.g. verbs)?
-        2. For each entity, use $match to find them in collection.
-            For each result get its relationships.
-            For each relationship, call $graphLookup to find related entities.
-        3. With all the found entities provided as context, send the query to the chatbot.
+        Args:
+            input_document: String to find relevant documents for.
+        Returns:
+            List of connected Entity dictionaries.
+        """
+        starting_ids: List[str] = self.extract_entity_names(input_document)
+        return self.related_entities(starting_ids)
+
+    def chat_response(self, query: str, chat_model: BaseChatModel = None) -> AIMessage:
+        """Responds to a query given information found in Knowledge Graph.
 
         Args:
             query:
-            depth:
-
+            chat_model:
         Returns:
-
+            Response to the query. response.content contains text.
         """
-        raise NotImplementedError
+        if chat_model is None:
+            chat_model = self.entity_extraction_model
+        # Perform Retrieval on knowledge graph
+        related_entities = self.similarity_search(query)
+        # Combine the llm with the prompt template to form a chain
+        chain: RunnableSequence = rag_prompt | chat_model
+        # Invoke with query
+        return chain.invoke(
+            dict(
+                query=query,
+                related_entities=related_entities,
+                entity_schema=output_format,
+            )
+        )
 
-    @property
-    def entity_schema(self):
-        return schema.entity_schema
 
+# TODO NEXT -----------------------------------
+#   * REFACTOR PROMPTS
+#       - test_validator is failing because we have not constrained the relationship properties to be strings
+#   * rag_prompt is being passed 3 key-value pairs at runtime, and to both the human and system templates!
+#      - We wish to include the $jsonSchema in schema.entity_schema in addition to the context in prompts.output_format
+#      - extraction_template.format(output_schema=output_format) is unnecessary. We don't need to format twice. We CAN, but it's confusing
+#   * We have 3 prompts. Entities, Names, RAG.
+#       - ONLY extraction uses output_format. So we merge them, adding the jsonSchema and mentioning that it will be used in MongoDB JSON Schema Validation
+#        as entities are written.
+#   * While we rewrite the prompts, let's put in **place holders for...
+#       - examples
+#       - relationship names/types. Need to describe this well. keys in the relationships object.
+#       - entity types
+#
 
 # TODO
-#   - Add: similarity_search
-#   - Add: Retriever
-#   - Add: GraphChain
-#   - Change ID to 'name' or ID to _id?
+#   - Rename "properties" in schema to "attributes"
 #   - Update Design Doc
 #   - Add: Constraints
 #       - relationships
 #       - entity types
 #   - Add schema validation. Does this need to be done during collection creation?!
+#       - If after creation: db.command("collMod", "my_collection", validator=validator)
 #   - Should I add an Entity class?
+#   - Add: GraphChain - do we want an end-to-end call for those not familiar with LangChain and RunnablePassthrough?

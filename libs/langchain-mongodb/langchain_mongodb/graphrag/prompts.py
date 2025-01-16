@@ -4,7 +4,7 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-entity_schema = """
+output_format = """
 A valid json document with a single top-level key 'entities'.
 Its value should be an array of the entities inferred.
 
@@ -46,123 +46,18 @@ Each Entity will be represented by a single JSON Document. It will have the foll
 }}
 """
 
-extraction_context = """
-# CONTEXT:
-## Overview
-You are a top-tier algorithm designed to extract information from plain text
-to build knowledge graphs in a structured format of entities and their relationships.
-INPUT: You will be provided a text document.
-Try to capture as much information from the text as possible without sacrificing accuracy.
-Do not add any information that is not explicitly mentioned in the text. The aim is to achieve simplicity and clarity in the knowledge graph.
-OUTPUT: You will produce valid json. It will have a single top-level key 'entities', with its value an array
- of the entities inferred. Each should follows the schema below.
-
-## General Schema Specification for a Knowledge Graph Entity in a MongoDB Collection.
-Each Entity will be represented by a single JSON Document. It will have the following fields.
-* ID: A unique identifier for the entity (e.g., UUID, name).
-* type: A string specifying the type of the entity (e.g., “Person”, “Organization”).
-* relationships: Stored as embedded key-value pairs. Keys are relationship types, values are lists of target entity IDs, along with additional metadata describing the relationship to that entity.
-* properties: A dictionary containing key-value pairs of attributes describing the entity. Properties should not include things that could be entities. When in doubt, make something an entity.
-
-## Example Entity structure
-{{
-  "ID": "12345",
-  "name": "Alice Palace",
-  "type": "Person",
-  "properties": {{
-    "position": "CEO",
-    "startDate": "2018-01-01"
-  }},
-  "relationships": {{
-    "employer": [
-      {{
-        "target": "MongoDB"
-      }}
-    ],
-    "friend": [
-      {{
-        "target": "Jarnail Singh",
-        "properties": {{
-          "since": "2019-05-01"
-        }}
-      }},
-      {{
-        "target": "Jasbinder Kaur",
-        "properties": {{
-          "since": "2015-05-01"
-        }}
-      }}
-    ]
-  }}
-}}
-
-## Entity Extraction Rules
-1. **Persons**: Extract all individuals mentioned, using their full names as unique IDs when available.
-2. **Organizations**: Treat all named organizations (e.g., companies, schools, or groups) as distinct entities with the type "Organization."
-   - If an organization is associated with a person (e.g., as an employer), capture the relationship explicitly (e.g., "employee").
-   - Do not nest organizations as properties of another entity; they should be separate entities with their own unique IDs.
-3. **Relationships**: Capture all relationships inferred from the text and ensure target entity IDs are consistent.
-4. **Places**: Extract named locations as entities with the type "location".
-
-## Entity Resolution and Consistency
-**Maintain Entity Consistency when extracting entities.** If an entity, such as "John Doe", is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "Joe", "he") always use the most complete identifier for that entity throughout the knowledge graph. In this example, use "John Doe" as the entity ID. Define required fields (e.g., ID, name,, type) and allow optional properties.
-
-## Relationships
-Ensure that every relationship target points to a valid entity ID. Ensure consistency and generality in relationship types when constructing knowledge schemas. Instead of using specific and momentary types such as 'became_professor', use more general and timeless relationship types like 'professor'. Make sure to use general and timeless relationship types!
-
-Remember, the knowledge graph should be coherent, consistent, and facilitate clear navigation of entities and their connections.
-Avoid mixing properties and entities for clarity. Maintaining consistency in entity references is crucial.
-"""
-
-
-query_context_relationships = """
-You are a meticulous analyst tasked with extracting information in the form of knowledge graphs
-comprised of entities (nodes) and their relationships (ships).
-
-INPUT: You will be provided a short document (query)
-from which you infer the entities as names or human-readable identifiers found in the text,
-and probable relationships. These will form the starting points for graph traversal
-to find similar entities. Hence, we are not looking for directed graph triples
- like (source node, relationship edge, target node). We are looking for source entity id,
- and relationships implied by the input text. This form is common in questions.
- For example, "Where is MongoDB located?" provides a source entity, "MongoDB"
- and a relationship "location" but the question mark is effectively the target.
-
-OUTPUT: Provide your response as valid json where
-keys are entity IDs and values are lists of relationships.
-"""
-
-
-query_schema_relationships = """
-A valid json document where keys are entity IDs and values are lists of relationships.
-
-The outputs will form the starting points for graph traversal
-to find similar entities. Hence, we are not looking for directed graph triples
-like (source node, relationship edge, target node). We are looking for source entity ids,
-and relationships implied by the input text. This form is common in questions.
-For example, "Where is MongoDB located?" provides a source entity, "MongoDB"
-and a relationship "location" but the question mark is effectively the target.
-
-Example:
-{{
-    "MongoDB": ["industry", "employee", "event"],
-    "Alice Palace": ["employer", "friend", "event", "activity"]
-}}
-"""
 
 query_context_entities_only = """
-You are a meticulous analyst tasked with extracting information in the form of knowledge graphs
-comprised of entities (nodes) and their relationships (ships).
+You are a meticulous analyst tasked with extracting information from documents to form
+knowledge graphs of entities (nodes) and their relationships (edges).
 
-INPUT: You will be provided a short document (query)
-from which you infer the entities as names or human-readable identifiers found in the text,
-These will form the starting points for graph traversal to find similar entities.
-Hence, we are NOT looking for directed graph triples like (source node, relationship edge, target node).
-We are looking for source entity ids only.
+You will be provided a short document (query) from which you infer the entity names.
+You need not think about relationships between the entities. You only need names.
 
-Provide your response as valid json list.
+Provide your response as valid json list of entity IDs,
+names or human-readable identifiers, found in the text.
 
- ** Examples:
+ ## Examples:
  1. input:  "Jack works at ACME in New York"
     output: ["Jack", "ACME", "New York"]
 
@@ -172,10 +67,14 @@ Provide your response as valid json list.
  2. input: "In what continent is Brazil?
     output: ["Brazil"]
 
+This example is in the form of a question. There is one entity,
+
 3. input: "For legal and operational purposes, many governments and organizations adopt specific definitions."
-    output: []
+   output: []
 
-
+In the final example, there are no entities.
+Though there are concepts and nouns that might be types or properties of entities,
+there is nothing here that could be seen as being a unique identifier or name.
 """
 
 extraction_template = """
@@ -229,24 +128,29 @@ For example, if Casey works at MongoDB, MongoDB is an employer of Casey, and Cas
 """
 
 rag_template = """
+## Context
 You are a meticulous analyst tasked with extracting information in the form of knowledge graphs
-comprised of entities (nodes) and their relationships (ships).
+comprised of entities (nodes) and their relationships (edges).
+
+Based on the user input (query) that will be provided, you have already retrieved information
+from the knowledge graph in the form of a list of entities known to be related to those in the Query.
+
+From the context retrieved alone, please respond to the Query.
+Your response should be a string of concise prose.
+
+## Entity Schema
 The entities have the following schema:
 
 {entity_schema}
 
-Based on the query that will be provided, you have already extracted
-a list of the following entities:
-
+## Entities Found to be Related to Query
 {related_entities}
-
-From the information retrieved alone, please answer the question.
 """
 
 entity_prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessagePromptTemplate.from_template(
-            extraction_template.format(output_schema=entity_schema)
+            extraction_template.format(output_schema=output_format)
         ),
         HumanMessagePromptTemplate.from_template("INPUT: {input_document}"),
     ]
