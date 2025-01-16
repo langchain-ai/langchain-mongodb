@@ -34,16 +34,16 @@ Maintain Entity Consistency when extracting entities. If an entity, such as "Joh
 is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "Joe", "he"),
 always use the most complete identifier for that entity throughout the knowledge graph.
 In this example, use "John Doe" as the entity ID.
-Define required fields (e.g., ID, name,, type) and allow optional properties.
+Define required fields (e.g., ID, name,, type) and allow optional attributes.
 
-Do not nest organizations as properties of another entity. they should be separate entities with their own unique IDs.
+Do not nest organizations as attributes of another entity. they should be separate entities with their own unique IDs.
 
 ## Relationships
 
 Relationships represent edges in the knowledge graph. Relationships describe a specific edge type.
 Ensure consistency and generality in relationship names when constructing knowledge schemas.
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
-like 'employee'. Add details as properties. Make sure to use general and timeless relationship types!
+like 'employee'. Add details as attributes. Make sure to use general and timeless relationship types!
 
 If synonyms are found in the document, choose the most general and use consistently.
 
@@ -58,7 +58,7 @@ Each Entity will be represented by a single JSON Document. It will have the foll
 * ID: A unique identifier for the entity (e.g., UUID, name).
 * type: A string specifying the type of the entity (e.g., “Person”, “Organization”).
 * relationships: Stored as embedded key-value pairs. Keys are relationship types, values are lists of target entity IDs, along with additional metadata describing the relationship to that entity.
-* properties: A dictionary containing key-value pairs of attributes describing the entity. Both keys and values are strings. Properties should not include things that could be entities. When in doubt, make something an entity.
+* attributes: A dictionary containing key-value pairs of attributes describing the entity. Both keys and values are strings. Properties should not include things that could be entities. When in doubt, make something an entity.
 
 ### Entity Schema
 The schema of each entity is provided below following the $jsonSchema style used for MongoDB validation.
@@ -76,7 +76,7 @@ Output:
 {{
   "ID": "Alice Palace",
   "type": "Person",
-  "properties": {{
+  "attributes": {{
     "position": "CEO",
     "startDate": "2018-01-01"
   }},
@@ -89,13 +89,13 @@ Output:
     "friend": [
       {{
         "target": "Jarnail Singh",
-        "properties": {{
+        "attributes": {{
           "since": "2019-05-01"
         }}
       }},
       {{
         "target": "Jasbinder Kaur",
-        "properties": {{
+        "attributes": {{
           "since": "2015-05-01"
         }}
       }}
@@ -131,7 +131,7 @@ This example is in the form of a question. There is one entity,
    output: '[]'
 
 In the final example, there are no entities.
-Though there are concepts and nouns that might be types or properties of entities,
+Though there are concepts and nouns that might be types or attributes of entities,
 there is nothing here that could be seen as being a unique identifier or name.
 """
 

@@ -4,7 +4,7 @@ https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/
 
 entity_schema = {
     "bsonType": "object",
-    "required": ["ID", "type", "relationships"],  #  "properties",
+    "required": ["ID", "type", "attributes", "relationships"],
     "properties": {
         "ID": {
             "bsonType": "string",
@@ -14,7 +14,7 @@ entity_schema = {
             "bsonType": "string",
             "description": "Type of the entity (e.g., 'Person', 'Organization')",
         },
-        "properties": {
+        "attributes": {
             "bsonType": "object",
             "description": "Key-value pairs describing the entity",
             "additionalProperties": {
@@ -40,7 +40,7 @@ entity_schema = {
                             "bsonType": "string",
                             "description": "ID of the target entity",
                         },
-                        "properties": {
+                        "attributes": {
                             "bsonType": "object",
                             "description": "Metadata describing the relationship",
                             "additionalProperties": {"bsonType": "string"},

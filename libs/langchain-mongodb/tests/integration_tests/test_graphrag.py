@@ -84,7 +84,7 @@ Output:
 {{
   "ID": "Best Practices",
   "type": "Guideline",
-  "properties": {{
+  "attributes": {{
     "style": "Follow the Python Style Guide (PEP 8)",
     "documentation": "Document public APIs using docstrings and examples",
     "testing": "Integration Tests for new functionality, regression tests for bug-fixes"
@@ -93,7 +93,7 @@ Output:
     "plannedFeature": [
       {{
         "target": "PYTHON-1834",
-        "properties": {{
+        "attributes": {{
           "description": "Auto code formatting"
         }}
       }}
@@ -101,7 +101,7 @@ Output:
     "reference": [
       {{
         "target": "Node Team Practices",
-        "properties": {{
+        "attributes": {{
           "url": "https://wiki.corp.mongodb.com/display/DRIVERS/Node+Team+Practices"
         }}
       }}
@@ -178,7 +178,7 @@ def test_similarity_search(graph_store, query_connection):
     docs = graph_store.similarity_search(query_connection)
     assert len(docs) >= 4
     assert all(
-        set(d.keys()) == {"ID", "type", "relationships", "properties"} for d in docs
+        set(d.keys()) == {"ID", "type", "relationships", "attributes"} for d in docs
     )
 
 

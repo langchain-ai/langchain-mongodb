@@ -18,7 +18,7 @@ from .schema import entity_schema
 
 logger = logging.getLogger(__name__)
 
-# Represents an entity in the knowledge graph with ID, type, properties, and relationships fields
+# Represents an entity in the knowledge graph with ID, type, attributes, and relationships fields
 # See .schema for full schema
 Entity: TypeAlias = Dict[str, Any]
 
@@ -42,7 +42,7 @@ class MongoDBGraphStore:
     hence answer questions that require more than one connection.
 
     It is also about finding common entities in documents,
-    combining the properties found and hence providing richer context than Vector RAG,
+    combining the attributes found and hence providing richer context than Vector RAG,
     especially in certain cases.
 
     When a document is extracted, each entity is represented by a single
@@ -175,8 +175,8 @@ class MongoDBGraphStore:
                             },
                             "$addToSet": {  # Update without overwriting
                                 **{
-                                    f"properties.{k}": v
-                                    for k, v in entity.get("properties", {}).items()
+                                    f"attributes.{k}": v
+                                    for k, v in entity.get("attributes", {}).items()
                                 },
                                 **{
                                     f"relationships.{k}": {"$each": v}
@@ -348,7 +348,6 @@ class MongoDBGraphStore:
 
 
 # TODO
-#   - Rename "properties" in schema to "attributes"
 #   - Update Design Doc
 #   - Prompts:
 #       - Can we pass variables in the dict that aren't used? (overspecified)
