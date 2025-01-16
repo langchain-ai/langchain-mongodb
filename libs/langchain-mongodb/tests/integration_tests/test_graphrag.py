@@ -70,6 +70,48 @@ The project is set to expand across multiple regions, marking a milestone in the
 
 
 @pytest.fixture(scope="module")
+def entity_example():
+    return """
+Input:
+Best Practices
+Style - Follow the Python Style Guide (PEP 8) wherever possible.
+We are planning to add auto code formatting in: PYTHON-1834.
+Documentation - Document public APIs using docstrings and examples whenever possible.
+Testing - New functionality should be accompanied with Integration Tests when specification tests aren’t provided. Bug-fixes should be accompanied by regression testing.
+The Node Team has a comprehensive guide to best practices: https://wiki.corp.mongodb.com/display/DRIVERS/Node+Team+Practices.
+
+Output:
+{{
+  "ID": "Best Practices",
+  "type": "Guideline",
+  "properties": {{
+    "style": "Follow the Python Style Guide (PEP 8)",
+    "documentation": "Document public APIs using docstrings and examples",
+    "testing": "Integration Tests for new functionality, regression tests for bug-fixes"
+  }},
+  "relationships": {{
+    "plannedFeature": [
+      {{
+        "target": "PYTHON-1834",
+        "properties": {{
+          "description": "Auto code formatting"
+        }}
+      }}
+    ],
+    "reference": [
+      {{
+        "target": "Node Team Practices",
+        "properties": {{
+          "url": "https://wiki.corp.mongodb.com/display/DRIVERS/Node+Team+Practices"
+        }}
+      }}
+    ]
+  }}
+}}
+"""
+
+
+@pytest.fixture(scope="module")
 def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection, entity_extraction_model, entity_prompt, query_prompt
@@ -110,6 +152,21 @@ def test_related_entities(graph_store):
     assert len(no_entities) == 0
 
 
+def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
+    # Test additional examples
+    client = MongoClient(MONGODB_URI)
+    db = client[DB_NAME]
+    collection = db[f"{COLLECTION_NAME}_addl_examples"]
+    collection.delete_many({})
+    store_with_addl_examples = MongoDBGraphStore(
+        collection, entity_extraction_model, entity_examples=entity_example
+    )
+    store_with_addl_examples.add_documents(documents)
+    entity_names = ["ACME Corporation", "GreenTech Ltd."]
+    new_entities = store_with_addl_examples.related_entities(entity_names)
+    assert len(new_entities) >= 2
+
+
 def test_chat_response(graph_store, query_connection):
     """Displays querying an existing Knowledge Graph Database"""
     answer = graph_store.chat_response(query_connection)
@@ -125,21 +182,10 @@ def test_similarity_search(graph_store, query_connection):
     )
 
 
-# @pytest.mark.skip("TODO")
 def test_validator(documents, entity_extraction_model):
     client = MongoClient(MONGODB_URI)
     clxn = client[DB_NAME]["langchain_test_validated_entities"]
+    clxn.delete_many({})
     store = MongoDBGraphStore(clxn, entity_extraction_model, validate=True)
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
-
-
-@pytest.fixture(scope="module")
-def multihop_questions(graph_store, documents):
-    return [
-        "What is the connection between ACME Corporation and GreenTech Ltd.?",
-        "Who is leading the SolarGrid Initiative, and what is their role?",
-        "Which organizations are participating in the SolarGrid Initiative?",
-        "What is John Doe’s role in ACME’s renewable energy projects?",
-        "Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?",
-    ]

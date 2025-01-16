@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypeAlias, Union
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.prompts.chat import ChatPromptTemplate, SystemMessagePromptTemplate
 from langchain_core.runnables import RunnableSequence
 from pymongo import UpdateOne
 from pymongo.collection import Collection
@@ -13,7 +13,8 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import prompts, schema
 
-from .prompts import output_format, rag_prompt
+from .prompts import rag_prompt
+from .schema import entity_schema
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,13 @@ class MongoDBGraphStore:
         - One would add hints or examples in their prompt to the Entity Extraction Model.
         - This is the right track. Even if we're not focussing on Entity Extraction, we care about providing an API to allow it
          ==> e.g. Could give specific types to include, and that one must pick one, or if ambiguous, throw away information.
+
+    Here are a few examples of so-called multi-hop questions where GraphRAG excels:
+        - What is the connection between ACME Corporation and GreenTech Ltd.?
+        - Who is leading the SolarGrid Initiative, and what is their role?
+        - Which organizations are participating in the SolarGrid Initiative?
+        - What is John Doe’s role in ACME’s renewable energy projects?
+        - Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?
     """
 
     def __init__(
@@ -84,6 +92,8 @@ class MongoDBGraphStore:
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
         max_depth: int = 2,
         validate: bool = False,
+        entity_examples: str = None,
+        entity_name_examples: str = None,
     ):
         """
         Args:
@@ -93,21 +103,36 @@ class MongoDBGraphStore:
             query_prompt: Prompt extracts entities and relationships as search starting points.
             max_depth: Maximum recursion depth in graph traversal.
             validate: If True, entity schema will be validated on every insert or update.
+            entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
+            entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
         """
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
         self.max_depth = max_depth
         if validate:
-            db = collection.database
-            collection_name = collection.name
-            collection.drop()
-            self.collection = db.create_collection(
-                collection_name,
+            collection.database.command(
+                "collMod",
+                collection.name,
                 validator={"$jsonSchema": self.entity_schema},
             )
-        else:
-            self.collection = collection
+        self.collection = collection
+
+        if entity_examples:
+            self.entity_prompt.messages.insert(
+                1,
+                SystemMessagePromptTemplate.from_template(
+                    f"## Additional Examples \n {entity_examples}"
+                ),
+            )
+
+        if entity_name_examples:
+            self.query_prompt.messages.insert(
+                1,
+                SystemMessagePromptTemplate.from_template(
+                    f"## Additional Examples \n {entity_name_examples}"
+                ),
+            )
 
     @property
     def entity_schema(self):
@@ -179,7 +204,9 @@ class MongoDBGraphStore:
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
-        response: AIMessage = chain.invoke(dict(input_document=raw_document))
+        response: AIMessage = chain.invoke(
+            dict(input_document=raw_document, entity_schema=entity_schema)
+        )
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and trailing ```
         json_string = (
@@ -250,7 +277,7 @@ class MongoDBGraphStore:
                     "connectFromField": "ID",  # Match on entity ID
                     "connectToField": "ID",  # Use the target entity's ID
                     "as": "connections",  # Output field for related entities
-                    "maxDepth": max_depth or self.max_depth, # Cap traversal depth
+                    "maxDepth": max_depth or self.max_depth,  # Cap traversal depth
                 }
             },
             # Unwind the connections array to process each connection as its own document
@@ -286,53 +313,45 @@ class MongoDBGraphStore:
         starting_ids: List[str] = self.extract_entity_names(input_document)
         return self.related_entities(starting_ids)
 
-    def chat_response(self, query: str, chat_model: BaseChatModel = None) -> AIMessage:
+    def chat_response(
+        self,
+        query: str,
+        chat_model: BaseChatModel = None,
+        prompt: ChatPromptTemplate = None,
+    ) -> AIMessage:
         """Responds to a query given information found in Knowledge Graph.
 
         Args:
-            query:
-            chat_model:
+            query: Query to send the chat_model
+            chat_model: ChatBot. Defaults to entity_extraction_model.
+            prompt: Alternative Prompt Template. Defaults to prompts.rag_prompt
         Returns:
-            Response to the query. response.content contains text.
+            Response Message. response.content contains text.
         """
         if chat_model is None:
             chat_model = self.entity_extraction_model
+        if prompt is None:
+            prompt = rag_prompt
+
         # Perform Retrieval on knowledge graph
         related_entities = self.similarity_search(query)
         # Combine the llm with the prompt template to form a chain
-        chain: RunnableSequence = rag_prompt | chat_model
+        chain: RunnableSequence = prompt | chat_model
         # Invoke with query
         return chain.invoke(
             dict(
                 query=query,
                 related_entities=related_entities,
-                entity_schema=output_format,
+                entity_schema=entity_schema,
             )
         )
 
 
-# TODO NEXT -----------------------------------
-#   * REFACTOR PROMPTS
-#       - test_validator is failing because we have not constrained the relationship properties to be strings
-#   * rag_prompt is being passed 3 key-value pairs at runtime, and to both the human and system templates!
-#      - We wish to include the $jsonSchema in schema.entity_schema in addition to the context in prompts.output_format
-#      - extraction_template.format(output_schema=output_format) is unnecessary. We don't need to format twice. We CAN, but it's confusing
-#   * We have 3 prompts. Entities, Names, RAG.
-#       - ONLY extraction uses output_format. So we merge them, adding the jsonSchema and mentioning that it will be used in MongoDB JSON Schema Validation
-#        as entities are written.
-#   * While we rewrite the prompts, let's put in **place holders for...
-#       - examples
-#       - relationship names/types. Need to describe this well. keys in the relationships object.
-#       - entity types
-#
-
 # TODO
 #   - Rename "properties" in schema to "attributes"
 #   - Update Design Doc
-#   - Add: Constraints
-#       - relationships
-#       - entity types
-#   - Add schema validation. Does this need to be done during collection creation?!
-#       - If after creation: db.command("collMod", "my_collection", validator=validator)
-#   - Should I add an Entity class?
-#   - Add: GraphChain - do we want an end-to-end call for those not familiar with LangChain and RunnablePassthrough?
+#   - Prompts:
+#       - Can we pass variables in the dict that aren't used? (overspecified)
+#       - Add: Constraints in Prompts:
+#           - relationship names/types. Need to describe this well. keys in the relationships object.
+#           - entity types

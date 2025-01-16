@@ -4,80 +4,7 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-output_format = """
-A valid json document with a single top-level key 'entities'.
-Its value should be an array of the entities inferred.
-
-Each Entity will be represented by a single JSON Document. It will have the following fields.
-* ID: A unique identifier for the entity (e.g., UUID, name).
-* type: A string specifying the type of the entity (e.g., “Person”, “Organization”).
-* relationships: Stored as embedded key-value pairs. Keys are relationship types, values are lists of target entity IDs, along with additional metadata describing the relationship to that entity.
-* properties: A dictionary containing key-value pairs of attributes describing the entity. Properties should not include things that could be entities. When in doubt, make something an entity.
-
-## Example Entity structure
-{{
-  "ID": "Alice Palace",
-  "type": "Person",
-  "properties": {{
-    "position": "CEO",
-    "startDate": "2018-01-01"
-  }},
-  "relationships": {{
-    "employer": [
-      {{
-        "target": "MongoDB"
-      }}
-    ],
-    "friend": [
-      {{
-        "target": "Jarnail Singh",
-        "properties": {{
-          "since": "2019-05-01"
-        }}
-      }},
-      {{
-        "target": "Jasbinder Kaur",
-        "properties": {{
-          "since": "2015-05-01"
-        }}
-      }}
-    ]
-  }}
-}}
-"""
-
-
-query_context_entities_only = """
-You are a meticulous analyst tasked with extracting information from documents to form
-knowledge graphs of entities (nodes) and their relationships (edges).
-
-You will be provided a short document (query) from which you infer the entity names.
-You need not think about relationships between the entities. You only need names.
-
-Provide your response as valid json list of entity IDs,
-names or human-readable identifiers, found in the text.
-
- ## Examples:
- 1. input:  "Jack works at ACME in New York"
-    output: ["Jack", "ACME", "New York"]
-
- In this example, you would identify 3 entities:
- Jack of type person; ACME of type organization; New York of type place.
-
- 2. input: "In what continent is Brazil?
-    output: ["Brazil"]
-
-This example is in the form of a question. There is one entity,
-
-3. input: "For legal and operational purposes, many governments and organizations adopt specific definitions."
-   output: []
-
-In the final example, there are no entities.
-Though there are concepts and nouns that might be types or properties of entities,
-there is nothing here that could be seen as being a unique identifier or name.
-"""
-
-extraction_template = """
+entity_extraction_instructions = """
 ## Overview
 You are a meticulous analyst tasked with extracting information from unstructured text
 to build a knowledge graph in a structured json format of entities (nodes) and their relationships (edges).
@@ -124,10 +51,92 @@ If a relationship is bidirectional, each entity should contain the relationship 
 For example, if Casey works at MongoDB, MongoDB is an employer of Casey, and Casey is an employee of MongoDB.
 
 ## Output Schema
-{output_schema}
+A valid json document that is an object with a single top-level key 'entities'.
+Its value should be an array of the entities inferred.
+
+Each Entity will be represented by a single JSON Document. It will have the following fields.
+* ID: A unique identifier for the entity (e.g., UUID, name).
+* type: A string specifying the type of the entity (e.g., “Person”, “Organization”).
+* relationships: Stored as embedded key-value pairs. Keys are relationship types, values are lists of target entity IDs, along with additional metadata describing the relationship to that entity.
+* properties: A dictionary containing key-value pairs of attributes describing the entity. Both keys and values are strings. Properties should not include things that could be entities. When in doubt, make something an entity.
+
+### Entity Schema
+The schema of each entity is provided below following the $jsonSchema style used for MongoDB validation.
+
+{entity_schema}
+
+## Examples.
+Input:
+Alice Palace, the CEO of MongoDB since January 1, 2018.
+She is known for her strong leadership.
+She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019,
+and Jasbinder Kaur, her friend since May 1, 2015.
+
+Output:
+{{
+  "ID": "Alice Palace",
+  "type": "Person",
+  "properties": {{
+    "position": "CEO",
+    "startDate": "2018-01-01"
+  }},
+  "relationships": {{
+    "employer": [
+      {{
+        "target": "MongoDB"
+      }}
+    ],
+    "friend": [
+      {{
+        "target": "Jarnail Singh",
+        "properties": {{
+          "since": "2019-05-01"
+        }}
+      }},
+      {{
+        "target": "Jasbinder Kaur",
+        "properties": {{
+          "since": "2015-05-01"
+        }}
+      }}
+    ]
+  }}
+}}
 """
 
-rag_template = """
+
+name_extraction_instructions = """
+You are a meticulous analyst tasked with extracting information from documents to form
+knowledge graphs of entities (nodes) and their relationships (edges).
+
+You will be provided a short document (query) from which you infer the entity names.
+You need not think about relationships between the entities. You only need names.
+
+Provide your response as valid JSON Document, an array of entity ID strings,
+names or human-readable identifiers, found in the text.
+
+ ## Examples:
+ 1. input:  "Jack works at ACME in New York"
+    output: '["Jack", "ACME", "New York"]'
+
+ In this example, you would identify 3 entities:
+ Jack of type person; ACME of type organization; New York of type place.
+
+ 2. input: "In what continent is Brazil?
+    output: '["Brazil"]'
+
+This example is in the form of a question. There is one entity,
+
+3. input: "For legal and operational purposes, many governments and organizations adopt specific definitions."
+   output: '[]'
+
+In the final example, there are no entities.
+Though there are concepts and nouns that might be types or properties of entities,
+there is nothing here that could be seen as being a unique identifier or name.
+"""
+
+
+rag_instructions = """
 ## Context
 You are a meticulous analyst tasked with extracting information in the form of knowledge graphs
 comprised of entities (nodes) and their relationships (edges).
@@ -139,7 +148,7 @@ From the context retrieved alone, please respond to the Query.
 Your response should be a string of concise prose.
 
 ## Entity Schema
-The entities have the following schema:
+The entities have the following schema matching MongoDB's $jsonSchema style used for MongoDB validation.
 
 {entity_schema}
 
@@ -149,16 +158,14 @@ The entities have the following schema:
 
 entity_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(
-            extraction_template.format(output_schema=output_format)
-        ),
-        HumanMessagePromptTemplate.from_template("INPUT: {input_document}"),
+        SystemMessagePromptTemplate.from_template(entity_extraction_instructions),
+        HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
 
 query_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(query_context_entities_only),
+        SystemMessagePromptTemplate.from_template(name_extraction_instructions),
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
@@ -166,7 +173,7 @@ query_prompt = ChatPromptTemplate.from_messages(
 
 rag_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(rag_template),
+        SystemMessagePromptTemplate.from_template(rag_instructions),
         HumanMessagePromptTemplate.from_template("{query}"),
     ]
 )
@@ -176,4 +183,3 @@ rag_prompt = ChatPromptTemplate.from_messages(
 #  Parameterize this to constrain
 #  - entity types
 #  - relationships types,
-#  Add spaceholder for examples
