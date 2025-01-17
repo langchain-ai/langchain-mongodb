@@ -119,3 +119,7 @@ ALL_CHECKPOINTERS_ASYNC_PLUS_NONE = [
 ]
 ALL_STORES_SYNC = ["in_memory"]
 ALL_STORES_ASYNC = ["in_memory"]
+REGULAR_CHECKPOINTERS_ASYNC = [
+    # "memory",
+    "mongodb_aio",
+]
