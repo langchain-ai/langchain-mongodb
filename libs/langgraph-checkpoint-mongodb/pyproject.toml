@@ -52,6 +52,10 @@ lint.select = [
 ]
 lint.ignore = ["E501", "B008", "UP007", "UP006"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/integration_tests/test_pregel*.py" = ["UP035", "B011", "B023"]
+
+
 [tool.mypy]
 # https://mypy.readthedocs.io/en/stable/config_file.html
 disallow_untyped_defs = true
