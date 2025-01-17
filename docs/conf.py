@@ -81,6 +81,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.autodoc_pydantic",
     "myst_parser",
+    "_extensions.gallery_directive",
     "sphinx_design",
     "sphinx_copybutton",
     "sphinxcontrib.googleanalytics",
