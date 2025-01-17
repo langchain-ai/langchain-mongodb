@@ -540,7 +540,7 @@ For user guides see [https://python.langchain.com](https://python.langchain.com)
                 else len(integrations_to_show)
             ),
         )[: len(integrations_to_show)]:
-            integration_grid += f'\n- header: "**{header_name}**"\n  content: {dir_} {_get_package_version(_package_dir(dir_))}\n  link: {dir_.replace("-", "_")}/index.html'
+            integration_grid += f'\n- header: "**{header_name}**"\n  content: {dir_} {_get_package_version(_package_dir(dir_))}\n  link: {dir_.replace("-", "_")}/api_docs.html'
         doc += f"""## Integrations
 
 ```{{gallery-grid}}
