@@ -35,6 +35,9 @@ else:
         return cls.__aiter__()
 
 
+__all__ = ["AsyncMongoDBSaver"]
+
+
 class AsyncMongoDBSaver(BaseCheckpointSaver):
     """A checkpoint saver that stores checkpoints in a MongoDB database asynchronously.
 

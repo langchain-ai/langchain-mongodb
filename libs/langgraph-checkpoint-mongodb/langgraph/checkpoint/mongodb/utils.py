@@ -1,3 +1,8 @@
+"""
+:private:
+Utilities for langchain-checkpoint-mongod.
+"""
+
 from typing import Any, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata

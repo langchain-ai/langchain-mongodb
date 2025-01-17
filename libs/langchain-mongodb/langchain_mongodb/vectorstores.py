@@ -61,12 +61,12 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
     Setup:
         * Set up a MongoDB Atlas cluster. The free tier M0 will allow you to start.
-        Search Indexes are only available on Atlas, the fully managed cloud service,
-        not the self-managed MongoDB.
-        Follow [this guide](https://www.mongodb.com/basics/mongodb-atlas-tutorial)
+          Search Indexes are only available on Atlas, the fully managed cloud service,
+          not the self-managed MongoDB.
+          Follow [this guide](https://www.mongodb.com/basics/mongodb-atlas-tutorial)
 
         * Create a Collection and a Vector Search Index.The procedure is described
-        [here](https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/#procedure).
+          [here](https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/#procedure).
 
         * Install ``langchain-mongodb``
 
@@ -189,6 +189,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             * [SIM=0.916096] foo [{'_id': '1', 'baz': 'bar'}]
 
     Use as Retriever:
+
         .. code-block:: python
 
             retriever = vector_store.as_retriever(

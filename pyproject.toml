@@ -21,6 +21,7 @@ dev = [
     "langgraph-checkpoint-mongodb",
     "langchain-community>=0.3.14",
     "myst-parser>=3.0.1",
+    "ipython>=8.18.1",
 ]
 
 [tool.uv.sources]

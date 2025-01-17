@@ -88,6 +88,8 @@ def _load_module_members(module_path: str, namespace: str) -> ModuleMembers:
             continue
         if ":private:" in (type_.__doc__ or ""):
             continue
+        if hasattr(module, "__all__") and name not in module.__all__:
+            continue
 
         if inspect.isclass(type_):
             # The type of the class is used to select a template
