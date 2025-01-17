@@ -80,7 +80,7 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
                 provided.
             session_id: str
                 arbitrary key that is used to store the messages of
-                 a single chat session.
+                a single chat session.
             database_name: Optional[str]
                 name of the database to use.
             collection_name: Optional[str]
