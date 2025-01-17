@@ -123,3 +123,7 @@ REGULAR_CHECKPOINTERS_ASYNC = [
     # "memory",
     "mongodb_aio",
 ]
+REGULAR_CHECKPOINTERS_SYNC = [
+    # "memory",
+    "mongodb",
+]
