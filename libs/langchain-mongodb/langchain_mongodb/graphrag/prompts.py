@@ -22,7 +22,6 @@ INPUT: You will be provided a text document.
 OUTPUT: You will produce valid json according the "Output Schema" section below.
 
 ## Entities
-
 An entity in a knowledge graph is a uniquely identifiable object or concept,
 such as a person, organization, location, object, or event,
 represented as a node with attributes (properties) and relationships to other entities,
@@ -38,8 +37,12 @@ Define required fields (e.g., ID, name,, type) and allow optional attributes.
 
 Do not nest organizations as attributes of another entity. they should be separate entities with their own unique IDs.
 
-## Relationships
+#### Allowed Entity Types
+IMPORTANT! It is vital to include ONLY these Entity types in the output: {allowed_entity_types}!
+If it is an empty array, any value for type is permitted. If it contains values,
+only include entities containing these values for 'type' in the output. Discard any others.
 
+## Relationships
 Relationships represent edges in the knowledge graph. Relationships describe a specific edge type.
 Ensure consistency and generality in relationship names when constructing knowledge schemas.
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
@@ -49,6 +52,11 @@ If synonyms are found in the document, choose the most general and use consisten
 
 If a relationship is bidirectional, each entity should contain the relationship with the other entity as target.
 For example, if Casey works at MongoDB, MongoDB is an employer of Casey, and Casey is an employee of MongoDB.
+
+#### Allowed Relationships
+If there are any values in this array, include ONLY relationships of these types: [{allowed_relationship_types}].
+If a relationship is implied but it does not make sense to name it one of the allowed keys,
+then do not add the relationship to the entity.
 
 ## Output Schema
 A valid json document that is an object with a single top-level key 'entities'.
@@ -62,6 +70,7 @@ Each Entity will be represented by a single JSON Document. It will have the foll
 
 ### Entity Schema
 The schema of each entity is provided below following the $jsonSchema style used for MongoDB validation.
+Remember to conform to the instructions in Allowed Entity Types and Allowed Relationship subsections.
 
 {entity_schema}
 

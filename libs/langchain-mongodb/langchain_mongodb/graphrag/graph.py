@@ -1,5 +1,6 @@
 import json
 import logging
+from copy import copy
 from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from langchain_core.documents import Document
@@ -11,10 +12,10 @@ from pymongo import UpdateOne
 from pymongo.collection import Collection
 from pymongo.results import BulkWriteResult
 
-from langchain_mongodb.graphrag import prompts, schema
+from langchain_mongodb.graphrag import prompts
 
 from .prompts import rag_prompt
-from .schema import entity_schema
+from .schema import entity_schema, relationship_schema
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,8 @@ class MongoDBGraphStore:
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
         max_depth: int = 2,
         validate: bool = False,
+        allowed_entity_types: List[str] = None,
+        allowed_relationship_types: List[str] = None,
         entity_examples: str = None,
         entity_name_examples: str = None,
     ):
@@ -103,6 +106,8 @@ class MongoDBGraphStore:
             query_prompt: Prompt extracts entities and relationships as search starting points.
             max_depth: Maximum recursion depth in graph traversal.
             validate: If True, entity schema will be validated on every insert or update.
+            allowed_entity_types: If provided, constrains search to these types.
+            allowed_relationship_types: If provided, constrains search to these types.
             entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
             entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
         """
@@ -110,11 +115,30 @@ class MongoDBGraphStore:
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
         self.max_depth = max_depth
+        self._schema = copy(entity_schema)
+        if allowed_entity_types:
+            self.allowed_entity_types = allowed_entity_types
+            self._schema["properties"]["type"]["enum"] = allowed_entity_types
+        else:
+            self.allowed_entity_types = []
+        if allowed_relationship_types:
+            # Update Prompt
+            self.allowed_relationship_types = allowed_relationship_types
+            # Update schema. Disallow other keys..
+            self._schema["properties"]["relationships"]["additionalProperties"] = False
+            self._schema["properties"]["relationships"]["properties"] = {}
+            for rel in allowed_relationship_types:
+                self._schema["properties"]["relationships"]["properties"][rel] = (
+                    relationship_schema
+                )
+        else:
+            self.allowed_relationship_types = []
+
         if validate:
             collection.database.command(
                 "collMod",
                 collection.name,
-                validator={"$jsonSchema": self.entity_schema},
+                validator={"$jsonSchema": self._schema},
             )
         self.collection = collection
 
@@ -141,7 +165,7 @@ class MongoDBGraphStore:
         See Also:
             `$jsonSchema <https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/>`_
         """
-        return schema.entity_schema
+        return self._schema
 
     def add_documents(
         self, documents: Union[Document, List[Document]]
@@ -205,7 +229,12 @@ class MongoDBGraphStore:
         chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
         response: AIMessage = chain.invoke(
-            dict(input_document=raw_document, entity_schema=entity_schema)
+            dict(
+                input_document=raw_document,
+                entity_schema=self.entity_schema,
+                allowed_entity_types=self.allowed_entity_types,
+                allowed_relationship_types=self.allowed_relationship_types,
+            )
         )
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and trailing ```
@@ -350,7 +379,6 @@ class MongoDBGraphStore:
 # TODO
 #   - Update Design Doc
 #   - Prompts:
-#       - Can we pass variables in the dict that aren't used? (overspecified)
 #       - Add: Constraints in Prompts:
 #           - relationship names/types. Need to describe this well. keys in the relationships object.
 #           - entity types

@@ -189,3 +189,34 @@ def test_validator(documents, entity_extraction_model):
     store = MongoDBGraphStore(clxn, entity_extraction_model, validate=True)
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
+    entities = store.collection.find({}).to_list()
+    assert set(e["type"] for e in entities) == {"Person", "Organization"}
+
+
+def test_validator_with_entity_constraints(documents, entity_extraction_model):
+    client = MongoClient(MONGODB_URI)
+    clxn = client[DB_NAME]["langchain_test_validated_entities"]
+    clxn.delete_many({})
+    store = MongoDBGraphStore(
+        clxn, entity_extraction_model, allowed_entity_types=["Person"], validate=True
+    )
+    bulkwrite_results = store.add_documents(documents)
+    assert len(bulkwrite_results) == len(documents)
+    entities = store.collection.find({}).to_list()
+    assert set(e["type"] for e in entities) == {"Person"}
+
+
+def test_validator_with_relationship_constraints(documents, entity_extraction_model):
+    client = MongoClient(MONGODB_URI)
+    clxn = client[DB_NAME]["langchain_test_validated_entities"]
+    clxn.delete_many({})
+    store = MongoDBGraphStore(
+        clxn,
+        entity_extraction_model,
+        allowed_relationship_types=["employee"],
+        validate=True,
+    )
+    bulkwrite_results = store.add_documents(documents)
+    assert len(bulkwrite_results) == len(documents)
+    entities = store.collection.find({}).to_list()
+    assert set(e["relationship"].keys() for e in entities) == {"employee"}
