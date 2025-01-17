@@ -74,9 +74,23 @@ jobs:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
+  api-docs:
+    name: API docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: 3.9
+      - run: uv run sphinx-build -T -b html docs docs/_build/html
+
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test, pre-commit]
+    needs: [build, lint, test, pre-commit, api-docs]
     if: |
       always()
     runs-on: ubuntu-latest
