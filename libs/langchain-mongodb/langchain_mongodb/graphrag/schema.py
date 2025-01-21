@@ -28,16 +28,24 @@ relationship_schema = {
             "attributes": {
                 "bsonType": "object",
                 "description": "Metadata describing the relationship",
-                "additionalProperties": {"bsonType": "string"},
+                "additionalProperties": {
+                    "anyOf": [
+                        {"bsonType": "string"},
+                        {
+                            "bsonType": "array",
+                            "items": {"bsonType": "string"},
+                        },
+                    ]
+                },
             },
         },
     },
 }
 
-"""Validation Schema for Enrtity used when inserting into Collection"""
+"""Entity Validation Schema used when inserting into Collection"""
 entity_schema = {
     "bsonType": "object",
-    "required": ["ID", "type", "attributes", "relationships"],
+    "required": ["ID", "type"],
     "properties": {
         "ID": {
             "bsonType": "string",

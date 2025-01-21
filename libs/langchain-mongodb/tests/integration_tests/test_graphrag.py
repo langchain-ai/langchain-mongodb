@@ -32,7 +32,7 @@ def collection() -> Collection:
 @pytest.fixture(scope="module")
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+    return ChatOpenAI(model="gpt-4o-mini", temperature=1.0)
 
 
 @pytest.fixture(scope="module")
@@ -191,22 +191,31 @@ def test_validator(documents, entity_extraction_model):
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
     assert set(e["type"] for e in entities) == {"Person", "Organization"}
+    answer = store.chat_response("How are Jane Smith and John Doe related?")
+    assert answer
 
 
-def test_validator_with_entity_constraints(documents, entity_extraction_model):
+
+def test_allowed_entity_types(documents, entity_extraction_model):
+    """Add allowed_entity_types. Use the validator to confirm behaviour."""
+    allowed_entity_types = ["Person"]  #
     client = MongoClient(MONGODB_URI)
     clxn = client[DB_NAME]["langchain_test_validated_entities"]
     clxn.delete_many({})
     store = MongoDBGraphStore(
-        clxn, entity_extraction_model, allowed_entity_types=["Person"], validate=True
+        clxn,
+        entity_extraction_model,
+        allowed_entity_types=allowed_entity_types,
+        validate=True,
     )
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
     assert set(e["type"] for e in entities) == {"Person"}
+    assert len(set(e.get("relationships") for e in entities)) == {None}
 
 
-def test_validator_with_relationship_constraints(documents, entity_extraction_model):
+def test_allowed_relationship_types(documents, entity_extraction_model):
     client = MongoClient(MONGODB_URI)
     clxn = client[DB_NAME]["langchain_test_validated_entities"]
     clxn.delete_many({})
@@ -220,3 +229,11 @@ def test_validator_with_relationship_constraints(documents, entity_extraction_mo
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
     assert set(e["relationship"].keys() for e in entities) == {"employee"}
+
+
+# TODO - Ask "How are John Doe and Jane Smith related?"
+#   If 'Person' is the only allowed_entity.
+#    - self.extract_entities("Jane Doe and John Smith both work at ACME Inc") has no relationships. This is because ACME Organization isn't created to connect
+#    - self.extract_entities("Jane Doe and John Smith are married") created "relationships.married'
+#    - We need to find a connection between them is Organization type IS allowed.
+#

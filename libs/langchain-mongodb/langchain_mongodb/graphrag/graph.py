@@ -167,6 +167,41 @@ class MongoDBGraphStore:
         """
         return self._schema
 
+    def _write_entities(self, entities: List[Entity]) -> BulkWriteResult:
+        """Isolate logic to insert and aggregate entities."""
+        operations = []
+        for entity in entities:
+            operations.append(
+                UpdateOne(
+                    filter={"ID": entity["ID"]},  # Match on ID
+                    update={
+                        "$setOnInsert": {  # Set if upsert
+                            "ID": entity["ID"],
+                            "type": entity["type"],
+                        },
+                        # "$set": {  # Ensure relationships field is always present
+                        #     "relationships": entity.get("relationships", {}),
+                        #     "attributes": entity.get("attributes", {}),
+                        # },
+                        "$addToSet": {  # Update without overwriting
+                            **{
+                                f"attributes.{k}": v
+                                for k, v in entity.get("attributes", {}).items()
+                            },
+                            **{
+                                f"relationships.{k}": {"$each": v}
+                                for k, v in entity.get("relationships", {}).items()
+                            },
+                        },
+                    },
+                    upsert=True,
+                )
+            )
+
+        # Execute bulk write for the entities
+        if operations:
+            return self.collection.bulk_write(operations)
+
     def add_documents(
         self, documents: Union[Document, List[Document]]
     ) -> List[BulkWriteResult]:
@@ -186,35 +221,8 @@ class MongoDBGraphStore:
             # Call LLM to find all Entities in doc
             entities = self.extract_entities(doc.page_content)
             logger.debug(f"Entities found: {[e["ID"] for e in entities]}")
-            # Insert new, or combine with existing, entity
-            operations = []
-            for entity in entities:
-                operations.append(
-                    UpdateOne(
-                        filter={"ID": entity["ID"]},  # Match on ID
-                        update={
-                            "$setOnInsert": {  # Set if upsert
-                                "ID": entity["ID"],
-                                "type": entity["type"],
-                            },
-                            "$addToSet": {  # Update without overwriting
-                                **{
-                                    f"attributes.{k}": v
-                                    for k, v in entity.get("attributes", {}).items()
-                                },
-                                **{
-                                    f"relationships.{k}": {"$each": v}
-                                    for k, v in entity.get("relationships", {}).items()
-                                },
-                            },
-                        },
-                        upsert=True,
-                    )
-                )
-
-            # Execute bulk write for the entities
-            if operations:
-                results.append(self.collection.bulk_write(operations))
+            # Insert new or combine with existing entities
+            results.append(self._write_entities(entities))
         return results
 
     def extract_entities(self, raw_document: str, **kwargs: Any) -> List[Entity]:
@@ -300,13 +308,14 @@ class MongoDBGraphStore:
                         "$reduce": {
                             "input": {"$objectToArray": "$relationships"},
                             "initialValue": [],
-                            "in": {"$concatArrays": ["$$value", "$$this.v.target"]},
+                            "in": {"$concatArrays": ["$$value", "$$this.v.target"]},  # TODO - This isn't right anymore.
                         }
                     },
-                    "connectFromField": "ID",  # Match on entity ID
+                    "connectFromField": "relationships.target", # Follows every target in array
                     "connectToField": "ID",  # Use the target entity's ID
                     "as": "connections",  # Output field for related entities
                     "maxDepth": max_depth or self.max_depth,  # Cap traversal depth
+                    "depthField": "depth",
                 }
             },
             # Unwind the connections array to process each connection as its own document
@@ -377,8 +386,13 @@ class MongoDBGraphStore:
 
 
 # TODO
+#   - Get traversal and schema right
+#       - Use sandbox/graphrag/traversal/traversal_latest.py and test to get right.
+#       - schema.py does not appear to be updated, but it is close. 
+#       - We want 3 arrays: target (str), type(str), attributes(object)
 #   - Update Design Doc
 #   - Prompts:
 #       - Add: Constraints in Prompts:
 #           - relationship names/types. Need to describe this well. keys in the relationships object.
 #           - entity types
+#   - Change ID to _id. _id is indexed.

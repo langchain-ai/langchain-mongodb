@@ -19,97 +19,92 @@ Use the following as guidelines.
 - Accuracy: Do not add any information that is not explicitly mentioned in the text.
 
 INPUT: You will be provided a text document.
-OUTPUT: You will produce valid json according the "Output Schema" section below.
+OUTPUT:
+- You will produce valid json according the "Output Schema" section below.
+- The extracted entities and relationships **MUST STRICTLY CONFORM** to the constraints outlined below.
+- Any entities or relationships not matching the allowed types must be **EXCLUDED**.
+
 
 ## Entities
-An entity in a knowledge graph is a uniquely identifiable object or concept,
-such as a person, organization, location, object, or event,
-represented as a node with attributes (properties) and relationships to other entities,
-enabling structured and meaningful connections within the graph.
-
-Extract all entities mentioned, using their full names as unique IDs when available.
+An entity in a knowledge graph is a uniquely identifiable object or concept
+(such as a person, organization, location, object, or event),
+represented as a node with attributes (properties) and relationships to other entities.
 
 Maintain Entity Consistency when extracting entities. If an entity, such as "John Doe",
-is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "Joe", "he"),
+is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "John", "Mr Doe", "he"),
 always use the most complete identifier for that entity throughout the knowledge graph.
 In this example, use "John Doe" as the entity ID.
-Define required fields (e.g., ID, name,, type) and allow optional attributes.
 
-Do not nest organizations as attributes of another entity. they should be separate entities with their own unique IDs.
+**Allowed Entity Types**:
+- Extract ONLY entities whose `type` matches one of the following: {allowed_entity_types}.
+- If this list is empty, any `type` is permitted.
 
-#### Allowed Entity Types
-IMPORTANT! It is vital to include ONLY these Entity types in the output: {allowed_entity_types}!
-If it is an empty array, any value for type is permitted. If it contains values,
-only include entities containing these values for 'type' in the output. Discard any others.
+### Examples of Exclusions:
+- If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions "Event" or "Location",
+  these entities must **NOT** be included in the output.
 
 ## Relationships
 Relationships represent edges in the knowledge graph. Relationships describe a specific edge type.
+Relationships MUST include a target entity. 
 Ensure consistency and generality in relationship names when constructing knowledge schemas.
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
 like 'employee'. Add details as attributes. Make sure to use general and timeless relationship types!
 
-If synonyms are found in the document, choose the most general and use consistently.
+**Allowed Relationship Types**:
+- Extract ONLY relationships that match the following keys: {allowed_relationship_types}.
+- NOTE: If this list is empty, ANY relationship type is permitted.
+- If a relationship cannot be named with one of the allowed keys, **DO NOT include it**.
+- An entity's relationships should be an empty object if no relationship is found that matches the allowed relation types.
 
-If a relationship is bidirectional, each entity should contain the relationship with the other entity as target.
-For example, if Casey works at MongoDB, MongoDB is an employer of Casey, and Casey is an employee of MongoDB.
+### Examples of Exclusions:
+- If `allowed_relationship_types` is `["employer", "friend"]` and the text implies a "partner" relationship,
+  the "partner" relationship must **NOT** be included.
 
-#### Allowed Relationships
-If there are any values in this array, include ONLY relationships of these types: [{allowed_relationship_types}].
-If a relationship is implied but it does not make sense to name it one of the allowed keys,
-then do not add the relationship to the entity.
+## Validation
+Before producing the final output:
+1. Validate that all extracted entities have an `ID` and `type`.
+2. Validate that all `type` values are in {allowed_entity_types}.
+3. Validate that all relationships use keys in {allowed_relationship_types}.
+4. Exclude any entities or relationships failing validation.
 
 ## Output Schema
-A valid json document that is an object with a single top-level key 'entities'.
-Its value should be an array of the entities inferred.
-
-Each Entity will be represented by a single JSON Document. It will have the following fields.
-* ID: A unique identifier for the entity (e.g., UUID, name).
-* type: A string specifying the type of the entity (e.g., “Person”, “Organization”).
-* relationships: Stored as embedded key-value pairs. Keys are relationship types, values are lists of target entity IDs, along with additional metadata describing the relationship to that entity.
-* attributes: A dictionary containing key-value pairs of attributes describing the entity. Both keys and values are strings. Properties should not include things that could be entities. When in doubt, make something an entity.
-
-### Entity Schema
-The schema of each entity is provided below following the $jsonSchema style used for MongoDB validation.
-Remember to conform to the instructions in Allowed Entity Types and Allowed Relationship subsections.
-
+Output a valid JSON document with a single top-level key, `entities`, as an array of objects.
+Each object must conform to the following schema:
 {entity_schema}
 
-## Examples.
-Input:
+## Input Example
 Alice Palace, the CEO of MongoDB since January 1, 2018.
-She is known for her strong leadership.
-She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019,
-and Jasbinder Kaur, her friend since May 1, 2015.
+She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019, and Jasbinder Kaur, her friend since May 1, 2015.
 
-Output:
+## Output Example
+(If `allowed_entity_types` is ["Person"] and `allowed_relationship_types` is ["friend"])
 {{
-  "ID": "Alice Palace",
-  "type": "Person",
-  "attributes": {{
-    "position": "CEO",
-    "startDate": "2018-01-01"
-  }},
-  "relationships": {{
-    "employer": [
-      {{
-        "target": "MongoDB"
-      }}
-    ],
-    "friend": [
-      {{
-        "target": "Jarnail Singh",
-        "attributes": {{
-          "since": "2019-05-01"
-        }}
+  "entities": [
+    {{
+      "ID": "Alice Palace",
+      "type": "Person",
+      "attributes": {{
+        "position": "CEO",
+        "startDate": "2018-01-01"
       }},
-      {{
-        "target": "Jasbinder Kaur",
-        "attributes": {{
-          "since": "2015-05-01"
-        }}
+      "relationships": {{
+        "friend": [
+          {{
+            "target": "Jarnail Singh",
+            "attributes": {{
+              "since": "2019-05-01"
+            }}
+          }},
+          {{
+            "target": "Jasbinder Kaur",
+            "attributes": {{
+              "since": "2015-05-01"
+            }}
+          }}
+        ]
       }}
-    ]
-  }}
+    }}
+  ]
 }}
 """
 
@@ -121,23 +116,23 @@ knowledge graphs of entities (nodes) and their relationships (edges).
 You will be provided a short document (query) from which you infer the entity names.
 You need not think about relationships between the entities. You only need names.
 
-Provide your response as valid JSON Document, an array of entity ID strings,
+Provide your response as valid JSON Array of entity ID strings,
 names or human-readable identifiers, found in the text.
 
  ## Examples:
  1. input:  "Jack works at ACME in New York"
-    output: '["Jack", "ACME", "New York"]'
+    output: ["Jack", "ACME", "New York"]
 
  In this example, you would identify 3 entities:
  Jack of type person; ACME of type organization; New York of type place.
 
  2. input: "In what continent is Brazil?
-    output: '["Brazil"]'
+    output: ["Brazil"]
 
 This example is in the form of a question. There is one entity,
 
 3. input: "For legal and operational purposes, many governments and organizations adopt specific definitions."
-   output: '[]'
+   output: []
 
 In the final example, there are no entities.
 Though there are concepts and nouns that might be types or attributes of entities,
@@ -192,3 +187,4 @@ rag_prompt = ChatPromptTemplate.from_messages(
 #  Parameterize this to constrain
 #  - entity types
 #  - relationships types,
+# Fix JSONDecoderError in rag_prompt
