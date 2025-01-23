@@ -1,7 +1,12 @@
 import json
 import logging
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, TypeAlias, Union
+from typing import Any, Dict, List, Optional, Union
+
+try:
+    from typing import TypeAlias  # Python 3.10+
+except ImportError:
+    from typing_extensions import TypeAlias  # Python 3.9 fallback
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
