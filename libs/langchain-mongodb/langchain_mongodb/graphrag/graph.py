@@ -410,7 +410,3 @@ class MongoDBGraphStore:
                 entity_schema=entity_schema,
             )
         )
-
-
-# TODO
-#   - Update Design Doc

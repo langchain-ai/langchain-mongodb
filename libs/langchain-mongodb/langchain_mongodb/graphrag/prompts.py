@@ -181,10 +181,3 @@ rag_prompt = ChatPromptTemplate.from_messages(
         HumanMessagePromptTemplate.from_template("{query}"),
     ]
 )
-
-
-# TODO -
-#  Parameterize this to constrain
-#  - entity types
-#  - relationships types,
-# Fix JSONDecoderError in rag_prompt
