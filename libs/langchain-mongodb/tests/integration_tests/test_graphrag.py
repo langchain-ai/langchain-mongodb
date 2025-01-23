@@ -26,13 +26,19 @@ def collection() -> Collection:
     return collection
 
 
-@pytest.mark.skipif(
-    "OPENAI_API_KEY" not in os.environ, reason="Requires OpenAI for chat responses."
-)
+if "OPENAI_API_KEY" not in os.environ:
+    pytest.skip(
+        "GraphRAG tests require OpenAI for chat responses.", allow_module_level=True
+    )
+
+
 @pytest.fixture(scope="module")
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
-    return ChatOpenAI(model="gpt-4o", temperature=0.0)
+    try:
+        return ChatOpenAI(model="gpt-4o", temperature=0.0)
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="module")
