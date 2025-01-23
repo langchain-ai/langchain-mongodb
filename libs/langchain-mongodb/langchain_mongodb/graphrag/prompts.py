@@ -9,7 +9,7 @@ entity_extraction_instructions = """
 You are a meticulous analyst tasked with extracting information from unstructured text
 to build a knowledge graph in a structured json format of entities (nodes) and their relationships (edges).
 The graph will be stored in a MongoDB Collection and traversed using $graphLookup
-from starting points of entity IDs and relationship types.
+from starting points of entity nodes matching names found in a query, and follow their relationships.
 
 Use the following as guidelines.
 
@@ -30,14 +30,17 @@ An entity in a knowledge graph is a uniquely identifiable object or concept
 (such as a person, organization, location, object, or event),
 represented as a node with attributes (properties) and relationships to other entities.
 
+Use the reserved field name `_id` for the name. It will be a unique primary key,
+and MongoDB automatically creates an index for the `_id` field.
+
 Maintain Entity Consistency when extracting entities. If an entity, such as "John Doe",
 is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "John", "Mr Doe", "he"),
 always use the most complete identifier for that entity throughout the knowledge graph.
-In this example, use "John Doe" as the entity ID.
+In this example, use "John Doe" as the entity `_id.`
 
 **Allowed Entity Types**:
 - Extract ONLY entities whose `type` matches one of the following: {allowed_entity_types}.
-- If this list is empty, any `type` is permitted.
+- NOTE: If this list is empty, ANY `type` is permitted.
 
 ### Examples of Exclusions:
 - If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions "Event" or "Location",
@@ -45,24 +48,28 @@ In this example, use "John Doe" as the entity ID.
 
 ## Relationships
 Relationships represent edges in the knowledge graph. Relationships describe a specific edge type.
-Relationships MUST include a target entity. 
+Relationships MUST include a target entity, but Entities can be extracted that DO NOT have relationships!
 Ensure consistency and generality in relationship names when constructing knowledge schemas.
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
 like 'employee'. Add details as attributes. Make sure to use general and timeless relationship types!
 
+
 **Allowed Relationship Types**:
-- Extract ONLY relationships that match the following keys: {allowed_relationship_types}.
-- NOTE: If this list is empty, ANY relationship type is permitted.
+- Extract ONLY relationships whose `type` matches one of the following: {allowed_relationship_types}.
+- If this list is empty, ANY relationship type is permitted.
+- Map synonymous or related terms to the closest matching allowed type. For example:
+	-	“works for” or “employed by” → employee
+	-	“manages” or “supervises” → manager
 - If a relationship cannot be named with one of the allowed keys, **DO NOT include it**.
-- An entity's relationships should be an empty object if no relationship is found that matches the allowed relation types.
+- An entity need not have a relationships object if no relationship is found that matches the allowed relation types.
 
 ### Examples of Exclusions:
-- If `allowed_relationship_types` is `["employer", "friend"]` and the text implies a "partner" relationship,
-  the "partner" relationship must **NOT** be included.
+- If `allowed_relationship_types` is `["employs", "friend"]` and the text implies a "partner" relationship,
+  the entities can be added, but the "partner" relationship must **NOT** be included.
 
 ## Validation
 Before producing the final output:
-1. Validate that all extracted entities have an `ID` and `type`.
+1. Validate that all extracted entities have an `_id` and `type`.
 2. Validate that all `type` values are in {allowed_entity_types}.
 3. Validate that all relationships use keys in {allowed_relationship_types}.
 4. Exclude any entities or relationships failing validation.
@@ -73,34 +80,27 @@ Each object must conform to the following schema:
 {entity_schema}
 
 ## Input Example
-Alice Palace, the CEO of MongoDB since January 1, 2018.
-She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019, and Jasbinder Kaur, her friend since May 1, 2015.
+Alice Palace, has been the CEO of MongoDB since January 1, 2018.
+She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019,
+and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
 
 ## Output Example
-(If `allowed_entity_types` is ["Person"] and `allowed_relationship_types` is ["friend"])
+(If `allowed_entity_types` is ["Person"] and `allowed_relationship_types` is ["Friend"])
 {{
   "entities": [
     {{
-      "ID": "Alice Palace",
+      "_id": "Alice Palace",
       "type": "Person",
       "attributes": {{
-        "position": "CEO",
-        "startDate": "2018-01-01"
+        "job": ["CEO of MongoDB"],
+        "startDate": ["2018-01-01"]
       }},
       "relationships": {{
-        "friend": [
-          {{
-            "target": "Jarnail Singh",
-            "attributes": {{
-              "since": "2019-05-01"
-            }}
-          }},
-          {{
-            "target": "Jasbinder Kaur",
-            "attributes": {{
-              "since": "2015-05-01"
-            }}
-          }}
+        "targets": ["Jasbinder Kaur", "Jarnail Singh"],
+        "types": ["Friend", "Friend"],
+        "attributes": [
+          {{ "since": ["2019-05-01"], "frequency": ["weekly"] }},
+          {{ "since": ["2015-05-01"] }}
         ]
       }}
     }}
@@ -116,8 +116,8 @@ knowledge graphs of entities (nodes) and their relationships (edges).
 You will be provided a short document (query) from which you infer the entity names.
 You need not think about relationships between the entities. You only need names.
 
-Provide your response as valid JSON Array of entity ID strings,
-names or human-readable identifiers, found in the text.
+Provide your response as a valid JSON Array of entity names
+or human-readable identifiers, found in the text.
 
  ## Examples:
  1. input:  "Jack works at ACME in New York"

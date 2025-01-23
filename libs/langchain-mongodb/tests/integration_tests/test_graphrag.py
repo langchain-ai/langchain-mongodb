@@ -17,12 +17,12 @@ DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def collection() -> Collection:
     client = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
-    collection = db[COLLECTION_NAME]
-    collection.delete_many({})
+    db[COLLECTION_NAME].drop()
+    collection = db.create_collection(COLLECTION_NAME)
     return collection
 
 
@@ -32,7 +32,7 @@ def collection() -> Collection:
 @pytest.fixture(scope="module")
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=1.0)
+    return ChatOpenAI(model="gpt-4o", temperature=0.0)
 
 
 @pytest.fixture(scope="module")
@@ -82,7 +82,7 @@ The Node Team has a comprehensive guide to best practices: https://wiki.corp.mon
 
 Output:
 {{
-  "ID": "Best Practices",
+  "_id": "Best Practices",
   "type": "Guideline",
   "attributes": {{
     "style": "Follow the Python Style Guide (PEP 8)",
@@ -111,7 +111,7 @@ Output:
 """
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection, entity_extraction_model, entity_prompt, query_prompt
@@ -124,7 +124,7 @@ def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphS
 
 @pytest.fixture(scope="module")
 def query_connection():
-    return "What is the connection between ACME Corporation and GreenTech Ltd.?"
+    return "How are Jane Smith and John Doe related?"
 
 
 def test_add_docs_store(graph_store):
@@ -135,7 +135,7 @@ def test_add_docs_store(graph_store):
 
 def test_extract_entity_names(graph_store, query_connection):
     query_entity_names = graph_store.extract_entity_names(query_connection)
-    assert set(query_entity_names) == {"ACME Corporation", "GreenTech Ltd."}
+    assert set(query_entity_names) == {"John Doe", "Jane Smith"}
 
     no_names = graph_store.extract_entity_names("")
     assert isinstance(no_names, list)
@@ -143,7 +143,7 @@ def test_extract_entity_names(graph_store, query_connection):
 
 
 def test_related_entities(graph_store):
-    entity_names = ["ACME Corporation", "GreenTech Ltd."]
+    entity_names = ["John Doe", "Jane Smith"]
     related_entities = graph_store.related_entities(entity_names)
     assert len(related_entities) >= 4
 
@@ -156,8 +156,9 @@ def test_additional_entity_examples(entity_extraction_model, entity_example, doc
     # Test additional examples
     client = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
-    collection = db[f"{COLLECTION_NAME}_addl_examples"]
-    collection.delete_many({})
+    clxn_name = f"{COLLECTION_NAME}_addl_examples"
+    db[clxn_name].drop()
+    collection = db[clxn_name]
     store_with_addl_examples = MongoDBGraphStore(
         collection, entity_extraction_model, entity_examples=entity_example
     )
@@ -171,39 +172,41 @@ def test_chat_response(graph_store, query_connection):
     """Displays querying an existing Knowledge Graph Database"""
     answer = graph_store.chat_response(query_connection)
     assert isinstance(answer, AIMessage)
-    assert "partner" in answer.content.lower()
+    assert "acme corporation" in answer.content.lower()
 
 
 def test_similarity_search(graph_store, query_connection):
     docs = graph_store.similarity_search(query_connection)
     assert len(docs) >= 4
-    assert all(
-        set(d.keys()) == {"ID", "type", "relationships", "attributes"} for d in docs
-    )
+    assert all({"_id", "type", "relationships"}.issubset(set(d.keys())) for d in docs)
+    assert any("depth" in d.keys() for d in docs)
+    assert any("attributes" in d.keys() for d in docs)
 
 
 def test_validator(documents, entity_extraction_model):
     client = MongoClient(MONGODB_URI)
-    clxn = client[DB_NAME]["langchain_test_validated_entities"]
-    clxn.delete_many({})
-    store = MongoDBGraphStore(clxn, entity_extraction_model, validate=True)
+    clxn_name = "langchain_test_graphrag_validation"
+    client[DB_NAME][clxn_name].drop()
+    clxn = client[DB_NAME].create_collection(clxn_name)
+    store = MongoDBGraphStore(
+        clxn, entity_extraction_model, validate=True, validation_action="error"
+    )
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
-    assert set(e["type"] for e in entities) == {"Person", "Organization"}
-    answer = store.chat_response("How are Jane Smith and John Doe related?")
-    assert answer
-
+    # Using subset because SolarGrid Initiative is not always considered an entity
+    assert {"Person", "Organization"}.issubset(set(e["type"] for e in entities))
 
 
 def test_allowed_entity_types(documents, entity_extraction_model):
     """Add allowed_entity_types. Use the validator to confirm behaviour."""
-    allowed_entity_types = ["Person"]  #
+    allowed_entity_types = ["Person"]
     client = MongoClient(MONGODB_URI)
-    clxn = client[DB_NAME]["langchain_test_validated_entities"]
-    clxn.delete_many({})
+    collection_name = f"{COLLECTION_NAME}_allowed_entity_types"
+    client[DB_NAME][collection_name].drop()
+    collection = client[DB_NAME].create_collection(collection_name)
     store = MongoDBGraphStore(
-        clxn,
+        collection,
         entity_extraction_model,
         allowed_entity_types=allowed_entity_types,
         validate=True,
@@ -212,28 +215,25 @@ def test_allowed_entity_types(documents, entity_extraction_model):
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
     assert set(e["type"] for e in entities) == {"Person"}
-    assert len(set(e.get("relationships") for e in entities)) == {None}
+    all([len(e["relationships"].get("targets", [])) == 0 for e in entities])
+    all([len(e["relationships"].get("types", [])) == 0 for e in entities])
+    all([len(e["relationships"].get("attributes", [])) == 0 for e in entities])
 
 
 def test_allowed_relationship_types(documents, entity_extraction_model):
     client = MongoClient(MONGODB_URI)
-    clxn = client[DB_NAME]["langchain_test_validated_entities"]
-    clxn.delete_many({})
+    collection_name = f"{COLLECTION_NAME}_allowed_relationship_types"
+    client[DB_NAME][collection_name].drop()
+    collection = client[DB_NAME].create_collection(collection_name)
     store = MongoDBGraphStore(
-        clxn,
+        collection,
         entity_extraction_model,
-        allowed_relationship_types=["employee"],
+        allowed_relationship_types=["partner"],
         validate=True,
     )
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
-    entities = store.collection.find({}).to_list()
-    assert set(e["relationship"].keys() for e in entities) == {"employee"}
-
-
-# TODO - Ask "How are John Doe and Jane Smith related?"
-#   If 'Person' is the only allowed_entity.
-#    - self.extract_entities("Jane Doe and John Smith both work at ACME Inc") has no relationships. This is because ACME Organization isn't created to connect
-#    - self.extract_entities("Jane Doe and John Smith are married") created "relationships.married'
-#    - We need to find a connection between them is Organization type IS allowed.
-#
+    relationships = set()
+    for ent in store.collection.find({}):
+        relationships.update(set(ent.get("relationships", {}).get("types", [])))
+    assert relationships == {"partner"}

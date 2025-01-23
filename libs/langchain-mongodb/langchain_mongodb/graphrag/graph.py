@@ -1,6 +1,6 @@
 import json
 import logging
-from copy import copy
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from langchain_core.documents import Document
@@ -15,11 +15,11 @@ from pymongo.results import BulkWriteResult
 from langchain_mongodb.graphrag import prompts
 
 from .prompts import rag_prompt
-from .schema import entity_schema, relationship_schema
+from .schema import entity_schema
 
 logger = logging.getLogger(__name__)
 
-# Represents an entity in the knowledge graph with ID, type, attributes, and relationships fields
+# Represents an entity in the knowledge graph with _id, type, attributes, and relationships fields
 # See .schema for full schema
 Entity: TypeAlias = Dict[str, Any]
 
@@ -92,11 +92,12 @@ class MongoDBGraphStore:
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
         max_depth: int = 2,
-        validate: bool = False,
         allowed_entity_types: List[str] = None,
         allowed_relationship_types: List[str] = None,
         entity_examples: str = None,
         entity_name_examples: str = None,
+        validate: bool = False,
+        validation_action: str = "warn",
     ):
         """
         Args:
@@ -105,17 +106,20 @@ class MongoDBGraphStore:
             entity_prompt: Prompt to fill graph store with entities following schema
             query_prompt: Prompt extracts entities and relationships as search starting points.
             max_depth: Maximum recursion depth in graph traversal.
-            validate: If True, entity schema will be validated on every insert or update.
             allowed_entity_types: If provided, constrains search to these types.
             allowed_relationship_types: If provided, constrains search to these types.
             entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
             entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
+            validate: If True, entity schema will be validated on every insert or update.
+            validation_action: One of {"warn", "error"}.
+              - If "warn", the default, documents will be inserted but errors logged.
+              - If "error", an exception will be raised if any document does not match the schema.
         """
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = entity_prompt
         self.query_prompt = query_prompt
         self.max_depth = max_depth
-        self._schema = copy(entity_schema)
+        self._schema = deepcopy(entity_schema)
         if allowed_entity_types:
             self.allowed_entity_types = allowed_entity_types
             self._schema["properties"]["type"]["enum"] = allowed_entity_types
@@ -125,12 +129,9 @@ class MongoDBGraphStore:
             # Update Prompt
             self.allowed_relationship_types = allowed_relationship_types
             # Update schema. Disallow other keys..
-            self._schema["properties"]["relationships"]["additionalProperties"] = False
-            self._schema["properties"]["relationships"]["properties"] = {}
-            for rel in allowed_relationship_types:
-                self._schema["properties"]["relationships"]["properties"][rel] = (
-                    relationship_schema
-                )
+            self._schema["properties"]["relationships"]["properties"]["types"][
+                "enum"
+            ] = allowed_relationship_types
         else:
             self.allowed_relationship_types = []
 
@@ -139,6 +140,7 @@ class MongoDBGraphStore:
                 "collMod",
                 collection.name,
                 validator={"$jsonSchema": self._schema},
+                validationAction=validation_action,
             )
         self.collection = collection
 
@@ -171,27 +173,35 @@ class MongoDBGraphStore:
         """Isolate logic to insert and aggregate entities."""
         operations = []
         for entity in entities:
+            relationships = entity.get("relationships", {})
+            targets = relationships.get("targets", [])
+            types = relationships.get("types", [])
+            attributes = relationships.get("attributes", [])
+
+            # Ensure the lengths of targets, types, and attributes align
+            if not (len(targets) == len(types) == len(attributes)):
+                logger.warning(
+                    f"Targets, types, and attributes do not have the same length for {entity["_id"]}!"
+                )
+
             operations.append(
                 UpdateOne(
-                    filter={"ID": entity["ID"]},  # Match on ID
+                    filter={"_id": entity["_id"]},  # Match on _id
                     update={
                         "$setOnInsert": {  # Set if upsert
-                            "ID": entity["ID"],
+                            "_id": entity["_id"],
                             "type": entity["type"],
                         },
-                        # "$set": {  # Ensure relationships field is always present
-                        #     "relationships": entity.get("relationships", {}),
-                        #     "attributes": entity.get("attributes", {}),
-                        # },
                         "$addToSet": {  # Update without overwriting
                             **{
-                                f"attributes.{k}": v
+                                f"attributes.{k}": {"$each": v}
                                 for k, v in entity.get("attributes", {}).items()
                             },
-                            **{
-                                f"relationships.{k}": {"$each": v}
-                                for k, v in entity.get("relationships", {}).items()
-                            },
+                        },
+                        "$push": {  # Push new entries into arrays
+                            "relationships.targets": {"$each": targets},
+                            "relationships.types": {"$each": types},
+                            "relationships.attributes": {"$each": attributes},
                         },
                     },
                     upsert=True,
@@ -220,7 +230,7 @@ class MongoDBGraphStore:
         for doc in documents:
             # Call LLM to find all Entities in doc
             entities = self.extract_entities(doc.page_content)
-            logger.debug(f"Entities found: {[e["ID"] for e in entities]}")
+            logger.debug(f"Entities found: {[e["_id"] for e in entities]}")
             # Insert new or combine with existing entities
             results.append(self._write_entities(entities))
         return results
@@ -262,7 +272,7 @@ class MongoDBGraphStore:
         Args:
             raw_document: A single text document as a string. Typically prose.
         Returns:
-            List of entity names / IDs.
+            List of entity names / _ids.
         """
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
@@ -278,11 +288,11 @@ class MongoDBGraphStore:
     def find_entity_by_name(self, name: str) -> Optional[List[Entity]]:
         """Utility to get Entity dict from Knowledge Graph / Collection.
         Args:
-            name: ID string to look for
+            name: _id string to look for
         Returns:
             List of Entity dicts if any match name
         """
-        return list(self.collection.find({"ID": name}))
+        return list(self.collection.find({"_id": name}))
 
     def related_entities(
         self, starting_entities: List[str], max_depth=3
@@ -290,7 +300,7 @@ class MongoDBGraphStore:
         """Traverse Graph along relationship edges to find connected entities.
 
         Args:
-            starting_entities: Traversal begins with documents whose IDs match these strings.
+            starting_entities: Traversal begins with documents whose _id fields match these strings.
             max_depth: Recursion continues until no more matching documents are found,
             or until the operation reaches a recursion depth specified by the maxDepth parameter
 
@@ -298,41 +308,58 @@ class MongoDBGraphStore:
             List of connected entities.
         """
         pipeline = [
-            # Begin by finding starting points.
-            {"$match": {"ID": {"$in": starting_entities}}},
+            # Match starting entities
+            {"$match": {"_id": {"$in": starting_entities}}},
             {
                 "$graphLookup": {
                     "from": self.collection.name,
-                    "startWith": {
-                        # Extract all relationship targets dynamically
-                        "$reduce": {
-                            "input": {"$objectToArray": "$relationships"},
-                            "initialValue": [],
-                            "in": {"$concatArrays": ["$$value", "$$this.v.target"]},  # TODO - This isn't right anymore.
-                        }
-                    },
-                    "connectFromField": "relationships.target", # Follows every target in array
-                    "connectToField": "ID",  # Use the target entity's ID
-                    "as": "connections",  # Output field for related entities
-                    "maxDepth": max_depth or self.max_depth,  # Cap traversal depth
-                    "depthField": "depth",
+                    "startWith": "$relationships.targets",  # Start traversal with relationships.targets
+                    "connectFromField": "relationships.targets",  # Traverse via relationships.targets
+                    "connectToField": "_id",  # Match to entity _id field
+                    "as": "connections",  # Store connections
+                    "maxDepth": 3,  # Limit traversal depth
+                    "depthField": "depth",  # Track depth
                 }
             },
-            # Unwind the connections array to process each connection as its own document
-            {"$unwind": "$connections"},
-            # Replace the root with the connection document
-            {"$replaceRoot": {"newRoot": "$connections"}},
-            # Remove duplicates
+            # Exclude connections from the original document
+            {
+                "$project": {
+                    "_id": 0,
+                    "original": {
+                        "_id": "$_id",
+                        "type": "$type",
+                        "attributes": "$attributes",
+                        "relationships": "$relationships",
+                    },
+                    "connections": 1,  # Retain connections for deduplication
+                }
+            },
+            # Combine original and connections into one array
+            {
+                "$project": {
+                    "combined": {
+                        "$concatArrays": [
+                            ["$original"],  # Include original as an array
+                            "$connections",  # Include connections
+                        ]
+                    }
+                }
+            },
+            # Unwind the combined array into individual documents
+            {"$unwind": "$combined"},
+            # Remove duplicates by grouping on `_id` and keeping the first document
             {
                 "$group": {
-                    "_id": "$ID",  # Group by `ID`
-                    "document": {"$first": "$$ROOT"},  # Keep the first
+                    "_id": "$combined._id",  # Group by entity _id
+                    "entity": {"$first": "$combined"},  # Keep the first occurrence
                 }
             },
-            # Restore the original document structure
-            {"$replaceRoot": {"newRoot": "$document"}},
-            # Exclude MongoDB's internal `_id` field
-            {"$project": {"_id": 0}},
+            # Format the final output
+            {
+                "$replaceRoot": {
+                    "newRoot": "$entity"  # Use the deduplicated document as the root
+                }
+            },
         ]
         return list(self.collection.aggregate(pipeline))
 
@@ -386,13 +413,4 @@ class MongoDBGraphStore:
 
 
 # TODO
-#   - Get traversal and schema right
-#       - Use sandbox/graphrag/traversal/traversal_latest.py and test to get right.
-#       - schema.py does not appear to be updated, but it is close. 
-#       - We want 3 arrays: target (str), type(str), attributes(object)
 #   - Update Design Doc
-#   - Prompts:
-#       - Add: Constraints in Prompts:
-#           - relationship names/types. Need to describe this well. keys in the relationships object.
-#           - entity types
-#   - Change ID to _id. _id is indexed.
