@@ -181,7 +181,7 @@ class MongoDBGraphStore:
             # Ensure the lengths of targets, types, and attributes align
             if not (len(targets) == len(types) == len(attributes)):
                 logger.warning(
-                    f"Targets, types, and attributes do not have the same length for {entity["_id"]}!"
+                    f"Targets, types, and attributes do not have the same length for {entity['_id']}!"
                 )
 
             operations.append(
