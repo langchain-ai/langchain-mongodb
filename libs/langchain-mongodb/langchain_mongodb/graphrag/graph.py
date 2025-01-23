@@ -230,7 +230,7 @@ class MongoDBGraphStore:
         for doc in documents:
             # Call LLM to find all Entities in doc
             entities = self.extract_entities(doc.page_content)
-            logger.debug(f"Entities found: {[e["_id"] for e in entities]}")
+            logger.debug(f"Entities found: {[e['_id'] for e in entities]}")
             # Insert new or combine with existing entities
             results.append(self._write_entities(entities))
         return results
