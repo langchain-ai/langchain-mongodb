@@ -8,9 +8,6 @@ on:
         type: string
         description: "From which folder this pipeline executes"
 
-env:
-  POETRY_VERSION: "1.7.1"
-
 jobs:
   build:
     defaults:
@@ -26,14 +23,14 @@ jobs:
     name: "run test #${{ matrix.python-version }}"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_setup"
         with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          working-directory: ${{ inputs.working-directory }}
-          cache-key: core
+          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       - uses: extractions/setup-just@v2
 
@@ -46,29 +43,24 @@ jobs:
 
       - name: Run core tests
         shell: bash
-        run: |
-          just test
+        run: just tests
 
       - name: Start local Atlas
         working-directory: .
         run: bash scripts/start_local_atlas.sh
 
-      - name: Get MongoDB URI
-        working-directory: .
-        run: cat .local_atlas_uri >> $GITHUB_ENV
-
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
 
       - name: Run Ollama
+        working-directory: .
         run: |
           ollama serve &
           sleep 5    # wait for the Ollama server to be ready
-          ollama pull all-minilm:l6-v2
+          bash scripts/setup_ollama.sh
 
       - name: Run integration tests
         run: just integration_tests
-        working-directory: ${{ inputs.working-directory }}
 
       - name: Ensure the tests did not create any additional files
         shell: bash
@@ -81,3 +73,8 @@ jobs:
           # grep will exit non-zero if the target message isn't found,
           # and `set -e` above will cause the step to fail.
           echo "$STATUS" | grep 'nothing to commit, working tree clean'
+
+      - name: Run unit tests with minimum dependency versions
+        run: |
+          uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
+          just tests

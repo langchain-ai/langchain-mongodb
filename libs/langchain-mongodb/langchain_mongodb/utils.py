@@ -11,6 +11,7 @@ These are duplicated from langchain_community to avoid cross-dependencies.
 
 Functions "maximal_marginal_relevance" and "cosine_similarity"
 are duplicated in this utility respectively from modules:
+
     - "libs/community/langchain_community/vectorstores/utils.py"
     - "libs/community/langchain_community/utils/math.py"
 """

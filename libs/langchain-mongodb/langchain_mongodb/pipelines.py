@@ -116,7 +116,7 @@ def reciprocal_rank_stage(
         extra_fields: Any fields other than text_field that one wishes to keep.
 
     Returns:
-        RRF score := \frac{1}{rank + penalty} with rank in [1,2,..,n]
+        RRF score
     """
 
     rrf_pipeline = [

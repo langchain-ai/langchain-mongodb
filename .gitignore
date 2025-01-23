@@ -6,3 +6,6 @@ __pycache__
 .env
 .venv*
 .local_atlas_uri
+docs/langchain_mongodb
+docs/langgraph_checkpoint_mongodb
+docs/index.md

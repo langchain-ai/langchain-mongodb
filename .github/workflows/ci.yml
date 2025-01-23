@@ -16,22 +16,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  POETRY_VERSION: "1.7.1"
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - id: files
         uses: Ana06/get-changed-files@v2.2.0
       - id: set-matrix
+        env:
+          FILES: ${{ steps.files.outputs.all }}
         run: |
-          python .github/scripts/check_diff.py ${{ steps.files.outputs.all }} >> $GITHUB_OUTPUT
+          python .github/scripts/check_diff.py ${FILES} >> $GITHUB_OUTPUT
     outputs:
       dirs-to-lint: ${{ steps.set-matrix.outputs.dirs-to-lint }}
       dirs-to-test: ${{ steps.set-matrix.outputs.dirs-to-test }}
@@ -73,9 +74,23 @@ jobs:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
+  api-docs:
+    name: API docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: 3.9
+      - run: uv run sphinx-build -T -W -b html docs docs/_build/html
+
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test, pre-commit]
+    needs: [build, lint, test, pre-commit, api-docs]
     if: |
       always()
     runs-on: ubuntu-latest

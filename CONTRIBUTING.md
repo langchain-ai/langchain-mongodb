@@ -7,11 +7,11 @@ We welcome contributions to this project! Please follow the following guidance t
 To contribute to this project, please follow the ["fork and pull request"](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) workflow. Please do not try to push directly to this repo unless you are a maintainer.
 
 
-### Dependency Management: Poetry and other env/dependency managers
+### Dependency Management: uv and other env/dependency managers
 
-This project utilizes [Poetry](https://python-poetry.org/) v1.7.1+ as a dependency manager.
+This project utilizes [uv](https://docs.astral.sh/uv/) v0.5.15+ as a dependency manager.
 
-Install Poetry: **[documentation on how to install it](https://python-poetry.org/docs/#installation)**.
+Install uv: **[documentation on how to install it](https://docs.astral.sh/uv/getting-started/installation/)**.
 
 ### Local Development Dependencies
 
@@ -32,7 +32,25 @@ just install
 Then verify the installation.
 
 ```bash
-just test
+just tests
+```
+
+In order to run the integration tests, you'll also need a `MONGODB_URI` for MongoDB Atlas, as well
+as either an `OPENAI_API_KEY` or a configured local version of [ollama](https://ollama.com/download).
+
+We have a convenience script to start a local Atlas instance, which requires `podman`:
+
+```bash
+scripts/start_local_atlas.sh
+```
+
+This will create a `.local_atlas_uri` file that has the `MONGODB_URI` set.  The `justfiles` are configured
+to read the environment variable from this file.
+
+If using `ollama`, we have a convenience script to download the library used in our tests:
+
+```bash
+scripts/setup_ollama.sh
 ```
 
 ### Testing
@@ -43,7 +61,7 @@ If you add new logic, please add a unit test.
 To run unit tests:
 
 ```bash
-just test
+just tests
 ```
 
 Integration tests cover the end-to-end service calls as much as possible.
@@ -55,7 +73,7 @@ this, please raise an issue.
 To run the integration tests:
 
 ```bash
-just integration_test
+just integration_tests
 ```
 
 ### Formatting and Linting
