@@ -18,10 +18,17 @@ class MongoDBRecordManager(RecordManager):
     def __init__(self, collection: Collection) -> None:
         """Initialize the MongoDBRecordManager.
 
+        The record manager abstraction is used by the langchain indexing API.
+        The record manager keeps track of which documents have been written into a vectorstore and when they were written.
+        For more details, see the `RecordManager API Docs`_.
+
         Args:
             connection_string: A valid MongoDB connection URI.
             db_name: The name of the database to use.
             collection_name: The name of the collection to use.
+
+        .. _RecordManager API Docs:
+            https://python.langchain.com/api_reference/core/indexing/langchain_core.indexing.base.RecordManager.html
         """
         namespace = f"{collection.database.name}.{collection.name}"
         super().__init__(namespace=namespace)

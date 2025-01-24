@@ -24,16 +24,17 @@ It contains the following packages.
 - Retrievers
     - [MongoDBAtlasHybridSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#hybrid-search-retriever)
     - [MongoDBAtlasFullTextSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#full-text-search-retriever)
-    - `MongoDBAtlasParentDocumentRetriever` - new feature, docs coming soon!
+    - [MongoDBAtlasParentDocumentRetriever](https://langchain-mongodb.readthedocs.io/en/latest/langchain_mongodb/retrievers/langchain_mongodb.retrievers.parent_document.MongoDBAtlasParentDocumentRetriever.html#langchain_mongodb.retrievers.parent_document.MongoDBAtlasParentDocumentRetriever)
 - Indexing
-    - `MongoDBRecordManager` - new feature, docs coming soon!
+    - [MongoDBRecordManager](https://langchain-mongodb.readthedocs.io/en/latest/langchain_mongodb/indexes/langchain_mongodb.indexes.MongoDBRecordManager.html#langchain_mongodb.indexes.MongoDBRecordManager)
 - Loading
-    - `MongoDBLoader` - new feature, docs coming soon!
+    - [MongoDBLoader](https://langchain-mongodb.readthedocs.io/en/latest/langchain_mongodb/loaders/langchain_mongodb.loaders.MongoDBLoader.html#langchain_mongodb.loaders.MongoDBLoader)
 
 ### LangGraph
 
 - Checkpointing
-    - `MongoDBSaver` - new feature, docs coming soon!
+    - [MongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/checkpoint/langgraph.checkpoint.mongodb.saver.MongoDBSaver.html#langgraph.checkpoint.mongodb.saver.MongoDBSaver)
+    - [AsyncMongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/checkpoint/langgraph.checkpoint.mongodb.aio.AsyncMongoDBSaver.html)
 
 ## Installation
 
@@ -54,6 +55,8 @@ pip install langgraph-checkpoint-mongodb
 See [langchain-mongodb usage](libs/langchain-mongodb/README.md#usage) and [langgraph-checkpoint-mongodb usage](libs/langgraph-checkpoint-mongodb/README.md#usage).
 
 For more detailed usage examples and documentation, please refer to the [LangChain documentation](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/).
+
+API docs can be found on [ReadTheDocs](https://langchain-mongodb.readthedocs.io/en/latest/index.html).
 
 ## Contributing
 

@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class MongoDBLoader(BaseLoader):
-    """Load MongoDB documents."""
+    """Document Loaders are classes to load Documents.
+
+    Document Loaders are usually used to load a lot of Documents in a single run."""
 
     def __init__(
         self,
