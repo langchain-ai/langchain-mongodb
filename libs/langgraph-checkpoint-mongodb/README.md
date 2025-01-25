@@ -14,8 +14,6 @@ MONGODB_URI = "mongodb://localhost:27017"
 DB_NAME = "checkpoint_example"
 
 with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME) as checkpointer:
-    # call .setup() the first time you're using the checkpointer
-    checkpointer.setup()
     checkpoint = {
         "v": 1,
         "ts": "2024-07-31T20:14:19.804150+00:00",
