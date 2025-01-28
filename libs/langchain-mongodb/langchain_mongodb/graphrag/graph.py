@@ -32,7 +32,8 @@ Entity: TypeAlias = Dict[str, Any]
 class MongoDBGraphStore:
     """GraphRAG DataStore
 
-    GraphRAG is a ChatModel that provides responses to semantic queries.
+    GraphRAG is a ChatModel that provides responses to semantic queries
+    based on a Knowledge Graph that an LLM is used to create.
     As in Vector RAG, we augment the Chat Model's training data
     with relevant information that we collect from  documents.
 
@@ -41,53 +42,47 @@ class MongoDBGraphStore:
     which can then be compared, and the most similar supplied to the
     Chat Model as context to the query.
 
-    In Graph RAG, one uses an Entity-Extraction model that converts both
-    the query, and the potentially relevant documents, into graphs. These are
+    In Graph RAG, one uses an "Entity-Extraction" model that converts
+    text into Entities and their relationships, a Knowledge Graph.
+    Comparison is done by Graph traversal, finding entities connected
+    to the query prompts. These are then supplied to the Chat Model  as context.
+    The main difference is that GraphRAG's output is typically in a structured format.
+
+    GraphRAG excels in finding links and common entities,
+    even if these come from different articles. It can combin information from
+    distinct source providing richer context than Vector RAG in certain cases.
+
+    Here are a few examples of so-called multi-hop questions where GraphRAG excels:
+    - What is the connection between ACME Corporation and GreenTech Ltd.?
+    - Who is leading the SolarGrid Initiative, and what is their role?
+    - Which organizations are participating in the SolarGrid Initiative?
+    - What is John Doe’s role in ACME’s renewable energy projects?
+    - Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?
+
+    In Graph RAG, one uses an Entity-Extraction model that interprets
+    text documents that it is given extracting the query,
+    and the potentially relevant documents, into graphs. These are
     composed of nodes that are entities (nouns) and edges that are relationships.
     The idea is that the graph can find connections between entities and
     hence answer questions that require more than one connection.
 
-    It is also about finding common entities in documents,
-    combining the attributes found and hence providing richer context than Vector RAG,
-    especially in certain cases.
-
-    When a document is extracted, each entity is represented by a single
-    MongoDB Document, and relationships are defined in a nested field named
-    'relationships'. The schema, and an example, are described in the
+    In MongoDB, Knowledge Graphs are stored in a single Collection.
+    Each MongoDB Document represents a single entity (node),
+    and it relationships (edges) are defined in a nested field named
+    "relationships". The schema, and an example, are described in the
     :data:`~langchain_mongodb.graphrag.prompts.entity_context` prompts module.
 
-    When a query is made, the model extracts the entities and relationships from it,
-    then traverses the graph starting from each of the entities found.
-    The connected entities and relationships form the context
+    When a query is made, the model extracts the entities in it,
+    then traverses the graph to find connections.
+    The closest entities and their relationships form the context
     that is included with the query to the Chat Model.
 
-    Requirements:
-        Documents
-        Entity Extraction Model
-        Prompt Template
-        Query
-        Chat Model
+    Consider this example Query: "Does John Doe work at MongoDB?"
+    GraphRAG can answer this question even if the following two statements come
+    from completely different sources.
+    - "Jane Smith works with John Doe."
+    - "Jane Smiths works at MongoDB."
 
-    Example Query: "Does Casey Clements work at MongoDB?"
-        ==> Entities: [(name=Casey Clements, type=person), (name=MongoDB, type=Corporation)]
-        ==> Relationships: [(name=EMPLOYEE), ]
-    Example document ingested into Collection:
-        "MongoDB employees everyone."
-
-    From this information, one would be able to deduce that Casey Clements DOES work at MongoDB.
-    The Graph is there to provide context/information, not answer the question.
-    The LLM will know that everyone contains every person.
-    But how will the LLM know to categorize Casey Clements as a person? It could be an organization, for example.
-        - One would add hints or examples in their prompt to the Entity Extraction Model.
-        - This is the right track. Even if we're not focussing on Entity Extraction, we care about providing an API to allow it
-         ==> e.g. Could give specific types to include, and that one must pick one, or if ambiguous, throw away information.
-
-    Here are a few examples of so-called multi-hop questions where GraphRAG excels:
-        - What is the connection between ACME Corporation and GreenTech Ltd.?
-        - Who is leading the SolarGrid Initiative, and what is their role?
-        - Which organizations are participating in the SolarGrid Initiative?
-        - What is John Doe’s role in ACME’s renewable energy projects?
-        - Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?
     """
 
     def __init__(
