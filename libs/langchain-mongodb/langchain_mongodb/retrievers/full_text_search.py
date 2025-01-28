@@ -10,9 +10,7 @@ from langchain_mongodb.utils import make_serializable
 
 
 class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
-    """Hybrid Search Retriever performs full-text searches
-    using Lucene's standard (BM25) analyzer.
-    """
+    """Retriever performs full-text searches using Lucene's standard (BM25) analyzer."""
 
     collection: Collection
     """MongoDB Collection on an Atlas cluster"""
