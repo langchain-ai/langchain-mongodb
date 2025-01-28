@@ -179,12 +179,12 @@ class MongoDBGraphStore:
         operations = []
         for entity in entities:
             relationships = entity.get("relationships", {})
-            targets = relationships.get("targets", [])
+            target_ids = relationships.get("target_ids", [])
             types = relationships.get("types", [])
             attributes = relationships.get("attributes", [])
 
-            # Ensure the lengths of targets, types, and attributes align
-            if not (len(targets) == len(types) == len(attributes)):
+            # Ensure the lengths of target_ids, types, and attributes align
+            if not (len(target_ids) == len(types) == len(attributes)):
                 logger.warning(
                     f"Targets, types, and attributes do not have the same length for {entity['_id']}!"
                 )
@@ -204,7 +204,7 @@ class MongoDBGraphStore:
                             },
                         },
                         "$push": {  # Push new entries into arrays
-                            "relationships.targets": {"$each": targets},
+                            "relationships.target_ids": {"$each": target_ids},
                             "relationships.types": {"$each": types},
                             "relationships.attributes": {"$each": attributes},
                         },
@@ -320,8 +320,8 @@ class MongoDBGraphStore:
             {
                 "$graphLookup": {
                     "from": self.collection.name,
-                    "startWith": "$relationships.targets",  # Start traversal with relationships.targets
-                    "connectFromField": "relationships.targets",  # Traverse via relationships.targets
+                    "startWith": "$relationships.target_ids",  # Start traversal with relationships.target_ids
+                    "connectFromField": "relationships.target_ids",  # Traverse via relationships.target_ids
                     "connectToField": "_id",  # Match to entity _id field
                     "as": "connections",  # Store connections
                     "maxDepth": max_depth or self.max_depth,  # Limit traversal depth

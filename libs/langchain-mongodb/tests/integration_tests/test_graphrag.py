@@ -96,21 +96,18 @@ Output:
     "testing": "Integration Tests for new functionality, regression tests for bug-fixes"
   }},
   "relationships": {{
-    "plannedFeature": [
-      {{
-        "target": "PYTHON-1834",
-        "attributes": {{
-          "description": "Auto code formatting"
-        }}
-      }}
+    "target_ids": [
+      "PYTHON-1834",
+      "Node Team Practices"
+      
+    ]
+    "types": [
+      "plannedFeature",
+      "reference"
     ],
-    "reference": [
-      {{
-        "target": "Node Team Practices",
-        "attributes": {{
-          "url": "https://wiki.corp.mongodb.com/display/DRIVERS/Node+Team+Practices"
-        }}
-      }}
+    "attributes": [
+      {{"description": "Auto code formatting"}},
+      {{"url": "https://wiki.corp.mongodb.com/display/DRIVERS/Node+Team+Practices"}}
     ]
   }}
 }}
@@ -164,7 +161,7 @@ def test_additional_entity_examples(entity_extraction_model, entity_example, doc
     db = client[DB_NAME]
     clxn_name = f"{COLLECTION_NAME}_addl_examples"
     db[clxn_name].drop()
-    collection = db[clxn_name]
+    collection = db.create_collection(clxn_name)
     store_with_addl_examples = MongoDBGraphStore(
         collection, entity_extraction_model, entity_examples=entity_example
     )
@@ -221,7 +218,7 @@ def test_allowed_entity_types(documents, entity_extraction_model):
     assert len(bulkwrite_results) == len(documents)
     entities = store.collection.find({}).to_list()
     assert set(e["type"] for e in entities) == {"Person"}
-    all([len(e["relationships"].get("targets", [])) == 0 for e in entities])
+    all([len(e["relationships"].get("target_ids", [])) == 0 for e in entities])
     all([len(e["relationships"].get("types", [])) == 0 for e in entities])
     all([len(e["relationships"].get("attributes", [])) == 0 for e in entities])
 

@@ -38,23 +38,23 @@ entity_schema = {
         "relationships": {
             "bsonType": "object",
             "description": "Key-value pairs of relationships",
-            "required": ["targets"],
+            "required": ["target_ids"],
             "properties": {
-                "targets": {
+                "target_ids": {
                     "bsonType": "array",
                     "description": "name/_id values of the target entities",
                     "items": {"bsonType": "string"},
                 },
                 "types": {
                     "bsonType": "array",
-                    "description": "An array of relationships to corresponding targets (in same array position).",
+                    "description": "An array of relationships to corresponding target_ids (in same array position).",
                     "items": {"bsonType": "string"},
                     # Note: When constrained, predefined types are added. For example:
                     # "enum": ["used_in", "owns", "written_by", "located_in"],  # Predefined types
                 },
                 "attributes": {
                     "bsonType": "array",
-                    "description": "An array of attributes describing the relationships to corresponding targets (in same array position). Each element is an object containing key-value pairs, where values are arrays of strings.",
+                    "description": "An array of attributes describing the relationships to corresponding target_ids (in same array position). Each element is an object containing key-value pairs, where values are arrays of strings.",
                     "items": {
                         "bsonType": "object",
                         "additionalProperties": {

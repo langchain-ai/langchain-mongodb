@@ -79,12 +79,16 @@ Output a valid JSON document with a single top-level key, `entities`, as an arra
 Each object must conform to the following schema:
 {entity_schema}
 
-## Input Example
+
+## Examples
+Use the following examples to guide your work.
+
+#### Input
 Alice Palace, has been the CEO of MongoDB since January 1, 2018.
 She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019,
 and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
 
-## Output Example
+#### Output
 (If `allowed_entity_types` is ["Person"] and `allowed_relationship_types` is ["Friend"])
 {{
   "entities": [
@@ -96,7 +100,7 @@ and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
         "startDate": ["2018-01-01"]
       }},
       "relationships": {{
-        "targets": ["Jasbinder Kaur", "Jarnail Singh"],
+        "target_ids": ["Jasbinder Kaur", "Jarnail Singh"],
         "types": ["Friend", "Friend"],
         "attributes": [
           {{ "since": ["2019-05-01"], "frequency": ["weekly"] }},
@@ -106,6 +110,8 @@ and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
     }}
   ]
 }}
+
+
 """
 
 
