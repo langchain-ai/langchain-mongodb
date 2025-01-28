@@ -99,7 +99,7 @@ Output:
     "target_ids": [
       "PYTHON-1834",
       "Node Team Practices"
-      
+
     ]
     "types": [
       "plannedFeature",
