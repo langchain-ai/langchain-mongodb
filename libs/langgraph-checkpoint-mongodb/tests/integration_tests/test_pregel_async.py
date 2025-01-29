@@ -50,12 +50,12 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import (
     CONFIG_KEY_NODE_FINISHED,
     ERROR,
-    FF_SEND_V2,
+    # FF_SEND_V2,
     PULL,
     PUSH,
     START,
 )
-from langgraph.errors import InvalidUpdateError, MultipleSubgraphsError, NodeInterrupt
+from langgraph.errors import InvalidUpdateError, NodeInterrupt
 from langgraph.graph import END, Graph, StateGraph
 from langgraph.graph.message import MessageGraph, MessagesState, add_messages
 from langgraph.managed.shared_value import SharedValue
@@ -99,6 +99,9 @@ from .messages import (
 # mypy: ignore-errors
 
 pytestmark = pytest.mark.anyio
+
+FF_SEND_V2 = True
+MultipleSubgraphsError = Exception
 
 
 async def test_checkpoint_errors() -> None:
