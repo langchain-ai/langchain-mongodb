@@ -36,11 +36,11 @@ class MongoDBDatabaseToolkit(BaseToolkit):
     Instantiate:
         .. code-block:: python
 
-            from langchain_community.agent_toolkits.sql.toolkit import MongoDBDatabaseToolkit
-            from langchain_community.utilities.sql_database import MongoDBDatabase
+            from langchain_mongodb.agent_toolkit.toolkit import MongoDBDatabaseToolkit
+            from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
             from langchain_openai import ChatOpenAI
 
-            db = MongoDBDatabase.from_uri("sqlite:///Chinook.db")
+            db = MongoDBDatabase.from_connection_string("mongodb://localhost:27017/chinook")
             llm = ChatOpenAI(temperature=0)
 
             toolkit = MongoDBDatabaseToolkit(db=db, llm=llm)
@@ -55,10 +55,10 @@ class MongoDBDatabaseToolkit(BaseToolkit):
 
             from langchain import hub
             from langgraph.prebuilt import create_react_agent
+            from mongodb_agent_toolkit.prompt import MONGODB_AGENT_SYSTEM_PROMPT
 
             # Pull prompt (or define your own)
-            prompt_template = hub.pull("langchain-ai/sql-agent-system-prompt")
-            system_message = prompt_template.format(top_k=5)
+            system_message = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
 
             # Create agent
             agent_executor = create_react_agent(

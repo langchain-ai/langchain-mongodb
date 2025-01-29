@@ -1,4 +1,4 @@
-"""SQLAlchemy wrapper around a database."""
+"""Wrapper around a MongoDB database."""
 
 from __future__ import annotations
 
@@ -245,7 +245,7 @@ class MongoDBDatabase:
             return f"Error: {e}"
 
     def run_no_throw(self, command: str) -> Union[str, Cursor]:
-        """Execute a SQL command and return a string representing the results.
+        """Execute a MongoDB command and return a string representing the results.
 
         If the statement returns rows, a string of the results is returned.
         If the statement returns no rows, an empty string is returned.
