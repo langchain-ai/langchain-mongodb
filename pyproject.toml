@@ -25,11 +25,5 @@ dev = [
 ]
 
 [tool.uv.sources]
-langchain-mongodb = { workspace = true }
-langgraph-checkpoint-mongodb = { workspace = true }
-
-[tool.uv.workspace]
-members = [
-  "libs/langchain-mongodb",
-  "libs/langgraph-checkpoint-mongodb"
-]
+langchain-mongodb = { path = "libs/langchain-mongodb" }
+langgraph-checkpoint-mongodb = { path = "libs/langgraph-checkpoint-mongodb" }
