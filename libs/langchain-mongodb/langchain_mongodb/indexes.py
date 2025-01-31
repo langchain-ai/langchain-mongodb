@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import functools
 import warnings
+from importlib.metadata import version
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.indexing.base import RecordManager
 from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.driver_info import DriverInfo
 from pymongo.errors import OperationFailure
 
 
@@ -47,7 +49,10 @@ class MongoDBRecordManager(RecordManager):
         Returns:
             A new MongoDBRecordManager instance.
         """
-        client: MongoClient = MongoClient(connection_string)
+        client: MongoClient = MongoClient(
+            connection_string,
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]
         return cls(collection=collection)
