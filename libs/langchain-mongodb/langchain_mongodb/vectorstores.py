@@ -101,7 +101,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
             vector_store = MongoDBAtlasVectorSearch.from_connection_string(
                 connection_string="mongodb+srv://user:password@clusterip.mongodb.net/?w=majority&appName=Cluster0"
-                namespace=f"db_name.collection_name",
+                namespace="db_name.collection_name",
                 embedding=OpenAIEmbeddings(),
                 index_name="vector_index",
             )
