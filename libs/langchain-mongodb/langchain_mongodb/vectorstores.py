@@ -100,7 +100,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             from langchain_openai import OpenAIEmbeddings
 
             vector_store = MongoDBAtlasVectorSearch.from_connection_string(
-                connection_string=os=MONGODB_ATLAS_CONNECTION_STRING
+                connection_string=os=MONGODB_ATLAS_CONNECTION_STRING,
                 namespace="db_name.collection_name",
                 embedding=OpenAIEmbeddings(),
                 index_name="vector_index",
