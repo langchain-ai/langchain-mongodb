@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
 from copy import deepcopy
+from importlib.metadata import version
 from typing import Any, Dict, List, Optional, Union
 
 try:
@@ -13,8 +16,9 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.prompts.chat import ChatPromptTemplate, SystemMessagePromptTemplate
 from langchain_core.runnables import RunnableSequence
-from pymongo import UpdateOne
+from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
+from pymongo.driver_info import DriverInfo
 from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import prompts
@@ -168,6 +172,65 @@ class MongoDBGraphStore:
             `$jsonSchema <https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/>`_
         """
         return self._schema
+
+    @classmethod
+    def from_connection_string(
+        cls,
+        connection_string: str,
+        database_name: str,
+        collection_name: str,
+        entity_extraction_model: BaseChatModel,
+        entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
+        query_prompt: ChatPromptTemplate = prompts.query_prompt,
+        max_depth: int = 2,
+        allowed_entity_types: List[str] = None,
+        allowed_relationship_types: List[str] = None,
+        entity_examples: str = None,
+        entity_name_examples: str = None,
+        validate: bool = False,
+        validation_action: str = "warn",
+    ) -> MongoDBGraphStore:
+        """Construct a `MongoDB KnowLedge Graph for RAG`
+        from a MongoDB connection URI.
+
+        Args:
+            connection_string: A valid MongoDB connection URI.
+            database_name: The name of the database to connect to.
+            collection_name: The name of the collection to connect to.
+            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships
+            entity_prompt: Prompt to fill graph store with entities following schema
+            query_prompt: Prompt extracts entities and relationships as search starting points.
+            max_depth: Maximum recursion depth in graph traversal.
+            allowed_entity_types: If provided, constrains search to these types.
+            allowed_relationship_types: If provided, constrains search to these types.
+            entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
+            entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
+            validate: If True, entity schema will be validated on every insert or update.
+            validation_action: One of {"warn", "error"}.
+              - If "warn", the default, documents will be inserted but errors logged.
+              - If "error", an exception will be raised if any document does not match the schema.
+
+        Returns:
+            A new MongoDBGraphStore instance.
+        """
+        client: MongoClient = MongoClient(
+            connection_string,
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        )
+        collection = client[database_name].create_collection(collection_name)
+        return cls(
+            collection,
+            entity_extraction_model,
+            entity_prompt,
+            query_prompt,
+            max_depth,
+            allowed_entity_types,
+            allowed_relationship_types,
+            entity_examples,
+            entity_name_examples,
+            validate,
+            validation_action,
+        )
 
     def _write_entities(self, entities: List[Entity]) -> BulkWriteResult:
         """Isolate logic to insert and aggregate entities."""
