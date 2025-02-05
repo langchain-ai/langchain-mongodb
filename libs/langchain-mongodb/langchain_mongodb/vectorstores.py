@@ -79,7 +79,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         .. code-block:: python
 
             import getpass
-            MONGODB_ATLAS_CLUSTER_URI = getpass.getpass("MongoDB Atlas Cluster URI:")
+            MONGODB_ATLAS_CONNECTION_STRING = getpass.getpass("MongoDB Atlas Connection String:")
 
     Key init args — indexing params:
         embedding: Embeddings
@@ -100,7 +100,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             from langchain_openai import OpenAIEmbeddings
 
             vector_store = MongoDBAtlasVectorSearch.from_connection_string(
-                connection_string="mongodb+srv://user:password@clusterip.mongodb.net/?w=majority&appName=Cluster0"
+                connection_string=os=MONGODB_ATLAS_CONNECTION_STRING
                 namespace="db_name.collection_name",
                 embedding=OpenAIEmbeddings(),
                 index_name="vector_index",
