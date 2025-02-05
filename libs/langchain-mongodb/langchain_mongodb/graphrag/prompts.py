@@ -4,8 +4,6 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-from . import example_templates
-
 entity_extraction_instructions = """
 ## Overview
 You are a meticulous analyst tasked with extracting information from unstructured text
@@ -55,7 +53,6 @@ Ensure consistency and generality in relationship names when constructing knowle
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
 like 'employee'. Add details as attributes. Make sure to use general and timeless relationship types!
 
-
 **Allowed Relationship Types**:
 - Extract ONLY relationships whose `type` matches one of the following: {allowed_relationship_types}.
 - If this list is empty, ANY relationship type is permitted.
@@ -94,12 +91,29 @@ You need not think about relationships between the entities. You only need names
 Provide your response as a valid JSON Array of entity names
 or human-readable identifiers, found in the text.
 
+**Allowed Entity Types**:
+- Extract ONLY entities whose `type` matches one of the following: {allowed_entity_types}.
+- NOTE: If this list is empty, ANY `type` is permitted.
+
+### Examples of Exclusions:
+- If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions "Event" or "Location",
+  these entities must **NOT** be included in the output.
+
  ## Examples:
- 1. input:  "Jack works at ACME in New York"
-    output: ["Jack", "ACME", "New York"]
+ Example 1: `allowed_entity_types` is `[]`
+    input: "John Doe works at ACME in New York"
+    output: ["John Doe", "ACME", "New York"]
 
  In this example, you would identify 3 entities:
- Jack of type person; ACME of type organization; New York of type place.
+ John Doe of type person; ACME of type organization; New York of type place.
+
+Example 2: `allowed_entity_types` is `[organization, place]`
+    input: "John Doe works at ACME in New York"
+    output: ["ACME", "New York"]
+
+ In this example, you would identify only 2 entities:
+ ACME of type organization; New York of type place.
+ John Doe, of type person, would be excluded.
 
  2. input: "In what continent is Brazil?
     output: ["Brazil"]
@@ -138,7 +152,6 @@ The entities have the following schema matching MongoDB's $jsonSchema style used
 entity_prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessagePromptTemplate.from_template(entity_extraction_instructions),
-        SystemMessagePromptTemplate.from_template(example_templates.entity_extraction),
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
@@ -149,7 +162,6 @@ query_prompt = ChatPromptTemplate.from_messages(
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
-
 
 rag_prompt = ChatPromptTemplate.from_messages(
     [

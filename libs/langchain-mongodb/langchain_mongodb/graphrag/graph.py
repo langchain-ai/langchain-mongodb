@@ -21,7 +21,7 @@ from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.results import BulkWriteResult
 
-from langchain_mongodb.graphrag import prompts
+from langchain_mongodb.graphrag import example_templates, prompts
 
 from .prompts import rag_prompt
 from .schema import entity_schema
@@ -148,13 +148,13 @@ class MongoDBGraphStore:
             )
         self.collection = collection
 
-        if entity_examples:
-            self.entity_prompt.messages.insert(
-                1,
-                SystemMessagePromptTemplate.from_template(
-                    f"## Additional Examples \n {entity_examples}"
-                ),
-            )
+        # Include examples
+        if entity_examples is None:
+            entity_examples = example_templates.entity_extraction
+        self.entity_prompt.messages.insert(
+            1,
+            SystemMessagePromptTemplate.from_template(entity_examples),
+        )
 
         if entity_name_examples:
             self.query_prompt.messages.insert(
@@ -340,7 +340,12 @@ class MongoDBGraphStore:
         # Combine the llm with the prompt template to form a chain
         chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
-        response: AIMessage = chain.invoke(dict(input_document=raw_document))
+        response: AIMessage = chain.invoke(
+            dict(
+                input_document=raw_document,
+                allowed_entity_types=self.allowed_entity_types,
+            )
+        )
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and suffix
         json_string = (
