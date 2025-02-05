@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  # Python
+  - package-ecosystem: "pip"
+    directory: "libs/langchain-mongodb"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "libs/langgraph-checkpoint-mongodb"
+    schedule:
+      interval: "weekly"
