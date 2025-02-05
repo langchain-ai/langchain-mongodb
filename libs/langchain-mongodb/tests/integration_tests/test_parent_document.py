@@ -33,7 +33,7 @@ def test_1clxn_retriever(
     # Setup
     client: MongoClient = MongoClient(
         connection_string,
-        driver=DriverInfo(name="langchain", version=version("langchain-mongodb")),
+        driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
     )
     db = client[DB_NAME]
     combined_clxn = db[COLLECTION_NAME]
