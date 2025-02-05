@@ -4,6 +4,8 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
+from . import example_templates
+
 entity_extraction_instructions = """
 ## Overview
 You are a meticulous analyst tasked with extracting information from unstructured text
@@ -79,39 +81,6 @@ Output a valid JSON document with a single top-level key, `entities`, as an arra
 Each object must conform to the following schema:
 {entity_schema}
 
-
-## Examples
-Use the following examples to guide your work.
-
-#### Input
-Alice Palace, has been the CEO of MongoDB since January 1, 2018.
-She maintains close friendships with Jarnail Singh, whom she has known since May 1, 2019,
-and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
-
-#### Output
-(If `allowed_entity_types` is ["Person"] and `allowed_relationship_types` is ["Friend"])
-{{
-  "entities": [
-    {{
-      "_id": "Alice Palace",
-      "type": "Person",
-      "attributes": {{
-        "job": ["CEO of MongoDB"],
-        "startDate": ["2018-01-01"]
-      }},
-      "relationships": {{
-        "target_ids": ["Jasbinder Kaur", "Jarnail Singh"],
-        "types": ["Friend", "Friend"],
-        "attributes": [
-          {{ "since": ["2019-05-01"], "frequency": ["weekly"] }},
-          {{ "since": ["2015-05-01"] }}
-        ]
-      }}
-    }}
-  ]
-}}
-
-
 """
 
 
@@ -169,6 +138,7 @@ The entities have the following schema matching MongoDB's $jsonSchema style used
 entity_prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessagePromptTemplate.from_template(entity_extraction_instructions),
+        SystemMessagePromptTemplate.from_template(example_templates.entity_extraction),
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
