@@ -4,12 +4,7 @@ import json
 import logging
 from copy import deepcopy
 from importlib.metadata import version
-from typing import Any, Dict, List, Optional, Union
-
-try:
-    from typing import TypeAlias  # Python 3.10+
-except ImportError:
-    from typing_extensions import TypeAlias  # Python 3.9 fallback
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -26,11 +21,16 @@ from langchain_mongodb.graphrag import example_templates, prompts
 from .prompts import rag_prompt
 from .schema import entity_schema
 
+if TYPE_CHECKING:
+    try:
+        from typing import TypeAlias  # Python 3.10+
+    except ImportError:
+        from typing_extensions import TypeAlias  # Python 3.9 fallback
+
+    Entity: TypeAlias = Dict[str, Any]
+    """Represents an Entity in the knowledge graph with specific schema. See .schema"""
+
 logger = logging.getLogger(__name__)
-
-
-Entity: TypeAlias = Dict[str, Any]
-"""Represents an Entity in the knowledge graph with specific schema. See .schema"""
 
 
 class MongoDBGraphStore:
