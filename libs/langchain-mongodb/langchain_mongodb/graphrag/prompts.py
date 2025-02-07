@@ -14,7 +14,7 @@ from starting points of entity nodes matching names found in a query, and follow
 Use the following as guidelines.
 
 - Simplicity: The graph should have as few entities and relationship types as needed to convey the information in the input.
-- Consistency: Connections can only be made if entities and relationships use consistent naming
+- Consistency: Connections can only be made if entities and relationships use consistent naming.
 - Generality: The graph should be useful for describing the concepts in not just this document but other similar documents.
 - Accuracy: Do not add any information that is not explicitly mentioned in the text.
 
