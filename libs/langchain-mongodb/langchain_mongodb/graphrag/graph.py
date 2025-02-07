@@ -39,7 +39,7 @@ class MongoDBGraphStore:
     GraphRAG is a ChatModel that provides responses to semantic queries
     based on a Knowledge Graph that an LLM is used to create.
     As in Vector RAG, we augment the Chat Model's training data
-    with relevant information that we collect from  documents.
+    with relevant information that we collect from documents.
 
     In Vector RAG, one uses an "Embedding" model that converts both
     the query, and the potentially relevant documents, into vectors,
@@ -49,12 +49,12 @@ class MongoDBGraphStore:
     In Graph RAG, one uses an "Entity-Extraction" model that converts
     text into Entities and their relationships, a Knowledge Graph.
     Comparison is done by Graph traversal, finding entities connected
-    to the query prompts. These are then supplied to the Chat Model  as context.
+    to the query prompts. These are then supplied to the Chat Model as context.
     The main difference is that GraphRAG's output is typically in a structured format.
 
     GraphRAG excels in finding links and common entities,
-    even if these come from different articles. It can combin information from
-    distinct source providing richer context than Vector RAG in certain cases.
+    even if these come from different articles. It can combine information from
+    distinct sources providing richer context than Vector RAG in certain cases.
 
     Here are a few examples of so-called multi-hop questions where GraphRAG excels:
     - What is the connection between ACME Corporation and GreenTech Ltd.?
@@ -64,7 +64,7 @@ class MongoDBGraphStore:
     - Which company is headquartered in San Francisco and involved in the SolarGrid Initiative?
 
     In Graph RAG, one uses an Entity-Extraction model that interprets
-    text documents that it is given extracting the query,
+    text documents that it is given and extracting the query,
     and the potentially relevant documents, into graphs. These are
     composed of nodes that are entities (nouns) and edges that are relationships.
     The idea is that the graph can find connections between entities and
@@ -85,7 +85,7 @@ class MongoDBGraphStore:
     GraphRAG can answer this question even if the following two statements come
     from completely different sources.
     - "Jane Smith works with John Doe."
-    - "Jane Smiths works at MongoDB."
+    - "Jane Smith works at MongoDB."
 
     """
 
@@ -105,9 +105,9 @@ class MongoDBGraphStore:
     ):
         """
         Args:
-            collection: Collection representing an Entity Graph
-            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships
-            entity_prompt: Prompt to fill graph store with entities following schema
+            collection: Collection representing an Entity Graph.
+            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships.
+            entity_prompt: Prompt to fill graph store with entities following schema.
             query_prompt: Prompt extracts entities and relationships as search starting points.
             max_depth: Maximum recursion depth in graph traversal.
             allowed_entity_types: If provided, constrains search to these types.
@@ -197,8 +197,8 @@ class MongoDBGraphStore:
             connection_string: A valid MongoDB connection URI.
             database_name: The name of the database to connect to.
             collection_name: The name of the collection to connect to.
-            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships
-            entity_prompt: Prompt to fill graph store with entities following schema
+            entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships.
+            entity_prompt: Prompt to fill graph store with entities following schema.
             query_prompt: Prompt extracts entities and relationships as search starting points.
             max_depth: Maximum recursion depth in graph traversal.
             allowed_entity_types: If provided, constrains search to these types.
@@ -286,7 +286,7 @@ class MongoDBGraphStore:
         Args:
             documents: list of textual documents and associated metadata.
         Returns:
-            List containing metadata on entities inserted and updated, one value for each input document
+            List containing metadata on entities inserted and updated, one value for each input document.
         """
         documents = [documents] if isinstance(documents, Document) else documents
         results = []
@@ -356,9 +356,9 @@ class MongoDBGraphStore:
     def find_entity_by_name(self, name: str) -> Optional[Entity]:
         """Utility to get Entity dict from Knowledge Graph / Collection.
         Args:
-            name: _id string to look for
+            name: _id string to look for.
         Returns:
-            List of Entity dicts if any match name
+            List of Entity dicts if any match name.
         """
         return self.collection.find_one({"_id": name})
 
@@ -459,7 +459,7 @@ class MongoDBGraphStore:
         Args:
             query: Prompt before it is augmented by Knowledge Graph.
             chat_model: ChatBot. Defaults to entity_extraction_model.
-            prompt: Alternative Prompt Template. Defaults to prompts.rag_prompt
+            prompt: Alternative Prompt Template. Defaults to prompts.rag_prompt.
         Returns:
             Response Message. response.content contains text.
         """
