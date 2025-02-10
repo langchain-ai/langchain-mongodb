@@ -1,19 +1,11 @@
-"""Logic for converting internal query language to a valid MongoDB Atlas query.
+"""Retriever that generates and executes structured queries over its own data source."""
 
+import logging
+from typing import Dict, Sequence, Tuple, Union
 
-
-With Vector Search Indexes, one can index boolean, date, number, objectId, string,
-and UUID fields to pre-filter your data.
-Filtering your data is useful to narrow the scope of your semantic search
-and ensure that not all vectors are considered for comparison.
-It reduces the number of documents against which to run similarity comparisons,
-which can decrease query latency and increase the accuracy of search results.
-
-
-"""
-
-from typing import Dict, Tuple, Union
-
+from langchain.chains.query_constructor.schema import AttributeInfo
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_core.language_models import BaseLanguageModel
 from langchain_core.structured_query import (
     Comparator,
     Comparison,
@@ -22,12 +14,22 @@ from langchain_core.structured_query import (
     StructuredQuery,
     Visitor,
 )
+from langchain_core.vectorstores import VectorStore
 
-MULTIPLE_ARITY_COMPARATORS = [Comparator.IN, Comparator.NIN]
+logger = logging.getLogger(__name__)
 
 
-class MongoDBAtlasTranslator(Visitor):
-    """Translate Mongo internal query language elements to valid filters."""
+class MongoDBStructuredQueryTranslator(Visitor):
+    """Translator between  MongoDB filters and LangChain's StructuredQuery
+
+    With Vector Search Indexes, one can index boolean, date, number, objectId, string,
+    and UUID fields to pre-filter your data.
+    Filtering your data is useful to narrow the scope of your semantic search
+    and ensure that not all vectors are considered for comparison.
+    It reduces the number of documents against which to run similarity comparisons,
+    which can decrease query latency and increase the accuracy of search results.
+
+    """
 
     """Subset of allowed logical comparators."""
     allowed_comparators = [
@@ -44,7 +46,7 @@ class MongoDBAtlasTranslator(Visitor):
     """Subset of allowed logical operators."""
     allowed_operators = [Operator.AND, Operator.OR]
 
-    ## Convert a operator or a comparator to Mongo Query Format
+    ## Convert an operator or a comparator to Mongo Query Format
     def _format_func(self, func: Union[Operator, Comparator]) -> str:
         self._validate_func(func)
         map_dict = {
@@ -66,7 +68,7 @@ class MongoDBAtlasTranslator(Visitor):
         return {self._format_func(operation.operator): args}
 
     def visit_comparison(self, comparison: Comparison) -> Dict:
-        if comparison.comparator in MULTIPLE_ARITY_COMPARATORS and not isinstance(
+        if comparison.comparator in [Comparator.IN, Comparator.NIN] and not isinstance(
             comparison.value, list
         ):
             comparison.value = [comparison.value]
@@ -85,3 +87,14 @@ class MongoDBAtlasTranslator(Visitor):
         else:
             kwargs = {"pre_filter": structured_query.filter.accept(self)}
         return structured_query.query, kwargs
+
+
+class MongoDBAtlasSelfQueryRetriever(SelfQueryRetriever):
+    def __init__(
+        self,
+        llm: BaseLanguageModel,
+        vectorstore: VectorStore,
+        metadata_field_info: Sequence[Union[AttributeInfo, dict]],
+        document_contents="Descriptions of movies",
+    ):
+        pass

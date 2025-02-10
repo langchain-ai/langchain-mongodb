@@ -1,10 +1,21 @@
+import os
+from typing import Sequence, Union
+
 import pytest
 from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
+from langchain_openai import ChatOpenAI
+
+from langchain_mongodb.retrievers.self_querying import MongoDBStructuredQueryTranslator
+from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "test_self_querying_retriever"
+
+
+if "OPENAI_API_KEY" not in os.environ:
+    pytest.skip("Requires OpenAI for chat responses.", allow_module_level=True)
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +90,7 @@ def fictitious_movies():
 
 
 @pytest.fixture(scope="module")
-def metadata_field_info():
+def field_info() -> Sequence[Union[AttributeInfo, dict]]:
     return [
         AttributeInfo(
             name="genre",
@@ -108,17 +119,24 @@ def vectorstore(
     embedding,
     fictitious_movies,
     dimensions,
-):
-    store = MongoDBAtlasVectorSearch.from_connection_string(
+) -> MongoDBAtlasVectorSearch:
+    """Vectorstore without documents nor index."""
+    return MongoDBAtlasVectorSearch.from_connection_string(
         connection_string,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=embedding,
     )
-    store.add_documents(fictitious_movies)
-    return store
 
 
-def test(vectorstore, dimensions):
+
+
+@pytest.fixture(scope="module")
+def llm():
+    """Model used for interpreting query."""
+    return ChatOpenAI(model="gpt-3.5-turbo")
+
+
+def test(vectorstore, llm, field_info, fictitious_movies, dimensions, embedding):
     """
     - Start with a collection of documents.
     - Define your Embedding Model, for search based on symantic similarity.
@@ -132,18 +150,40 @@ def test(vectorstore, dimensions):
     Returns:
 
     """
+    retriever = SelfQueryRetriever.from_llm(
+        llm=llm,
+        vectorstore=vectorstore,
+        metadata_field_info=field_info,
+        structured_query_translator=MongoDBStructuredQueryTranslator(),
+        document_contents="Descriptions of movies",
 
-    # Steps
-    #
+    )
+
+    assert isinstance(retriever, SelfQueryRetriever)
+
+    # This example only specifies a filter
+    response = retriever.invoke("I want to watch a movie rated higher than 8.5")
+
+    # Create index along with filter field indexes
     vectorstore.create_vector_search_index(
         dimensions=dimensions, wait_until_complete=60
     )
 
-    pass
+    # Add documents, including embeddings
+    vectorstore.add_documents(fictitious_movies)
 
 
 # TODO NEXT
+#   - We need the metadata_field info as part of index before we add documents
 #   - Add mappings to vector-search-index
 #       * https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#about-the-filter-type
 #       * Take these from list of AttributeInfo. We'll need a function for this
 #   - API  add_documents, add_attribute_info (good name?),
+"""
+NEXT - Walk through from_llm again
+- See how our Translator attempts provide values (eg allowed_operators, allowed_attributes)
+    to help in the chain it builds: prompt | llm | output_parser
+    These translator values are used to form the prompt and the output_parser
+- 
+
+"""
