@@ -4,7 +4,7 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 
-entity_extraction_instructions = """
+ENTITY_EXTRACTION_INSTRUCTIONS = """
 ## Overview
 You are a meticulous analyst tasked with extracting information from unstructured text
 to build a knowledge graph in a structured json format of entities (nodes) and their relationships (edges).
@@ -81,7 +81,7 @@ Each object must conform to the following schema:
 """
 
 
-name_extraction_instructions = """
+NAME_EXTRACTION_INSTRUCTIONS = """
 You are a meticulous analyst tasked with extracting information from documents to form
 knowledge graphs of entities (nodes) and their relationships (edges).
 
@@ -129,7 +129,7 @@ there is nothing here that could be seen as being a unique identifier or name.
 """
 
 
-rag_instructions = """
+RAG_INSTRUCTIONS = """
 ## Context
 You are a meticulous analyst tasked with extracting information in the form of knowledge graphs
 comprised of entities (nodes) and their relationships (edges).
@@ -151,21 +151,21 @@ The entities have the following schema matching MongoDB's $jsonSchema style used
 
 entity_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(entity_extraction_instructions),
+        SystemMessagePromptTemplate.from_template(ENTITY_EXTRACTION_INSTRUCTIONS),
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
 
 query_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(name_extraction_instructions),
+        SystemMessagePromptTemplate.from_template(NAME_EXTRACTION_INSTRUCTIONS),
         HumanMessagePromptTemplate.from_template("{input_document}"),
     ]
 )
 
 rag_prompt = ChatPromptTemplate.from_messages(
     [
-        SystemMessagePromptTemplate.from_template(rag_instructions),
+        SystemMessagePromptTemplate.from_template(RAG_INSTRUCTIONS),
         HumanMessagePromptTemplate.from_template("{query}"),
     ]
 )

@@ -113,7 +113,7 @@ class MongoDBGraphStore:
             allowed_entity_types: If provided, constrains search to these types.
             allowed_relationship_types: If provided, constrains search to these types.
             entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
-            entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
+            entity_name_examples: A string appended to prompts.NAME_EXTRACTION_INSTRUCTIONS containing examples.
             validate: If True, entity schema will be validated on every insert or update.
             validation_action: One of {"warn", "error"}.
               - If "warn", the default, documents will be inserted but errors logged.
@@ -204,7 +204,7 @@ class MongoDBGraphStore:
             allowed_entity_types: If provided, constrains search to these types.
             allowed_relationship_types: If provided, constrains search to these types.
             entity_examples: A string containing any number of additional examples to provide as context for entity extraction.
-            entity_name_examples: A string appended to schema.name_extraction_instructions containing examples.
+            entity_name_examples: A string appended to prompts.NAME_EXTRACTION_INSTRUCTIONS containing examples.
             validate: If True, entity schema will be validated on every insert or update.
             validation_action: One of {"warn", "error"}.
               - If "warn", the default, documents will be inserted but errors logged.
