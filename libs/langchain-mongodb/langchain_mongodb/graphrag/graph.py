@@ -372,7 +372,7 @@ class MongoDBGraphStore:
         Args:
             starting_entities: Traversal begins with documents whose _id fields match these strings.
             max_depth: Recursion continues until no more matching documents are found,
-            or until the operation reaches a recursion depth specified by the maxDepth parameter
+                or until the operation reaches a recursion depth specified by this parameter.
 
         Returns:
             List of connected entities.
