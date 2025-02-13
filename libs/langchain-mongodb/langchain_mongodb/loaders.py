@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from importlib.metadata import version
 from typing import Dict, List, Optional, Sequence
 
 from langchain_community.document_loaders.base import BaseLoader
@@ -9,6 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.driver_info import DriverInfo
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +82,10 @@ class MongoDBLoader(BaseLoader):
             include_db_collection_in_metadata (bool): Flag to include database and
             collection names in metadata.
         """
-        client = MongoClient(connection_string)
+        client = MongoClient(
+            connection_string,
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        )
         collection = client[db_name][collection_name]
         return MongoDBLoader(
             collection,

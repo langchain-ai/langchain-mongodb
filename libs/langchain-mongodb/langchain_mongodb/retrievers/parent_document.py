@@ -168,7 +168,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="langchain", version=version("langchain-mongodb")),
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
         )
         collection = client[database_name][collection_name]
         vectorstore = MongoDBAtlasVectorSearch(

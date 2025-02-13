@@ -1,5 +1,6 @@
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from importlib.metadata import version
 from typing import (
     Any,
     Optional,
@@ -8,6 +9,7 @@ from typing import (
 from langchain_core.runnables import RunnableConfig
 from pymongo import MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
+from pymongo.driver_info import DriverInfo
 
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
@@ -88,7 +90,12 @@ class MongoDBSaver(BaseCheckpointSaver):
         """
         client: Optional[MongoClient] = None
         try:
-            client = MongoClient(conn_string)
+            client = MongoClient(
+                conn_string,
+                driver=DriverInfo(
+                    name="Langgraph", version=version("langgraph-checkpoint-mongodb")
+                ),
+            )
             yield MongoDBSaver(
                 client,
                 db_name,

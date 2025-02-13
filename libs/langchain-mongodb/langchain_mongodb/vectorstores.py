@@ -79,7 +79,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         .. code-block:: python
 
             import getpass
-            MONGODB_ATLAS_CLUSTER_URI = getpass.getpass("MongoDB Atlas Cluster URI:")
+            MONGODB_ATLAS_CONNECTION_STRING = getpass.getpass("MongoDB Atlas Connection String:")
 
     Key init args — indexing params:
         embedding: Embeddings
@@ -99,20 +99,11 @@ class MongoDBAtlasVectorSearch(VectorStore):
             from pymongo import MongoClient
             from langchain_openai import OpenAIEmbeddings
 
-            # initialize MongoDB python client
-            client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
-
-            DB_NAME = "langchain_test_db"
-            COLLECTION_NAME = "langchain_test_vectorstores"
-            ATLAS_VECTOR_SEARCH_INDEX_NAME = "langchain-test-index-vectorstores"
-
-            MONGODB_COLLECTION = client[DB_NAME][COLLECTION_NAME]
-
-            vector_store = MongoDBAtlasVectorSearch(
-                collection=MONGODB_COLLECTION,
+            vector_store = MongoDBAtlasVectorSearch.from_connection_string(
+                connection_string=os=MONGODB_ATLAS_CONNECTION_STRING,
+                namespace="db_name.collection_name",
                 embedding=OpenAIEmbeddings(),
-                index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
-                relevance_score_fn="cosine",
+                index_name="vector_index",
             )
 
     Add Documents:
@@ -279,7 +270,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain")),
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]
