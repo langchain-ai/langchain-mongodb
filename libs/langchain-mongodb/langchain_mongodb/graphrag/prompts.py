@@ -21,6 +21,7 @@ Use the following as guidelines.
 INPUT: You will be provided a text document.
 OUTPUT:
 - You will produce valid json according the "Output Schema" section below.
+- Your response **must be** a **valid JSON document** with NO extra text, explanations, or markdown formatting.
 - The extracted entities and relationships **MUST STRICTLY CONFORM** to the constraints outlined below.
 - Any entities or relationships not matching the allowed types must be **EXCLUDED**.
 
