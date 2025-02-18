@@ -1,6 +1,9 @@
 import asyncio
 import builtins
+import logging
 import sys
+import threading
+import time
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any, Optional
@@ -75,6 +78,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
+        auto_delete_expired_threads: bool = False,
+        thread_status_collection_name: str = "checkpoint_thread_status_aio",
+        thread_expire_time_second: int = 2592000, #30 days
+        thread_expire_check_time_second: int = 86400,  # 1 day
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -83,6 +90,14 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
         self.loop = asyncio.get_running_loop()
+        self.auto_delete_expired_threads = auto_delete_expired_threads
+        if self.auto_delete_expired_threads:
+            self.thread_expire_time_second = thread_expire_time_second
+            self.thread_expire_check_time_second = thread_expire_check_time_second
+            self.thread_status_collection = self.db[thread_status_collection_name]
+            self.last_thread_expire_check_time_second = 0
+            self.thread_expire_check_lock = threading.RLock()
+            self.try_delete_expired_threads_from_checkpoints()
 
     @classmethod
     @asynccontextmanager
@@ -290,6 +305,18 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         await self.checkpoint_collection.update_one(
             upsert_query, {"$set": doc}, upsert=True
         )
+        if self.auto_delete_expired_threads:
+            thread_status_collection_doc = {
+                "thread_id": thread_id,
+                "last_update": int(time.time())
+            }
+            thread_status_collection_upsert_query = {
+                "thread_id": thread_id
+            }
+            await self.thread_status_collection.update_one(
+                thread_status_collection_upsert_query, {"$set": thread_status_collection_doc}, upsert=True
+            )
+            await self.try_delete_expired_threads_from_checkpoints()
         return {
             "configurable": {
                 "thread_id": thread_id,
@@ -450,3 +477,34 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         return asyncio.run_coroutine_threadsafe(
             self.aput_writes(config, writes, task_id), self.loop
         ).result()
+
+    async def try_delete_expired_threads_from_checkpoints(self):
+        self.thread_expire_check_lock.acquire()
+        if self.last_thread_expire_check_time_second + self.thread_expire_check_time_second < int(time.time()):
+            try:
+                thread_status_collection_result = self.thread_status_collection.find(
+                    {
+                        "last_update" : {
+                            "$lt": int(time.time()) - self.thread_expire_time_second
+                        }
+                    }
+                )
+                expired_thread_ids = []
+                async for doc in thread_status_collection_result:
+                    if doc["last_update"] + self.thread_expire_time_second < int(time.time()):
+                        thread_id = doc["thread_id"]
+                        expired_thread_ids.append(thread_id)
+                await self.checkpoint_collection.delete_many({
+                    "thread_id": {
+                        "$in": expired_thread_ids
+                    }
+                })
+                await self.thread_status_collection.delete_many({
+                    "thread_id": {
+                        "$in": expired_thread_ids
+                    }
+                })
+            except Exception as e:
+                logging.error("delete_expired_threads_from_checkpoints error:", e)
+            self.last_thread_expire_check_time_second = int(time.time())
+        self.thread_expire_check_lock.release()
