@@ -17,7 +17,7 @@ DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def collection() -> Collection:
     client = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
@@ -114,7 +114,7 @@ Output:
 """
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection, entity_extraction_model, entity_prompt, query_prompt
