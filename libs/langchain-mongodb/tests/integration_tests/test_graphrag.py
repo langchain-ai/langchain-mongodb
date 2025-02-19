@@ -36,7 +36,7 @@ if "OPENAI_API_KEY" not in os.environ:
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
-        return ChatOpenAI(model="gpt-4o", temperature=0.0)
+        return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
     except Exception:
         pass
 
