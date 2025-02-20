@@ -6,7 +6,7 @@ Given an input question, create a syntactically correct MongoDB query to run, th
 Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most {top_k} results.
 You can order the results by a relevant field to return the most interesting examples in the database.
 Never query for all the fields from a specific collection, only ask for the relevant fields given the question.
-The query must be written in Python.
+
 You have access to tools for interacting with the database.
 Only use the below tools. Only use the information returned by the below tools to construct your final answer.
 You MUST double check your query before executing it. If you get an error while executing a query, rewrite the query and try again.
@@ -42,8 +42,11 @@ MONGODB_FUNCTIONS_SUFFIX = """I should look at the collections in the database t
 
 MONGODB_QUERY_CHECKER = """
 {query}
+
 Double check the MongoDB query above for common mistakes, including:
-- Using NOT IN with NULL values
+- Missing content in the aggegregation pipeline
+- Improperly quoting identifiers
+- Improperly quoting operators
 
 If there are any of the above mistakes, rewrite the query. If there are no mistakes, just reproduce the original query.
 

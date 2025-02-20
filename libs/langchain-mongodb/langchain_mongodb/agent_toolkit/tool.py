@@ -11,9 +11,9 @@ from langchain_core.callbacks import (
     CallbackManagerForToolRun,
 )
 from langchain_core.prompts import PromptTemplate
-from mongodb_agent_toolkit.database import MongoDBDatabase
+from .database import MongoDBDatabase
 from langchain_core.tools import BaseTool
-from mongodb_agent_toolkit.prompt import MONGODB_QUERY_CHECKER
+from .prompt import MONGODB_QUERY_CHECKER
 
 
 class BaseMongoDBDatabaseTool(BaseModel):

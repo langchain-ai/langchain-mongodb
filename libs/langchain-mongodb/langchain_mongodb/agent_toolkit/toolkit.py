@@ -7,14 +7,15 @@ from langchain_core.callbacks import Callbacks as Callbacks
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import BaseToolkit
-from mongodb_agent_toolkit.database import MongoDBDatabase
-from mongodb_agent_toolkit.tool import (
+from pydantic import ConfigDict, Field
+
+from .database import MongoDBDatabase
+from .tool import (
     InfoMongoDBDatabaseTool,
     ListMongoDBDatabaseTool,
     QueryMongoDBCheckerTool,
     QueryMongoDBDatabaseTool,
 )
-from pydantic import ConfigDict, Field
 
 
 class MongoDBDatabaseToolkit(BaseToolkit):

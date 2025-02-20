@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -197,34 +198,51 @@ class MongoDBDatabase:
             ):
                 doc[key] = value[: MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE + 1]
 
+    def _parse_command(self, command: str) -> Any:
+        # Convert a JavaScript command to a python object.
+        command = command.strip().replace("\n", "").replace(" ", "")
+        # Handle missing closing parens.
+        if command.endswith("]"):
+            command += ")"
+        agg_command = command[command.index("[") : -1]
+        tokens = re.split("([\[{,:}\]])", agg_command)
+        result = ""
+        patt = re.compile('[-\d"]')
+        markers = set("{,:}[]")
+        for token in tokens:
+            if not token:
+                continue
+            if token in markers:
+                result += token
+            elif token.startswith("'"):
+                result += f'"{token[1:-1]}"'
+            elif re.match(patt, token[0]):
+                result += token
+            else:
+                result += f'"{token}"'
+        try:
+            return json.loads(result)
+        except Exception as e:
+            raise ValueError(f"Cannot execute command {command}") from e
+
     def run(self, command: str) -> Union[str, Cursor]:
-        """Execute a MongoDB command and return a string representing the results.
+        """Execute a MongoDB aggregration command and return a string representing the results.
 
         If the statement returns documents, a string of the results is returned.
         If the statement returns no documents, an empty string is returned.
-        """
-        """
-        "db.Invoice.aggregate([ { $group: { _id: '$BillingCountry', totalSpent: { $sum: '$Total' } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 } ])"
-        """
-        coll = self._db[command.split(".")[1]]
-        if ".aggregate(" in command:
-            json_str = ""
-            parts = command[command.index("[") : -1].split()
-            for part in parts:
-                part = part.replace("'", '"')
-                if part.endswith(":") and not part.endswith('"'):
-                    json_str += f' "{part[:-1]}":'
-                else:
-                    json_str += f" {part}"
-            agg = json.loads(json_str)
-            import pprint
 
-            pprint.pprint(agg)
-            docs = dumps(list(coll.aggregate(agg)), indent=2)
-            print(docs)
-            return docs
-        else:
-            raise ValueError("cannot handle prompt", command)
+        The command MUST be of the form: `db.collectionName.aggregate(...)`.
+        """
+        if not command.startswith("db."):
+            raise ValueError(f"Cannot run command {command}")
+        col_name = command.split(".")[1]
+        if col_name not in self.get_usable_collection_names():
+            raise ValueError(f"Collection {col_name} does not exist!")
+        coll = self._db[col_name]
+        if ".aggregate(" not in command:
+            raise ValueError(f"Cannot execute command {command}")
+        agg = self._parse_command(command)
+        return dumps(list(coll.aggregate(agg)), indent=2)
 
     def get_collection_info_no_throw(
         self, collection_names: Optional[List[str]] = None
@@ -242,6 +260,7 @@ class MongoDBDatabase:
             return self.get_collection_info(collection_names)
         except ValueError as e:
             """Format the error message"""
+            raise e
             return f"Error: {e}"
 
     def run_no_throw(self, command: str) -> Union[str, Cursor]:
