@@ -147,7 +147,7 @@ def test_database_run(db: MongoDBDatabase) -> None:
     db._client["test"]["user"].insert_one(user)
 
     # Query and verify.
-    command = """db.user.aggregate([ { $match: { name: 'Harrison' } } ])"""
+    command = """db.user.aggregate([ { "$match": { "name": "Harrison" } } ])"""
     output = db.run(command)
     docs = json.loads(output.strip())
     del docs[0]["_id"]
