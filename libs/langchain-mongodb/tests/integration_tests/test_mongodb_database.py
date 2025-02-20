@@ -153,18 +153,3 @@ def test_database_run(db: MongoDBDatabase) -> None:
     del docs[0]["_id"]
     del user["_id"]
     assert docs[0] == user
-
-
-CMDS = [
-    """db.Invoice.aggregate([ { $group: { _id: "$BillingCountry", totalSpent: { $sum: "$Total" } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 } ])""",
-    """db.Invoice.aggregate([{ $group: { _id: '$BillingCountry', totalSpent: { $sum: '$Total' } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 }])""",
-    """db.Invoice.aggregate([{$group: {_id: "$BillingCountry", totalSpent: {$sum: "$Total"}}}, {$sort: {totalSpent: -1}}, {$limit: 5}])""",
-    """db.Invoice.aggregate([ { "$group": { "_id": "$BillingCountry", "totalSpent": { "$sum": "$Total" } } }, { "$sort": { "totalSpent": -1 } }, { "$limit": 5 } ])""",
-    """db.InvoiceLine.aggregate([ { $group: { _id: "$InvoiceId", totalSpent: { $sum: { $multiply: [ "$UnitPrice", "$Quantity" ] }} }}, { $lookup: { from: "Customer", localField: "_id", foreignField: "CustomerId", as: "customerInfo" }}, { $unwind: "$customerInfo" }, { $group: { _id: "$customerInfo.Country", totalSpent: { $sum: "$totalSpent" } }}, { $sort: { totalSpent: -1 }}, { $limit: 5 } ])""",
-    """db.Invoice.aggregate([ { $group: { _id: "$BillingCountry", totalSpent: { $sum: "$Total" } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 } ])""",
-]
-
-
-def test_database_parse_command(db: MongoDBDatabase) -> None:
-    for cmd in CMDS:
-        db._parse_command(cmd)

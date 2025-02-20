@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -205,23 +204,8 @@ class MongoDBDatabase:
         if command.endswith("]"):
             command += ")"
         agg_command = command[command.index("[") : -1]
-        tokens = re.split("([\[{,:}\]])", agg_command)
-        result = ""
-        patt = re.compile('[-\d"]')
-        markers = set("{,:}[]")
-        for token in tokens:
-            if not token:
-                continue
-            if token in markers:
-                result += token
-            elif token.startswith("'"):
-                result += f'"{token[1:-1]}"'
-            elif re.match(patt, token[0]):
-                result += token
-            else:
-                result += f'"{token}"'
         try:
-            return json.loads(result)
+            return json.loads(agg_command)
         except Exception as e:
             raise ValueError(f"Cannot execute command {command}") from e
 
