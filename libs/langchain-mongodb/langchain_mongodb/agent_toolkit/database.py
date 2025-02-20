@@ -226,7 +226,7 @@ class MongoDBDatabase:
             raise ValueError(f"Cannot execute command {command}") from e
 
     def run(self, command: str) -> Union[str, Cursor]:
-        """Execute a MongoDB aggregration command and return a string representing the results.
+        """Execute a MongoDB aggregation command and return a string representing the results.
 
         If the statement returns documents, a string of the results is returned.
         If the statement returns no documents, an empty string is returned.

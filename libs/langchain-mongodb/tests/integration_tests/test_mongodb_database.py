@@ -161,7 +161,7 @@ CMDS = [
     """db.Invoice.aggregate([{ $group: { _id: '$BillingCountry', totalSpent: { $sum: '$Total' } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 }])""",
     """db.Invoice.aggregate([{$group: {_id: "$BillingCountry", totalSpent: {$sum: "$Total"}}}, {$sort: {totalSpent: -1}}, {$limit: 5}])""",
     """db.Invoice.aggregate([ { "$group": { "_id": "$BillingCountry", "totalSpent": { "$sum": "$Total" } } }, { "$sort": { "totalSpent": -1 } }, { "$limit": 5 } ])""",
-    """db.InvoiceLine.aggregate([ { $group: { _id: "$InvoiceId", totalSpent: { $sum: { $multiply: [ "$UnitPrice", "$Quantity" ] }} }}, { $lookup: { from: "Customer", localField: "_id", foreignField: "CustomerId", as: "customerInfo" }}, { $unwind: "$customerInfo" }, { $group: { _id: "$customerInfo.Country", totalSpent: { $sum: "$totalSpent" } }}, { $sort: { totalSpent: -1 }}, { $limit: 5 } ])"""
+    """db.InvoiceLine.aggregate([ { $group: { _id: "$InvoiceId", totalSpent: { $sum: { $multiply: [ "$UnitPrice", "$Quantity" ] }} }}, { $lookup: { from: "Customer", localField: "_id", foreignField: "CustomerId", as: "customerInfo" }}, { $unwind: "$customerInfo" }, { $group: { _id: "$customerInfo.Country", totalSpent: { $sum: "$totalSpent" } }}, { $sort: { totalSpent: -1 }}, { $limit: 5 } ])""",
     """db.Invoice.aggregate([ { $group: { _id: "$BillingCountry", totalSpent: { $sum: "$Total" } } }, { $sort: { totalSpent: -1 } }, { $limit: 5 } ])""",
 ]
 
