@@ -233,6 +233,8 @@ class MongoDBDatabase:
 
         The command MUST be of the form: `db.collectionName.aggregate(...)`.
         """
+        # TODO: remove before merging
+        print("HELLO", command)
         if not command.startswith("db."):
             raise ValueError(f"Cannot run command {command}")
         col_name = command.split(".")[1]

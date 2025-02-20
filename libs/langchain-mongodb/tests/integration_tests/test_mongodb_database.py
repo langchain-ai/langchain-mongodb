@@ -10,8 +10,7 @@ from langchain_mongodb.agent_toolkit import MongoDBDatabase
 
 
 @pytest.fixture
-def db() -> MongoDBDatabase:
-    client = MongoClient()
+def db(client: MongoClient) -> MongoDBDatabase:
     client.drop_database("test")
     user = dict(name="Alice", bio="Engineer from Ohio")
     client["test"]["user"].insert_one(user)
