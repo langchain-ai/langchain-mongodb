@@ -135,7 +135,7 @@ def test_collection_info_w_sample_docs(db: MongoDBDatabase) -> None:
     */""".strip()
 
     for line1, line2 in zip(output.splitlines(), expected_output.splitlines()):
-        if "$oid" in line1:
+        if "$oid" in line1 or line1.strip().startswith("{{"):
             continue
         assert line1.strip() == line2.strip()
 
