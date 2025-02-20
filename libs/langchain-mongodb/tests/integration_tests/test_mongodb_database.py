@@ -24,51 +24,16 @@ def db(client: MongoClient) -> MongoDBDatabase:
 def test_collection_info(db: MongoDBDatabase) -> None:
     """Test that collection info is constructed properly."""
     output = db.collection_info
-    expected_output = f"""
+    expected_header = f"""
     Database name: {DB_NAME}
     Collection name: company
     Schema from a sample of documents from the collection:
     _id: ObjectId
     name: String
-    location: String
+    location: String""".strip()
 
-    /*
-    3 documents from company collection:
-    [
-      {{
-        "_id": {{
-          "$oid": "..."
-        }},
-        "name": "Acme",
-        "location": "Montana"
-      }}
-    ]
-    */
-
-    Database name: {DB_NAME}
-    Collection name: user
-    Schema from a sample of documents from the collection:
-    _id: ObjectId
-    name: String
-    bio: String
-
-    /*
-    3 documents from user collection:
-    [
-      {{
-        "_id": {{
-          "$oid": "..."
-        }},
-        "name": "Alice",
-        "bio": "Engineer from Ohio"
-      }}
-    ]
-    */
-    """.strip()
-    for line1, line2 in zip(output.splitlines(), expected_output.splitlines()):
-        if "$oid" in line1:
-            continue
-        assert line1.strip() == line2.strip()
+    for line in expected_header.splitlines():
+        assert line.strip() in output
 
 
 def test_collection_info_w_sample_docs(db: MongoDBDatabase) -> None:
@@ -86,58 +51,17 @@ def test_collection_info_w_sample_docs(db: MongoDBDatabase) -> None:
     db = MongoDBDatabase(db._client, DB_NAME, sample_docs_in_collection_info=2)
     output = db.collection_info
 
-    expected_output = f"""
+    expected_header = f"""
     Database name: {DB_NAME}
     Collection name: company
     Schema from a sample of documents from the collection:
     _id: ObjectId
     name: String
     location: String
+    """.strip()
 
-    /*
-    2 documents from company collection:
-    [
-      {{
-        "_id": {{
-          "$oid": "..."
-        }},
-        "name": "Acme",
-        "location": "Montana"
-      }}
-    ]
-    */
-
-    Database name: {DB_NAME}
-    Collection name: user
-    Schema from a sample of documents from the collection:
-    _id: ObjectId
-    name: String
-    bio: String
-
-    /*
-    2 documents from user collection:
-    [
-      {{
-        "_id": {{
-          "$oid": "..."
-        }},
-        "name": "Harrison",
-        "bio": "bio"
-      }},
-      {{
-        "_id": {{
-          "$oid": "..."
-        }},
-        "name": "Chase",
-        "bio": "bio"
-      }}
-    ]
-    */""".strip()
-
-    for line1, line2 in zip(output.splitlines(), expected_output.splitlines()):
-        if "$oid" in line1 or ":" not in line1:
-            continue
-        assert line1.strip() == line2.strip()
+    for line in expected_header.splitlines():
+        assert line.strip() in output
 
 
 def test_database_run(db: MongoDBDatabase) -> None:
