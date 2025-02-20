@@ -14,6 +14,8 @@ from langchain_mongodb.agent_toolkit import (
     MongoDBDatabaseToolkit,
 )
 
+DB_NAME = "langchain_test_db_chinook"
+
 
 @pytest.fixture
 def db(client: MongoClient) -> MongoDBDatabase:
@@ -32,14 +34,14 @@ def db(client: MongoClient) -> MongoDBDatabase:
     tables = [i[0] for i in cursor.fetchall()]
     cursor.close()
     for t in tables:
-        coll = client["chinook"][t]
+        coll = client[DB_NAME][t]
         coll.delete_many({})
         cursor = con.cursor()
         cursor.execute(f"select * from {t}")
         docs = [dict(i) for i in cursor.fetchall()]
         cursor.close()
         coll.insert_many(docs)
-    return MongoDBDatabase(client, "chinook")
+    return MongoDBDatabase(client, DB_NAME)
 
 
 @flaky(max_runs=5, min_passes=4)
@@ -48,7 +50,7 @@ def db(client: MongoClient) -> MongoDBDatabase:
 )
 def test_toolkit_response(db, connection_string: str):
     db_wrapper = MongoDBDatabase.from_connection_string(
-        connection_string, database="chinook"
+        connection_string, database=DB_NAME
     )
     llm = ChatOpenAI(model="gpt-4o-mini", timeout=60)
 
