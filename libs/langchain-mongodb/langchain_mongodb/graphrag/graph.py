@@ -14,6 +14,7 @@ from langchain_core.runnables import RunnableSequence
 from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
+from pymongo.errors import OperationFailure
 from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
@@ -145,12 +146,18 @@ class MongoDBGraphStore:
         else:
             self.allowed_relationship_types = []
         if validate:
-            collection.database.command(
-                "collMod",
-                collection.name,
-                validator={"$jsonSchema": self._schema},
-                validationAction=validation_action,
-            )
+            try:
+                collection.database.command(
+                    "collMod",
+                    collection.name,
+                    validator={"$jsonSchema": self._schema},
+                    validationAction=validation_action,
+                )
+            except OperationFailure:
+                logger.warning(
+                    "Validation will NOT be performed. User must be DB Admin to add validation **after** a Collection is created. \n"
+                    "Please add validator when you create collection: db.create_collection.(coll_name, validator={'$jsonSchema': self._schema})"
+                )
         self.collection = collection
 
         # Include examples

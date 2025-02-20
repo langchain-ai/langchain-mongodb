@@ -17,7 +17,7 @@ DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def collection() -> Collection:
     client = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
@@ -36,7 +36,7 @@ if "OPENAI_API_KEY" not in os.environ:
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
-        return ChatOpenAI(model="gpt-4o", temperature=0.0)
+        return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
     except Exception:
         pass
 
@@ -114,7 +114,7 @@ Output:
 """
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection, entity_extraction_model, entity_prompt, query_prompt
