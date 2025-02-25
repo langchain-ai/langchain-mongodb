@@ -396,6 +396,15 @@ wheels = [
 ]
 
 [[package]]
+name = "flaky"
+version = "3.8.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/c5/ef69119a01427204ff2db5fc8f98001087bcce719bbb94749dcd7b191365/flaky-3.8.1.tar.gz", hash = "sha256:47204a81ec905f3d5acfbd61daeabcada8f9d4031616d9bcb0618461729699f5", size = 25248 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/b8/b830fc43663246c3f3dd1ae7dca4847b96ed992537e85311e27fa41ac40e/flaky-3.8.1-py2.py3-none-any.whl", hash = "sha256:194ccf4f0d3a22b2de7130f4b62e45e977ac1b5ccad74d4d48f3005dcc38815e", size = 19139 },
+]
+
+[[package]]
 name = "freezegun"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -797,6 +806,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "flaky" },
     { name = "freezegun" },
     { name = "langchain" },
     { name = "langchain-community" },
@@ -827,6 +837,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "flaky", specifier = ">=3.8.1" },
     { name = "freezegun", specifier = ">=1.2.2" },
     { name = "langchain", specifier = ">=0.3.14" },
     { name = "langchain-community", specifier = ">=0.3.14" },
