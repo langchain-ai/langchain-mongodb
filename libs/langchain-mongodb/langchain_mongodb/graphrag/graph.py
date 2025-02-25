@@ -130,18 +130,45 @@ class MongoDBGraphStore:
               - If "error", an exception will be raised if any document does not match the schema.
         """
         self._schema = deepcopy(entity_schema)
+        collection_existed = True
         if connection_string and collection is not None:
             raise ValueError(
                 "Pass one of: connection_string, database_name, and collection_name"
                 "OR a MongoDB Collection."
             )
-        if collection is not None:
+        if collection is None:  # collection is specified by uri and names
+            client: MongoClient = MongoClient(
+                connection_string,
+                driver=DriverInfo(
+                    name="Langchain", version=version("langchain-mongodb")
+                ),
+            )
+            db = client[database_name]
+            if collection_name not in db.list_collection_names():
+                validator = {"$jsonSchema": self._schema} if validate else None
+                collection = client[database_name].create_collection(
+                    collection_name,
+                    validator=validator,
+                    validationAction=validation_action,
+                )
+                collection_existed = False
+            else:
+                collection = db[collection_name]
+        else:
             if not isinstance(collection, Collection):
                 raise ValueError(
                     "collection must be a MongoDB Collection. "
                     "Consider using connection_string, database_name, and collection_name."
                 )
-            if validate:
+
+        if validate and collection_existed:
+            # first check for existing validator
+            collection_info = collection.database.command(
+                "listCollections", filter={"name": collection.name}
+            )
+            collection_options = collection_info.get("cursor", {}).get("firstBatch", [])
+            validator = collection_options[0].get("options", {}).get("validator", None)
+            if not validator:
                 try:
                     collection.database.command(
                         "collMod",
@@ -156,19 +183,6 @@ class MongoDBGraphStore:
                         "Please add validator when you create collection: "
                         "db.create_collection.(coll_name, validator={'$jsonSchema': schema.entity_schema})"
                     )
-        else:
-            client: MongoClient = MongoClient(
-                connection_string,
-                driver=DriverInfo(
-                    name="Langchain", version=version("langchain-mongodb")
-                ),
-            )
-            db = client[database_name]
-            if collection_name not in db.list_collection_names():
-                validator = {"$jsonSchema": self._schema} if validate else None
-                collection = client[database_name].create_collection(
-                    collection_name, validator=validator
-                )
         self.collection = collection
 
         self.entity_extraction_model = entity_extraction_model

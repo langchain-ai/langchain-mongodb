@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from flaky import flaky
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -8,7 +9,6 @@ from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.results import BulkWriteResult
-from flaky import flaky
 
 from langchain_mongodb.graphrag.graph import MongoDBGraphStore
 from langchain_mongodb.graphrag.prompts import entity_prompt, query_prompt
@@ -149,6 +149,7 @@ def test_extract_entity_names(graph_store, query_connection):
     assert isinstance(no_names, list)
     assert len(no_names) == 0
 
+
 @flaky
 def test_related_entities(graph_store):
     entity_names = ["John Doe", "Jane Smith"]
@@ -158,6 +159,7 @@ def test_related_entities(graph_store):
     no_entities = graph_store.related_entities([])
     assert isinstance(no_entities, list)
     assert len(no_entities) == 0
+
 
 @flaky
 def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
@@ -202,7 +204,7 @@ def test_similarity_search(graph_store, query_connection):
 
 @flaky
 def test_validator(documents, entity_extraction_model):
-    # First, create one client just to drop any existing collections
+    # Case 1. No existing collection.
     client = MongoClient(MONGODB_URI)
     clxn_name = f"{COLLECTION_NAME}_validation"
     client[DB_NAME][clxn_name].drop()
@@ -220,6 +222,39 @@ def test_validator(documents, entity_extraction_model):
     entities = store.collection.find({}).to_list()
     # Using subset because SolarGrid Initiative is not always considered an entity
     assert {"Person", "Organization"}.issubset(set(e["type"] for e in entities))
+    client.close()
+
+    # Case 2: Existing collection with a validator
+    client = MongoClient(MONGODB_URI)
+    clxn_name = f"{COLLECTION_NAME}_validation"
+    collection = client[DB_NAME][clxn_name]
+    collection.delete_many({})
+
+    store = MongoDBGraphStore(
+        collection=collection,
+        entity_extraction_model=entity_extraction_model,
+        validate=True,
+        validation_action="error",
+    )
+    bulkwrite_results = store.add_documents(documents)
+    assert len(bulkwrite_results) == len(documents)
+    collection.drop()
+    client.close()
+
+    # Case 3: Existing collection without a validator
+    client = MongoClient(MONGODB_URI)
+    clxn_name = f"{COLLECTION_NAME}_validation"
+    collection = client[DB_NAME].create_collection(clxn_name)
+    store = MongoDBGraphStore(
+        collection=collection,
+        entity_extraction_model=entity_extraction_model,
+        validate=True,
+        validation_action="error",
+    )
+    bulkwrite_results = store.add_documents(documents)
+    assert len(bulkwrite_results) == len(documents)
+    client.close()
+
 
 @flaky
 def test_allowed_entity_types(documents, entity_extraction_model):
