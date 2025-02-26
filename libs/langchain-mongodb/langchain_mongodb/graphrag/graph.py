@@ -87,12 +87,15 @@ class MongoDBGraphStore:
     from completely different sources.
     - "Jane Smith works with John Doe."
     - "Jane Smith works at MongoDB."
-
     """
 
     def __init__(
         self,
-        collection: Collection,
+        *,
+        connection_string: Optional[str] = None,
+        database_name: Optional[str] = None,
+        collection_name: Optional[str] = None,
+        collection: Optional[Collection] = None,
         entity_extraction_model: BaseChatModel,
         entity_prompt: ChatPromptTemplate = None,
         query_prompt: ChatPromptTemplate = None,
@@ -106,7 +109,11 @@ class MongoDBGraphStore:
     ):
         """
         Args:
-            collection: Collection representing an Entity Graph.
+            connection_string: A valid MongoDB connection URI.
+            database_name: The name of the database to connect to.
+            collection_name: The name of the collection to connect to.
+            collection: A Collection that will represent a Knowledge Graph.
+                ** One may pass a Collection in lieu of connection_string, database_name, and collection_name.
             entity_extraction_model: LLM for converting documents into Graph of Entities and Relationships.
             entity_prompt: Prompt to fill graph store with entities following schema.
                 Defaults to .prompts.ENTITY_EXTRACTION_INSTRUCTIONS
@@ -122,6 +129,62 @@ class MongoDBGraphStore:
               - If "warn", the default, documents will be inserted but errors logged.
               - If "error", an exception will be raised if any document does not match the schema.
         """
+        self._schema = deepcopy(entity_schema)
+        collection_existed = True
+        if connection_string and collection is not None:
+            raise ValueError(
+                "Pass one of: connection_string, database_name, and collection_name"
+                "OR a MongoDB Collection."
+            )
+        if collection is None:  # collection is specified by uri and names
+            client: MongoClient = MongoClient(
+                connection_string,
+                driver=DriverInfo(
+                    name="Langchain", version=version("langchain-mongodb")
+                ),
+            )
+            db = client[database_name]
+            if collection_name not in db.list_collection_names():
+                validator = {"$jsonSchema": self._schema} if validate else None
+                collection = client[database_name].create_collection(
+                    collection_name,
+                    validator=validator,
+                    validationAction=validation_action,
+                )
+                collection_existed = False
+            else:
+                collection = db[collection_name]
+        else:
+            if not isinstance(collection, Collection):
+                raise ValueError(
+                    "collection must be a MongoDB Collection. "
+                    "Consider using connection_string, database_name, and collection_name."
+                )
+
+        if validate and collection_existed:
+            # first check for existing validator
+            collection_info = collection.database.command(
+                "listCollections", filter={"name": collection.name}
+            )
+            collection_options = collection_info.get("cursor", {}).get("firstBatch", [])
+            validator = collection_options[0].get("options", {}).get("validator", None)
+            if not validator:
+                try:
+                    collection.database.command(
+                        "collMod",
+                        collection.name,
+                        validator={"$jsonSchema": self._schema},
+                        validationAction=validation_action,
+                    )
+                except OperationFailure:
+                    logger.warning(
+                        "Validation will NOT be performed. "
+                        "User must be DB Admin to add validation **after** a Collection is created. \n"
+                        "Please add validator when you create collection: "
+                        "db.create_collection.(coll_name, validator={'$jsonSchema': schema.entity_schema})"
+                    )
+        self.collection = collection
+
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = (
             prompts.entity_prompt if entity_prompt is None else entity_prompt
@@ -145,20 +208,6 @@ class MongoDBGraphStore:
             ] = allowed_relationship_types
         else:
             self.allowed_relationship_types = []
-        if validate:
-            try:
-                collection.database.command(
-                    "collMod",
-                    collection.name,
-                    validator={"$jsonSchema": self._schema},
-                    validationAction=validation_action,
-                )
-            except OperationFailure:
-                logger.warning(
-                    "Validation will NOT be performed. User must be DB Admin to add validation **after** a Collection is created. \n"
-                    "Please add validator when you create collection: db.create_collection.(coll_name, validator={'$jsonSchema': self._schema})"
-                )
-        self.collection = collection
 
         # Include examples
         if entity_examples is None:

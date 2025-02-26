@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.5 (2025/02/11)
+## Changes in version 0.5 (2025/02/25)
 
 - Added GraphRAG support via `MongoDBGraphStore`
 
