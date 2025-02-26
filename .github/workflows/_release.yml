@@ -161,12 +161,12 @@ jobs:
             --extra-index-url https://test.pypi.org/simple/ \
             "$PKG_NAME==$VERSION"
 
-      - name: Run unit tests
-        run: just tests
-
       - name: Start local Atlas
         working-directory: .
         run: bash scripts/start_local_atlas.sh
+
+      - name: Run unit tests
+        run: just tests
 
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
