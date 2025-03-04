@@ -779,7 +779,7 @@ wheels = [
 
 [[package]]
 name = "langchain-mongodb"
-version = "0.4.0"
+version = "0.5.0"
 source = { directory = "libs/langchain-mongodb" }
 dependencies = [
     { name = "langchain" },
@@ -800,6 +800,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "flaky", specifier = ">=3.8.1" },
     { name = "freezegun", specifier = ">=1.2.2" },
     { name = "langchain", specifier = ">=0.3.14" },
     { name = "langchain-community", specifier = ">=0.3.14" },
@@ -876,20 +877,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langgraph"
-version = "0.2.63"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "langgraph-checkpoint" },
-    { name = "langgraph-sdk" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/ac/70c4e4f8197af0a348042b38bdebd219b8cc3522e44848e18027d2e1520d/langgraph-0.2.63.tar.gz", hash = "sha256:4bcdd6023b02d16c840b5ee612bfbafd1b9e0beef91622aa1827593374ee6e8e", size = 120296 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/7e/0a40b69abe014f1caa5000ccf0856ed3e62aa5c3e4cd1f3cc1bafab16d3a/langgraph-0.2.63-py3-none-any.whl", hash = "sha256:7867108e045c0ee52cb705749edd478b08588dce74fbd4466b4197a04c4e718b", size = 139696 },
-]
-
-[[package]]
 name = "langgraph-checkpoint"
 version = "2.0.10"
 source = { registry = "https://pypi.org/simple" }
@@ -904,10 +891,9 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.1.0"
+version = "0.1.1"
 source = { directory = "libs/langgraph-checkpoint-mongodb" }
 dependencies = [
-    { name = "langgraph" },
     { name = "langgraph-checkpoint" },
     { name = "motor" },
     { name = "pymongo" },
@@ -915,17 +901,15 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langgraph", specifier = ">=0.2.55" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.0" },
     { name = "motor", specifier = ">3.5.0" },
-    { name = "pymongo", specifier = "~=4.9.0" },
+    { name = "pymongo", specifier = ">=4.9,<4.12" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "anyio", specifier = ">=4.4.0" },
     { name = "langchain-core", specifier = ">=0.3.29" },
-    { name = "langgraph", specifier = ">=0.2.61" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.9" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
@@ -935,19 +919,6 @@ dev = [
     { name = "pytest-repeat", specifier = ">=0.9.3" },
     { name = "pytest-watch", specifier = ">=4.2.0" },
     { name = "syrupy", specifier = ">=4.0.2" },
-]
-
-[[package]]
-name = "langgraph-sdk"
-version = "0.1.51"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "orjson" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/32/d1/95ae599428e8e7d90229e402adf3056072f2ebd0c45c7f7154a5243ff35a/langgraph_sdk-0.1.51.tar.gz", hash = "sha256:dea1363e72562cb1e82a2d156be8d5b1a69ff3fe8815eee0e1e7a2f423242ec1", size = 41591 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/e9/d5d2ea883ddb3e16d4c18213457b3f3d04380089d410db71faae52a3c34a/langgraph_sdk-0.1.51-py3-none-any.whl", hash = "sha256:ce2b58466d1700d06149782ed113157a8694a6d7932c801f316cd13fab315fe4", size = 44652 },
 ]
 
 [[package]]
