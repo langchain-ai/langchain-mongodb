@@ -13,6 +13,7 @@
 ## Prep the Release
 
 - Create a PR to bump the version and update the changelog, including today's date.
+  Bump the minor version for new features, patch for a bug fix.
 
 - Merge the PR.
 
@@ -45,4 +46,4 @@
 
 - Return to the release action and wait for it to complete successfully.
 
-- Announce the release on Slack.
+- Announce the release on Slack.  e.g "ANN: langchain-mongodb 0.5 with support for GraphRAG.
