@@ -5,17 +5,6 @@
 
 .. autoclass:: {{ objname }}
 
-   {% block attributes %}
-   {% if attributes %}
-   .. rubric:: {{ _('Attributes') }}
-
-   .. autosummary::
-   {% for item in attributes %}
-      ~{{ item }}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
-
    {% block methods %}
    {% if methods %}
    .. rubric:: {{ _('Methods') }}
@@ -31,6 +20,3 @@
 
    {% endif %}
    {% endblock %}
-
-
-.. example_links:: {{ objname }}

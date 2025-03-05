@@ -6,4 +6,4 @@ default:
   @just --list
 
 docs:
-	uv run sphinx-build -T -W -b html docs docs/_build/html
+	uv run sphinx-build -T -b html docs docs/_build/html

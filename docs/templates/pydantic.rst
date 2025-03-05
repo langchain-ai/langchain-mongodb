@@ -20,5 +20,3 @@
 
     {% block attributes %}
     {% endblock %}
-
-.. example_links:: {{ objname }}

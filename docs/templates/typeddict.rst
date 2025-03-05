@@ -10,5 +10,3 @@
   .. autoattribute:: {{ item }}
    {% endfor %}
    {% endblock %}
-
-.. example_links:: {{ objname }}

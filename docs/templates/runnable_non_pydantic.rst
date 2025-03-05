@@ -35,6 +35,3 @@
 
    {% endif %}
    {% endblock %}
-
-
-.. example_links:: {{ objname }}
