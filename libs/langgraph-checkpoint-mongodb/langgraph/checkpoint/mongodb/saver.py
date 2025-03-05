@@ -27,6 +27,13 @@ from .utils import dumps_metadata, loads_metadata
 class MongoDBSaver(BaseCheckpointSaver):
     """A checkpoint saver that stores StateGraph checkpoints in a MongoDB database.
 
+    A compound index as shown below will be added to each of the collections
+    backing the saver (checkpoints, pending writes). If the collections pre-exist,
+    and have indexes already, nothing will be done during initialization::
+
+        keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+        unique=True,
+
     Args:
         client (MongoClient): The MongoDB connection.
         db_name (Optional[str]): Database name
@@ -67,8 +74,19 @@ class MongoDBSaver(BaseCheckpointSaver):
         super().__init__()
         self.client = client
         self.db = self.client[db_name]
+
         self.checkpoint_collection = self.db[checkpoint_collection_name]
+        if len(self.checkpoint_collection.list_indexes().to_list()) < 2:
+            self.checkpoint_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
         self.writes_collection = self.db[writes_collection_name]
+        if len(self.writes_collection.list_indexes().to_list()) < 2:
+            self.writes_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
 
     @classmethod
     @contextmanager
