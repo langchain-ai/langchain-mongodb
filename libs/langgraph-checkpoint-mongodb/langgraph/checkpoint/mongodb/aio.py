@@ -115,7 +115,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
     ) -> AsyncIterator["AsyncMongoDBSaver"]:
         """Create asynchronous checkpointer
 
-        This includes creation of collections and indexes if they don't exist.
+        This includes creation of collections and indexes if they don't exist
         """
         client: Optional[AsyncIOMotorClient] = None
         try:
