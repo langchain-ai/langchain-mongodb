@@ -779,8 +779,8 @@ wheels = [
 
 [[package]]
 name = "langchain-mongodb"
-version = "0.4.0"
-source = { directory = "libs/langchain-mongodb" }
+version = "0.5.0"
+source = { editable = "libs/langchain-mongodb" }
 dependencies = [
     { name = "langchain" },
     { name = "langchain-core" },
@@ -800,6 +800,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "flaky", specifier = ">=3.8.1" },
     { name = "freezegun", specifier = ">=1.2.2" },
     { name = "langchain", specifier = ">=0.3.14" },
     { name = "langchain-community", specifier = ">=0.3.14" },
@@ -852,8 +853,8 @@ dev = [
     { name = "ipython", specifier = ">=8.18.1" },
     { name = "langchain-community", specifier = ">=0.3.14" },
     { name = "langchain-core", specifier = ">=0.3.30" },
-    { name = "langchain-mongodb", directory = "libs/langchain-mongodb" },
-    { name = "langgraph-checkpoint-mongodb", directory = "libs/langgraph-checkpoint-mongodb" },
+    { name = "langchain-mongodb", editable = "libs/langchain-mongodb" },
+    { name = "langgraph-checkpoint-mongodb", editable = "libs/langgraph-checkpoint-mongodb" },
     { name = "myst-parser", specifier = ">=3.0.1" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
     { name = "sphinx", specifier = ">=7.4.7" },
@@ -876,38 +877,23 @@ wheels = [
 ]
 
 [[package]]
-name = "langgraph"
-version = "0.2.63"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "langgraph-checkpoint" },
-    { name = "langgraph-sdk" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/ac/70c4e4f8197af0a348042b38bdebd219b8cc3522e44848e18027d2e1520d/langgraph-0.2.63.tar.gz", hash = "sha256:4bcdd6023b02d16c840b5ee612bfbafd1b9e0beef91622aa1827593374ee6e8e", size = 120296 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/7e/0a40b69abe014f1caa5000ccf0856ed3e62aa5c3e4cd1f3cc1bafab16d3a/langgraph-0.2.63-py3-none-any.whl", hash = "sha256:7867108e045c0ee52cb705749edd478b08588dce74fbd4466b4197a04c4e718b", size = 139696 },
-]
-
-[[package]]
 name = "langgraph-checkpoint"
-version = "2.0.10"
+version = "2.0.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "msgpack" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/26/96/378e06c60d8c8cf44e1d6a2b669e9d5d87236bdee6bf7cfc9125ef5b5d0e/langgraph_checkpoint-2.0.10.tar.gz", hash = "sha256:2dcc04e09091d588bb6209e49d83ff5406d7231c2590d6ff18fb29ab8b140129", size = 33431 }
+sdist = { url = "https://files.pythonhosted.org/packages/01/66/5d4a2013a84c511be289bb4a5ef91cbaad28c091b6b366fdb79710a1458b/langgraph_checkpoint-2.0.16.tar.gz", hash = "sha256:49ba8cfa12b2aae845ccc3b1fbd1d7a8d3a6c4a2e387ab3a92fca40dd3d4baa5", size = 34206 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/ef/c320b52035e29081f2693377602289a00545016b4adcc963d5e202ac0c92/langgraph_checkpoint-2.0.10-py3-none-any.whl", hash = "sha256:0d592cfda2df93844c6ea44d142170a8f7e5ba5320274e0e5e60e27f2749392c", size = 37476 },
+    { url = "https://files.pythonhosted.org/packages/7c/63/03bc3dd304ead45b53313cab8727329e1d139a2d220f2d030c72242c860e/langgraph_checkpoint-2.0.16-py3-none-any.whl", hash = "sha256:dfab51076a6eddb5f9e146cfe1b977e3dd6419168b2afa23ff3f4e47973bf06f", size = 38291 },
 ]
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.1.0"
-source = { directory = "libs/langgraph-checkpoint-mongodb" }
+version = "0.1.1"
+source = { editable = "libs/langgraph-checkpoint-mongodb" }
 dependencies = [
-    { name = "langgraph" },
     { name = "langgraph-checkpoint" },
     { name = "motor" },
     { name = "pymongo" },
@@ -915,17 +901,15 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langgraph", specifier = ">=0.2.55" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.0" },
     { name = "motor", specifier = ">3.5.0" },
-    { name = "pymongo", specifier = "~=4.9.0" },
+    { name = "pymongo", specifier = ">=4.9,<4.12" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "anyio", specifier = ">=4.4.0" },
     { name = "langchain-core", specifier = ">=0.3.29" },
-    { name = "langgraph", specifier = ">=0.2.61" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.9" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
@@ -935,19 +919,6 @@ dev = [
     { name = "pytest-repeat", specifier = ">=0.9.3" },
     { name = "pytest-watch", specifier = ">=4.2.0" },
     { name = "syrupy", specifier = ">=4.0.2" },
-]
-
-[[package]]
-name = "langgraph-sdk"
-version = "0.1.51"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "orjson" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/32/d1/95ae599428e8e7d90229e402adf3056072f2ebd0c45c7f7154a5243ff35a/langgraph_sdk-0.1.51.tar.gz", hash = "sha256:dea1363e72562cb1e82a2d156be8d5b1a69ff3fe8815eee0e1e7a2f423242ec1", size = 41591 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/e9/d5d2ea883ddb3e16d4c18213457b3f3d04380089d410db71faae52a3c34a/langgraph_sdk-0.1.51-py3-none-any.whl", hash = "sha256:ce2b58466d1700d06149782ed113157a8694a6d7932c801f316cd13fab315fe4", size = 44652 },
 ]
 
 [[package]]
@@ -1093,14 +1064,14 @@ wheels = [
 
 [[package]]
 name = "motor"
-version = "3.6.1"
+version = "3.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pymongo" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/5d/be1f10b4ecc259503bcc9c5642a61b39715796343c771f3f61b84f79ee21/motor-3.6.1.tar.gz", hash = "sha256:ee2b18386292f9ceb3cc8279a4cd34e4c641c5ac8de3500c30374081c76a9d03", size = 279031 }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/c0/b94558a88fb8406b092bb180c6fa5fb3068f8ec2c7e84dd2b0625f4f4f6e/motor-3.7.0.tar.gz", hash = "sha256:0dfa1f12c812bd90819c519b78bed626b5a9dbb29bba079ccff2bfa8627e0fec", size = 279745 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/aa/a255c74c702477a8610fa24fb83af45ce1a2dd0bce7bca4e2230e2c9a23b/motor-3.6.1-py3-none-any.whl", hash = "sha256:7fe552353aded4fa9f05ae515a179df5b1d192b1da56726f422dbb2d8c3b5962", size = 74813 },
+    { url = "https://files.pythonhosted.org/packages/ab/a6/e915e3225cc431c7ff07fd3e5ae138f6eb1c3ef4f8e8356cab1ea5dc1ed5/motor-3.7.0-py3-none-any.whl", hash = "sha256:61bdf1afded179f008d423f98066348157686f25a90776ea155db5f47f57d605", size = 74811 },
 ]
 
 [[package]]

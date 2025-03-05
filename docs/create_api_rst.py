@@ -173,7 +173,9 @@ def _merge_module_members(
 
 
 def _load_package_modules(
-    package_directory: Union[str, Path], submodule: Optional[str] = None
+    package_name: str,
+    package_directory: Union[str, Path],
+    submodule: Optional[str] = None,
 ) -> Dict[str, ModuleMembers]:
     """Recursively load modules of a package based on the file system.
 
@@ -193,9 +195,6 @@ def _load_package_modules(
         else package_directory
     )
     modules_by_namespace = {}
-
-    # Get the high level package name
-    package_name = package_path.name
 
     # If we are loading a submodule, add it in
     if submodule is not None:
@@ -270,7 +269,7 @@ def _construct_doc(
 .. _{package_namespace}:
 
 ======================================
-{package_namespace.replace('_', '-')}: {package_version}
+{package_namespace.replace('_', '-').replace('.', '-')}: {package_version}
 ======================================
 
 .. automodule:: {package_namespace}
@@ -468,7 +467,9 @@ def _build_rst_file(package_name: str = "langchain") -> None:
         package_name: Can be either "langchain" or "core" or "experimental".
     """
     package_dir = _package_dir(package_name)
-    package_members = _load_package_modules(package_dir)
+    package_members = _load_package_modules(
+        _package_namespace(package_name), _src_path(package_name)
+    )
     package_version = _get_package_version(package_dir)
     output_dir = _out_file_path(package_name)
     shutil.rmtree(output_dir, ignore_errors=True)
@@ -481,16 +482,31 @@ def _build_rst_file(package_name: str = "langchain") -> None:
             f.write(rst)
 
 
+def _src_path(package_name: str) -> str:
+    return (
+        ROOT_DIR
+        / "libs"
+        / package_name
+        / _package_namespace(package_name).replace(".", "/")
+    )
+
+
 def _package_namespace(package_name: str) -> str:
     """Returns the package name used."""
-    if package_name == "langgraph-checkpoint-mongodb":
-        package_name = "langgraph"
-    return f"{package_name.replace('-', '_')}"
+    if package_name.startswith("langgraph"):
+        return f"{package_name.replace('-', '.')}"
+    else:
+        return f"{package_name.replace('-', '_')}"
 
 
 def _package_dir(package_name: str = "langchain") -> Path:
     """Return the path to the directory containing the documentation."""
-    return ROOT_DIR / "libs" / package_name / _package_namespace(package_name)
+    return (
+        ROOT_DIR
+        / "libs"
+        / package_name
+        / _package_namespace(package_name).split(".")[0]
+    )
 
 
 def _get_package_version(package_dir: Path) -> str:

@@ -115,6 +115,10 @@ just typing
 
 We recognize linting can be annoying - if you do not want to do it, please contact a project maintainer, and they can help you with it. We do not want this to be a blocker for good code getting contributed.
 
+#### Building the docs
+
+The docs are build from the top level of the repository, by running `just docs`.
+
 #### Spellcheck
 
 Spellchecking for this project is done via [codespell](https://github.com/codespell-project/codespell).

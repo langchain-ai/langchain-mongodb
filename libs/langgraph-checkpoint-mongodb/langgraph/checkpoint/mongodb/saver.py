@@ -25,7 +25,7 @@ from .utils import dumps_metadata, loads_metadata
 
 
 class MongoDBSaver(BaseCheckpointSaver):
-    """A checkpoint saver that stores StateGraph checkpoints in a MongoDB database.
+    """A HELLO checkpoint saver that stores StateGraph checkpoints in a MongoDB database.
 
     Args:
         client (MongoClient): The MongoDB connection.

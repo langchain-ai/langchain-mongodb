@@ -103,7 +103,6 @@ autodoc_pydantic_model_show_validator_summary = False
 autodoc_pydantic_model_signature_prefix = "class"
 autodoc_pydantic_field_signature_prefix = "param"
 autodoc_member_order = "groupwise"
-autoclass_content = "both"
 autodoc_typehints_format = "short"
 autodoc_typehints = "both"
 
