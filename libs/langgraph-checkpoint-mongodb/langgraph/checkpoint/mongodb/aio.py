@@ -84,6 +84,25 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.writes_collection = self.db[writes_collection_name]
         self.loop = asyncio.get_running_loop()
 
+    async def setup(self):
+        """Create indexes if not present.
+
+        This MUST be called by the user DIRECTLY before
+        the first time the checkpointer is used, otherwise
+        no indexes will be created. setup() will be called if checkpointer is
+        instantiated using class method `from_conn_string.
+        """
+        if len(await self.checkpoint_collection.list_indexes().to_list()) < 2:
+            await self.checkpoint_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
+        if len(await self.writes_collection.list_indexes().to_list()) < 2:
+            await self.writes_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
+
     @classmethod
     @asynccontextmanager
     async def from_conn_string(
@@ -94,16 +113,23 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         writes_collection_name: str = "checkpoint_writes_aio",
         **kwargs: Any,
     ) -> AsyncIterator["AsyncMongoDBSaver"]:
+        """Create asynchronous checkpointer
+
+        This includes creation of collections and indexes if they don't exist.
+        """
         client: Optional[AsyncIOMotorClient] = None
         try:
             client = AsyncIOMotorClient(conn_string)
-            yield AsyncMongoDBSaver(
+            saver = AsyncMongoDBSaver(
                 client,
                 db_name,
                 checkpoint_collection_name,
                 writes_collection_name,
                 **kwargs,
             )
+            await saver.setup()
+            yield saver
+
         finally:
             if client:
                 client.close()
