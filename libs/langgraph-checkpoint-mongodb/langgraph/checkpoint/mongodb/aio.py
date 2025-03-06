@@ -85,13 +85,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self._setup_future = None
 
     async def _setup(self):
-        """Create indexes if not present.
-
-        This MUST be called by the user DIRECTLY before
-        the first time the checkpointer is used, otherwise
-        no indexes will be created. setup() will be called if checkpointer is
-        instantiated using class method `from_conn_string.
-        """
+        """Create indexes if not present."""
         if self._setup_future is not None:
             return await self._setup_future
         self._setup_future = asyncio.Future()
