@@ -25,5 +25,5 @@ dev = [
 ]
 
 [tool.uv.sources]
-langchain-mongodb = { path = "libs/langchain-mongodb" }
-langgraph-checkpoint-mongodb = { path = "libs/langgraph-checkpoint-mongodb" }
+langchain-mongodb = { path = "libs/langchain-mongodb", editable = true }
+langgraph-checkpoint-mongodb = { path = "libs/langgraph-checkpoint-mongodb", editable = true }
