@@ -110,7 +110,7 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
 
     template: str = MONGODB_QUERY_CHECKER
     llm: BaseLanguageModel
-    llm_chain: Any = Field(init=False)
+    prompt: PromptTemplate = Field(init=False)
     name: str = "mongodb_query_checker"
     description: str = """
     Use this tool to double check if your query is correct before executing it.
@@ -120,20 +120,15 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
 
     @model_validator(mode="before")
     @classmethod
-    def initialize_llm_chain(cls, values: Dict[str, Any]) -> Any:
-        if "llm_chain" not in values:
-            from langchain.chains.llm import LLMChain
-
-            values["llm_chain"] = LLMChain(
-                llm=values.get("llm"),  # type: ignore[arg-type]
-                prompt=PromptTemplate(
-                    template=MONGODB_QUERY_CHECKER, input_variables=["query"]
-                ),
+    def initialize_prompt(cls, values: Dict[str, Any]) -> Any:
+        if "prompt" not in values:
+            values["prompt"] = PromptTemplate(
+                template=MONGODB_QUERY_CHECKER, input_variables=["query"]
             )
 
-        if values["llm_chain"].prompt.input_variables != ["query"]:
+        if values["prompt"].input_variables != ["query"]:
             raise ValueError(
-                "LLM chain for QueryCheckerTool must have input variables ['query']"
+                "Prompt for QueryCheckerTool must have input variables ['query']"
             )
 
         return values
@@ -145,17 +140,5 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
     ) -> str:
         """Use the LLM to check the query."""
         # TODO: check the query using pymongo first.
-        return self.llm_chain.predict(
-            query=query,
-            callbacks=run_manager.get_child() if run_manager else None,
-        )
-
-    async def _arun(
-        self,
-        query: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        return await self.llm_chain.apredict(
-            query=query,
-            callbacks=run_manager.get_child() if run_manager else None,
-        )
+        chain = self.prompt | self.llm
+        return chain.invoke(query)

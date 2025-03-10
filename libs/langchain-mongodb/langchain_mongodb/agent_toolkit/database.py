@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
+from importlib.metadata import version
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from bson import ObjectId
@@ -12,6 +13,7 @@ from bson.decimal128 import Decimal128
 from bson.json_util import dumps
 from pymongo import MongoClient
 from pymongo.cursor import Cursor
+from pymongo.driver_info import DriverInfo
 from pymongo.errors import PyMongoError
 
 NUM_DOCUMENTS_TO_SAMPLE = 4
@@ -67,7 +69,10 @@ class MongoDBDatabase:
         **kwargs: Any,
     ) -> MongoDBDatabase:
         """Construct a MongoDBDatabase from URI."""
-        client = MongoClient(connection_string)
+        client = MongoClient(
+            connection_string,
+            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        )
         database = database or client.get_default_database().name
         return cls(client, database, **kwargs)
 
@@ -158,8 +163,8 @@ class MongoDBDatabase:
         return sub_schema
 
     def _get_collection_indexes(self, collection: str) -> str:
-        col = self._db[collection]
-        indexes = list(col.list_indexes())
+        coll = self._db[collection]
+        indexes = list(coll.list_indexes())
         if not indexes:
             return ""
         indexes = self._inspector.get_indexes(collection.name)
@@ -217,8 +222,6 @@ class MongoDBDatabase:
 
         The command MUST be of the form: `db.collectionName.aggregate(...)`.
         """
-        # TODO: remove before merging
-        print("HELLO", command)
         if not command.startswith("db."):
             raise ValueError(f"Cannot run command {command}")
         col_name = command.split(".")[1]
