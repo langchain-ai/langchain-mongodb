@@ -22,11 +22,11 @@ class MongoDBDatabaseToolkit(BaseToolkit):
     """MongoDBDatabaseToolkit for interacting with MongoDB databases.
 
     Setup:
-        Install ``langchain-community``.
+        Install ``langchain-mongodb``.
 
         .. code-block:: bash
 
-            pip install -U langchain-community
+            pip install -U langchain-mongodb
 
     Key init args:
         db: MongoDBDatabase

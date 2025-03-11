@@ -41,11 +41,7 @@ class QueryMongoDBDatabaseTool(BaseMongoDBDatabaseTool, BaseTool):  # type: igno
     """
     args_schema: Type[BaseModel] = _QueryMongoDBDatabaseToolInput
 
-    def _run(
-        self,
-        query: str,
-        run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> Union[str, Sequence[Dict[str, Any]]]:
+    def _run(self, query: str, **kwargs: Any) -> Union[str, Sequence[Dict[str, Any]]]:
         """Execute the query, return the results or an error message."""
         return self.db.run_no_throw(query)
 
