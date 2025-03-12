@@ -99,7 +99,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
-        self._setup_future.resolve()
+        self._setup_future.set_result(None)
 
     @classmethod
     @asynccontextmanager
