@@ -116,14 +116,12 @@ def test_vectorstore_create_vector_search_index(collection: Collection) -> None:
         )
 
     # Test MongoDBAtlasVectorSearch's API
-    vectorstore = MongoDBAtlasVectorSearch(
+    _ = MongoDBAtlasVectorSearch(
         collection=collection,
         embedding=ConsistentFakeEmbeddings(),
         index_name=VECTOR_INDEX_NAME,
-    )
-
-    vectorstore.create_vector_search_index(
-        dimensions=DIMENSIONS, wait_until_complete=TIMEOUT
+        dimensions=DIMENSIONS,
+        auto_index_timeout=TIMEOUT,
     )
 
     assert index._is_index_ready(collection, VECTOR_INDEX_NAME)
