@@ -11,11 +11,15 @@ install:
 	uv sync --frozen
 
 [group('test')]
-integration_tests:
-	uv run pytest tests/integration_tests/
+integration_tests *args="":
+	uv run pytest tests/integration_tests/ {{args}}
 
 [group('test')]
-tests *args="tests/unit_tests":
+unit_tests *args="":
+	uv run pytest tests/unit_tests {{args}}
+
+[group('test')]
+tests *args="":
 	uv run pytest {{args}}
 
 [group('test')]
