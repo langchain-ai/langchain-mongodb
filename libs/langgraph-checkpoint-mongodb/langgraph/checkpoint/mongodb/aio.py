@@ -96,7 +96,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             )
         if len(await self.writes_collection.list_indexes().to_list()) < 2:
             await self.writes_collection.create_index(
-                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                keys=[
+                    ("thread_id", 1),
+                    ("checkpoint_ns", 1),
+                    ("checkpoint_id", -1),
+                    ("idx", 1),
+                ],
                 unique=True,
             )
         self._setup_future.set_result(None)

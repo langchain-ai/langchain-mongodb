@@ -85,7 +85,12 @@ class MongoDBSaver(BaseCheckpointSaver):
             )
         if len(self.writes_collection.list_indexes().to_list()) < 2:
             self.writes_collection.create_index(
-                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                keys=[
+                    ("thread_id", 1),
+                    ("checkpoint_ns", 1),
+                    ("checkpoint_id", -1),
+                    ("idx", 1),
+                ],
                 unique=True,
             )
 
