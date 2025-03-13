@@ -33,7 +33,7 @@ TIMEOUT = 60.0
 INTERVAL = 0.5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def example_documents() -> List[Document]:
     return [
         Document(page_content="In 2023, I visited Paris"),
@@ -43,7 +43,7 @@ def example_documents() -> List[Document]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
@@ -74,7 +74,7 @@ def collection(client: MongoClient, dimensions: int) -> Collection:
     return clxn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection_nested(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME_NESTED not in client[DB_NAME].list_collection_names():
@@ -107,7 +107,7 @@ def collection_nested(client: MongoClient, dimensions: int) -> Collection:
     return clxn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def indexed_vectorstore(
     collection: Collection,
     example_documents: List[Document],
@@ -130,7 +130,7 @@ def indexed_vectorstore(
     vectorstore.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def indexed_nested_vectorstore(
     collection_nested: Collection,
     example_documents: List[Document],

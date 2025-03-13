@@ -22,12 +22,12 @@ COLLECTION_NAME = "langchain_test_vectorstores"
 DIMENSIONS = 5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     return client[DB_NAME][COLLECTION_NAME]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -37,7 +37,7 @@ def texts() -> List[str]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def trivial_embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 

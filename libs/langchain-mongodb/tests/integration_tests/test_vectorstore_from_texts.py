@@ -22,7 +22,7 @@ INDEX_NAME = "langchain-test-index-from-texts"
 DIMENSIONS = 5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
@@ -45,7 +45,7 @@ def collection(client: MongoClient) -> Collection:
     return clxn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -55,17 +55,17 @@ def texts() -> List[str]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def metadatas() -> List[Dict]:
     return [{"a": 1}, {"b": 1}, {"c": 1}, {"d": 1, "e": 2}]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def vectorstore(
     collection: Collection,
     texts: List[str],

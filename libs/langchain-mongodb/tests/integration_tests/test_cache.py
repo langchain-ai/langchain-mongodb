@@ -31,7 +31,7 @@ def random_string() -> str:
     return str(uuid.uuid4())
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION not in client[DATABASE].list_collection_names():

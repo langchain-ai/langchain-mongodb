@@ -22,7 +22,7 @@ INDEX_NAME = "langchain-test-index-from-documents"
 DIMENSIONS = 5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
@@ -44,7 +44,7 @@ def collection(client: MongoClient) -> Collection:
     return clxn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def example_documents() -> List[Document]:
     return [
         Document(page_content="Dogs are tough.", metadata={"a": 1}),
@@ -54,12 +54,12 @@ def example_documents() -> List[Document]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def vectorstore(
     collection: Collection, example_documents: List[Document], embeddings: Embeddings
 ) -> Generator[None, None, PatchedMongoDBAtlasVectorSearch]:
