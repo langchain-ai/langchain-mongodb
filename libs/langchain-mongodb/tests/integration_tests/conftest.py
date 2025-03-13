@@ -23,7 +23,7 @@ def connection_string() -> str:
     return os.environ["MONGODB_URI"]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def client(connection_string: str) -> MongoClient:
     return MongoClient(connection_string)
 
