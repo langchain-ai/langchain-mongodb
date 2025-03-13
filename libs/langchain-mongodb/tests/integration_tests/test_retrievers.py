@@ -127,6 +127,7 @@ def indexed_vectorstore(
     yield vectorstore
 
     vectorstore.collection.delete_many({})
+    vectorstore.close()
 
 
 @pytest.fixture(scope="module")
@@ -149,6 +150,7 @@ def indexed_nested_vectorstore(
     yield vectorstore
 
     vectorstore.collection.delete_many({})
+    vectorstore.close()
 
 
 def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
@@ -163,6 +165,7 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
+    retriever.close()
 
 
 def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
@@ -181,6 +184,7 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
+    retriever.close()
 
 
 def test_hybrid_retriever_nested(
@@ -201,6 +205,7 @@ def test_hybrid_retriever_nested(
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
+    retriever.close()
 
 
 def test_fulltext_retriever(
@@ -241,3 +246,4 @@ def test_fulltext_retriever(
     results = retriever.invoke(query)
     assert "New Orleans" in results[0].page_content
     assert "score" in results[0].metadata
+    retriever.close()

@@ -107,6 +107,10 @@ class MongoDBSaver(BaseCheckpointSaver):
             if client:
                 client.close()
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBSaver."""
+        self.client.close()
+
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database.
 

@@ -160,6 +160,10 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
         messages = messages_from_dict(items)
         return messages
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBChatMessageHistory."""
+        self.client.close()
+
     def add_message(self, message: BaseMessage) -> None:
         """Append the message to the record in MongoDB"""
         try:

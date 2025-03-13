@@ -133,3 +133,5 @@ def test_chain(
     answer = chain.invoke("What city did I visit last?")
 
     assert "Paris" in answer
+
+    vectorstore.close()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Generator, List
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.documents import Document
@@ -62,7 +62,7 @@ def embeddings() -> Embeddings:
 @pytest.fixture(scope="module")
 def vectorstore(
     collection: Collection, example_documents: List[Document], embeddings: Embeddings
-) -> PatchedMongoDBAtlasVectorSearch:
+) -> Generator[None, None, PatchedMongoDBAtlasVectorSearch]:
     """VectorStore created with a few documents and a trivial embedding model.
 
     Note: PatchedMongoDBAtlasVectorSearch is MongoDBAtlasVectorSearch in all
@@ -75,7 +75,8 @@ def vectorstore(
         collection=collection,
         index_name=INDEX_NAME,
     )
-    return vectorstore
+    yield vectorstore
+    vectorstore.close()
 
 
 def test_default_search(

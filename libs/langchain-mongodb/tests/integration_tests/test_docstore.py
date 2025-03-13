@@ -31,3 +31,5 @@ def test_docstore(client: MongoClient, technical_report_pages: List[Document]) -
     sample = docstore.mget(["8", "16", "24", "36"])
     assert sample[2] is None
     assert all(isinstance(sample[i], Document) for i in [0, 1, 3])
+
+    docstore.close()

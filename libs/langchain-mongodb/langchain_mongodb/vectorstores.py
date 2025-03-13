@@ -300,6 +300,10 @@ class MongoDBAtlasVectorSearch(VectorStore):
         collection = client[db_name][collection_name]
         return cls(collection, embedding, **kwargs)
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBAtlasVectorSearch."""
+        self._collection.database.client.close()
+
     def add_texts(
         self,
         texts: Iterable[str],

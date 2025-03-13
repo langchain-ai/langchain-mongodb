@@ -116,7 +116,7 @@ def test_vectorstore_create_vector_search_index(collection: Collection) -> None:
         )
 
     # Test MongoDBAtlasVectorSearch's API
-    _ = MongoDBAtlasVectorSearch(
+    vector_search = MongoDBAtlasVectorSearch(
         collection=collection,
         embedding=ConsistentFakeEmbeddings(),
         index_name=VECTOR_INDEX_NAME,
@@ -133,3 +133,5 @@ def test_vectorstore_create_vector_search_index(collection: Collection) -> None:
     index.drop_vector_search_index(
         collection, VECTOR_INDEX_NAME, wait_until_complete=TIMEOUT
     )
+
+    vector_search.close()

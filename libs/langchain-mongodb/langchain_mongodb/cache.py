@@ -68,6 +68,10 @@ class MongoDBCache(BaseCache):
         """Returns the collection used to store cache values."""
         return self.database[self.__collection_name]
 
+    def close(self) -> None:
+        """Close the MongoClient used by the MongoDBCache."""
+        self.client.close()
+
     def lookup(self, prompt: str, llm_string: str) -> Optional[RETURN_VAL_TYPE]:
         """Look up based on prompt and llm_string."""
         return_doc = (

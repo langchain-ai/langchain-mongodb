@@ -1,4 +1,5 @@
 import os
+from typing import Generator
 
 import pytest
 from flaky import flaky
@@ -116,7 +117,9 @@ Output:
 
 
 @pytest.fixture(scope="module")
-def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
+def graph_store(
+    collection, entity_extraction_model, documents
+) -> Generator[None, None, MongoDBGraphStore]:
     store = MongoDBGraphStore(
         collection=collection,
         entity_extraction_model=entity_extraction_model,
@@ -126,7 +129,8 @@ def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphS
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
     assert isinstance(bulkwrite_results[0], BulkWriteResult)
-    return store
+    yield store
+    store.close()
 
 
 @pytest.fixture(scope="module")

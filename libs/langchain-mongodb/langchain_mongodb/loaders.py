@@ -95,6 +95,10 @@ class MongoDBLoader(BaseLoader):
             include_db_collection_in_metadata=include_db_collection_in_metadata,
         )
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBLoader."""
+        self.db.client.close()
+
     def load(self) -> List[Document]:
         """Load data into Document objects."""
         result = []

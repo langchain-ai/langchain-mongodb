@@ -57,6 +57,10 @@ class MongoDBRecordManager(RecordManager):
         collection = client[db_name][collection_name]
         return cls(collection=collection)
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBRecordManager."""
+        self._collection.database.client.close()
+
     def create_schema(self) -> None:
         """Create the database schema for the document manager."""
         pass

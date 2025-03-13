@@ -88,6 +88,7 @@ def vectorstore(
     yield vectorstore_from_texts
 
     vectorstore_from_texts.collection.delete_many({})
+    vectorstore_from_texts.close()
 
 
 def test_search_with_metadatas_and_pre_filter(
