@@ -49,6 +49,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     def collection(self) -> Collection:
         return self.vectorstore._collection
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBAtlasHybridSearchRetriever."""
+        self.vectorstore.close()
+
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:

@@ -25,6 +25,10 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     include_scores: bool = True
     """If True, include scores that provide measure of relative relevance"""
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBAtlasFullTextSearchRetriever."""
+        self.collection.database.client.close()
+
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
