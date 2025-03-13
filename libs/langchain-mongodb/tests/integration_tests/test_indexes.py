@@ -25,7 +25,7 @@ def manager(client: MongoClient) -> Generator[None, None, MongoDBRecordManager]:
 @pytest_asyncio.fixture
 async def amanager(
     client: MongoClient,
-) -> AsyncGenerator[None, None, MongoDBRecordManager]:
+) -> AsyncGenerator[None, MongoDBRecordManager]:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
