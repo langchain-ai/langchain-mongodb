@@ -1,13 +1,18 @@
 import os
+from time import sleep
 from typing import Sequence, Union
 
 import pytest
+from flaky import flaky
 from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 
-from langchain_mongodb.retrievers.self_querying import MongoDBStructuredQueryTranslator
+from langchain_mongodb.retrievers.self_querying import (
+    MongoDBAtlasSelfQueryRetriever,
+    MongoDBStructuredQueryTranslator,
+)
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
 DB_NAME = "langchain_test_db"
@@ -121,69 +126,97 @@ def vectorstore(
     dimensions,
 ) -> MongoDBAtlasVectorSearch:
     """Vectorstore without documents nor index."""
-    return MongoDBAtlasVectorSearch.from_connection_string(
+    vs = MongoDBAtlasVectorSearch.from_connection_string(
         connection_string,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=embedding,
     )
 
+    vs.collection.delete_many({})
+    if any(ix["name"] == vs._index_name for ix in vs.collection.list_search_indexes()):
+        vs.collection.drop_search_index(vs._index_name)
+        sleep(5)  # TODO - Follow existing practice
 
+    return vs
 
 
 @pytest.fixture(scope="module")
 def llm():
     """Model used for interpreting query."""
-    return ChatOpenAI(model="gpt-3.5-turbo")
+    return ChatOpenAI(model="gpt-4o")
 
 
+@flaky
 def test(vectorstore, llm, field_info, fictitious_movies, dimensions, embedding):
-    """
+    """Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator
     - Start with a collection of documents.
     - Define your Embedding Model, for search based on symantic similarity.
-    - Define AttributeInfo, values that one can use to index and filter on.
+    - Define AttributeInfo, values that the LLM can use to index and filter on.
     - Create a VectorSearch Index using the model and field indexes
-    -
+    - Create VectorStore and add Documents
 
-    Args:
-        vectorstore:
-
-    Returns:
 
     """
-    retriever = SelfQueryRetriever.from_llm(
+
+    # Create index along with filter field indexes
+    vectorstore.create_vector_search_index(
+        dimensions=dimensions,
+        filters=[f.name for f in field_info],
+        update=False,  # TODO Check if update works on local atlas
+        wait_until_complete=60,
+    )
+
+    retriever = MongoDBAtlasSelfQueryRetriever.from_llm(
         llm=llm,
         vectorstore=vectorstore,
         metadata_field_info=field_info,
         structured_query_translator=MongoDBStructuredQueryTranslator(),
         document_contents="Descriptions of movies",
-
+        use_original_query=False,  # TODO - set True if we discover why query is thrown out.
+        enable_limit=True,  # TODO test cases
+        # fix_invalid=True,  # TODO remove if we can. I think the o4 fixes this
+        k=10,  # TODO Get this to propagate to _similarity_search_with_score
+        search_kwargs={"k": 12},
     )
 
     assert isinstance(retriever, SelfQueryRetriever)
 
-    # This example only specifies a filter
-    response = retriever.invoke("I want to watch a movie rated higher than 8.5")
-
-    # Create index along with filter field indexes
-    vectorstore.create_vector_search_index(
-        dimensions=dimensions, wait_until_complete=60
-    )
-
     # Add documents, including embeddings
     vectorstore.add_documents(fictitious_movies)
+    sleep(5)  # TODO - Follow existing practice
 
+    # This example specifies a filter
+    res_filter = retriever.invoke("I want to watch a movie rated higher than 8.5")
+    assert isinstance(res_filter, list)
+    assert isinstance(res_filter[0], Document)
+    assert len(res_filter) == 1
+    assert res_filter[0].metadata["title"] == "The Coda Paradox"
 
-# TODO NEXT
-#   - We need the metadata_field info as part of index before we add documents
-#   - Add mappings to vector-search-index
-#       * https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#about-the-filter-type
-#       * Take these from list of AttributeInfo. We'll need a function for this
-#   - API  add_documents, add_attribute_info (good name?),
-"""
-NEXT - Walk through from_llm again
-- See how our Translator attempts provide values (eg allowed_operators, allowed_attributes)
-    to help in the chain it builds: prompt | llm | output_parser
-    These translator values are used to form the prompt and the output_parser
-- 
+    # This example specifies a composite AND filter
+    res_and = retriever.invoke(
+        "Provide movies made after 2030 that are rated lower than 8"
+    )
+    assert isinstance(res_and, list)
+    assert len(res_and) == 2
+    assert set(film.metadata["title"] for film in res_and) == {
+        "Manifesto Midnight",
+        "Neon Tide",
+    }
 
-"""
+    res_or = retriever.invoke("Provide movies made after 2030 or rated higher than 8.4")
+    assert isinstance(res_or, list)
+    assert len(res_or) == 4
+    assert set(film.metadata["title"] for film in res_or) == {
+        "Manifesto Midnight",
+        "Neon Tide",
+        "The Abyssal Crown",
+        "The Coda Paradox",
+    }
+
+    # This one does not have a filter
+    res_nofilter = retriever.invoke("Provide movies that take place underwater")
+    assert len(res_nofilter) == len(fictitious_movies)
+
+    # This example gives a limit
+    res_limit = retriever.invoke("Provide 3 movies")
+    assert len(res_limit) == 3
