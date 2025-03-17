@@ -1,5 +1,14 @@
+"""Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator
+
+- Start with a collection of documents.
+- Define your Embedding Model, for search based on symantic similarity.
+- Define AttributeInfo, values that the LLM can use to index and filter on.
+- Create a VectorSearch Index using the model and field indexes
+- Create VectorStore and add Documents
+- Create a MongoDBAtlasSelfQueryRetriever from_llm
+"""
+
 import os
-from time import sleep
 from typing import Sequence, Union
 
 import pytest
@@ -9,22 +18,24 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 
+from langchain_mongodb import MongoDBAtlasVectorSearch, index
 from langchain_mongodb.retrievers.self_querying import (
     MongoDBAtlasSelfQueryRetriever,
     MongoDBStructuredQueryTranslator,
 )
-from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
+
+from ..utils import PatchedMongoDBAtlasVectorSearch
 
 DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "test_self_querying_retriever"
-
+TIMEOUT = 120
 
 if "OPENAI_API_KEY" not in os.environ:
     pytest.skip("Requires OpenAI for chat responses.", allow_module_level=True)
 
 
 @pytest.fixture(scope="module")
-def fictitious_movies():
+def fictitious_movies() -> list[Document]:
     """A list of documents that a typical LLM would not know without RAG"""
 
     return [
@@ -124,75 +135,79 @@ def vectorstore(
     embedding,
     fictitious_movies,
     dimensions,
+    field_info,
 ) -> MongoDBAtlasVectorSearch:
-    """Vectorstore without documents nor index."""
-    vs = MongoDBAtlasVectorSearch.from_connection_string(
+    """Fully configured vector store.
+
+    Includes
+    - documents added, along with their embedding vectors
+    - search index with filters defined by the attributes provided
+    """
+    vs = PatchedMongoDBAtlasVectorSearch.from_connection_string(
         connection_string,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=embedding,
     )
-
+    # Clean up existing documents and indexes
     vs.collection.delete_many({})
     if any(ix["name"] == vs._index_name for ix in vs.collection.list_search_indexes()):
-        vs.collection.drop_search_index(vs._index_name)
-        sleep(5)  # TODO - Follow existing practice
+        index.drop_vector_search_index(
+            vs.collection, vs._index_name, wait_until_complete=TIMEOUT
+        )
+
+    # Create  search index with filters
+    vs.create_vector_search_index(
+        dimensions=dimensions,
+        filters=[f.name for f in field_info],
+        wait_until_complete=TIMEOUT,
+    )
+
+    # Add documents, including embeddings
+    vs.add_documents(fictitious_movies)
 
     return vs
 
 
 @pytest.fixture(scope="module")
-def llm():
+def llm() -> ChatOpenAI:
     """Model used for interpreting query."""
     return ChatOpenAI(model="gpt-4o")
 
 
-@flaky
-def test(vectorstore, llm, field_info, fictitious_movies, dimensions, embedding):
-    """Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator
-    - Start with a collection of documents.
-    - Define your Embedding Model, for search based on symantic similarity.
-    - Define AttributeInfo, values that the LLM can use to index and filter on.
-    - Create a VectorSearch Index using the model and field indexes
-    - Create VectorStore and add Documents
+@pytest.fixture(scope="module")
+def retriever(vectorstore, llm, field_info) -> MongoDBAtlasSelfQueryRetriever:
+    """Create the retriever from the VectorStore, an LLM and info about the documents."""
 
-
-    """
-
-    # Create index along with filter field indexes
-    vectorstore.create_vector_search_index(
-        dimensions=dimensions,
-        filters=[f.name for f in field_info],
-        update=False,  # TODO Check if update works on local atlas
-        wait_until_complete=60,
-    )
-
-    retriever = MongoDBAtlasSelfQueryRetriever.from_llm(
+    return MongoDBAtlasSelfQueryRetriever.from_llm(
         llm=llm,
         vectorstore=vectorstore,
         metadata_field_info=field_info,
-        structured_query_translator=MongoDBStructuredQueryTranslator(),
+        structured_query_translator=MongoDBStructuredQueryTranslator(),  # TODO Remove
         document_contents="Descriptions of movies",
-        use_original_query=False,  # TODO - set True if we discover why query is thrown out.
-        enable_limit=True,  # TODO test cases
-        # fix_invalid=True,  # TODO remove if we can. I think the o4 fixes this
-        k=10,  # TODO Get this to propagate to _similarity_search_with_score
+        enable_limit=True,
         search_kwargs={"k": 12},
     )
 
+
+@flaky
+def test_construction(retriever):
+    """Confirm that the retriever was initialized."""
     assert isinstance(retriever, SelfQueryRetriever)
 
-    # Add documents, including embeddings
-    vectorstore.add_documents(fictitious_movies)
-    sleep(5)  # TODO - Follow existing practice
 
-    # This example specifies a filter
+@flaky
+def test_single_filter(retriever):
+    """This example specifies a single filter."""
     res_filter = retriever.invoke("I want to watch a movie rated higher than 8.5")
     assert isinstance(res_filter, list)
     assert isinstance(res_filter[0], Document)
     assert len(res_filter) == 1
     assert res_filter[0].metadata["title"] == "The Coda Paradox"
 
-    # This example specifies a composite AND filter
+
+@flaky
+def test_composite_filter_and(retriever):
+    """This example specifies a composite AND filter."""
     res_and = retriever.invoke(
         "Provide movies made after 2030 that are rated lower than 8"
     )
@@ -203,6 +218,10 @@ def test(vectorstore, llm, field_info, fictitious_movies, dimensions, embedding)
         "Neon Tide",
     }
 
+
+@flaky
+def test_composite_filter_or(retriever):
+    """This example specifies a composite OR filter."""
     res_or = retriever.invoke("Provide movies made after 2030 or rated higher than 8.4")
     assert isinstance(res_or, list)
     assert len(res_or) == 4
@@ -213,10 +232,16 @@ def test(vectorstore, llm, field_info, fictitious_movies, dimensions, embedding)
         "The Coda Paradox",
     }
 
-    # This one does not have a filter
+
+@flaky
+def test_no_filter(retriever, fictitious_movies):
+    """This one does not have a filter."""
     res_nofilter = retriever.invoke("Provide movies that take place underwater")
     assert len(res_nofilter) == len(fictitious_movies)
 
-    # This example gives a limit
+
+@flaky
+def test_limit(retriever):
+    """This example gives a limit."""
     res_limit = retriever.invoke("Provide 3 movies")
     assert len(res_limit) == 3
