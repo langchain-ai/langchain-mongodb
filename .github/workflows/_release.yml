@@ -145,7 +145,7 @@ jobs:
 
           uv run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Import test dependencies
         run: just install

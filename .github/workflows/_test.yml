@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Install dependencies
         shell: bash
