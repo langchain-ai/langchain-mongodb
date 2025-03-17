@@ -13,9 +13,8 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasParentDocumentRetriever,
 )
 
-from ..utils import PatchedMongoDBAtlasVectorSearch
+from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_parent_document_combined"
 VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
 EMBEDDING_FIELD = "embedding"
@@ -25,14 +24,13 @@ TIMEOUT = 60.0
 
 
 def test_1clxn_retriever(
-    connection_string: str,
     technical_report_pages: List[Document],
     embedding: Embeddings,
     dimensions: int,
 ) -> None:
     # Setup
     client: MongoClient = MongoClient(
-        connection_string,
+        CONNECTION_STRING,
         driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
     )
     db = client[DB_NAME]

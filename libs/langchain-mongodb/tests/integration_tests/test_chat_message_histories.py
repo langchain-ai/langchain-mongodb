@@ -5,17 +5,18 @@ from langchain_core.messages import message_to_dict
 
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 
-DATABASE = "langchain_test_db"
+from ..utils import CONNECTION_STRING, DB_NAME
+
 COLLECTION = "langchain_test_chat"
 
 
-def test_memory_with_message_store(connection_string: str) -> None:
+def test_memory_with_message_store() -> None:
     """Test the memory with a message store."""
     # setup MongoDB as a message store
     message_history = MongoDBChatMessageHistory(
-        connection_string=connection_string,
+        connection_string=CONNECTION_STRING,
         session_id="test-session",
-        database_name=DATABASE,
+        database_name=DB_NAME,
         collection_name=COLLECTION,
     )
     memory = ConversationBufferMemory(

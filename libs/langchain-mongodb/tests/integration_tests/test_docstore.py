@@ -5,7 +5,8 @@ from pymongo import MongoClient
 
 from langchain_mongodb.docstores import MongoDBDocStore
 
-DB_NAME = "langchain_test_db"
+from ..utils import DB_NAME
+
 COLLECTION_NAME = "langchain_test_docstore"
 
 

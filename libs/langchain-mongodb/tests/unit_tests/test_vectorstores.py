@@ -8,10 +8,10 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 
-from ..utils import ConsistentFakeEmbeddings, MockCollection
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, MockCollection
 
 INDEX_NAME = "langchain-test-index"
-NAMESPACE = "langchain_test_db.langchain_test_collection"
+NAMESPACE = f"{DB_NAME}.langchain_test_collection"
 DB_NAME, COLLECTION_NAME = NAMESPACE.split(".")
 
 

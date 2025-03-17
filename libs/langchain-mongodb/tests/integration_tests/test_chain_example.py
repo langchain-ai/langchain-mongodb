@@ -16,9 +16,8 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import index
 
-from ..utils import PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_chain_example"
 INDEX_NAME = "langchain-test-chain-example-vector-index"
 DIMENSIONS = 1536

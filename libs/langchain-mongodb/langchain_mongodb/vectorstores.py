@@ -10,6 +10,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -381,6 +382,35 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 )
             result_ids.extend(batch_res)
         return result_ids
+
+    def get_by_ids(self, ids: Sequence[str], /) -> list[Document]:
+        """Get documents by their IDs.
+
+        The returned documents are expected to have the ID field set to the ID of the
+        document in the vector store.
+
+        Fewer documents may be returned than requested if some IDs are not found or
+        if there are duplicated IDs.
+
+        Users should not assume that the order of the returned documents matches
+        the order of the input IDs. Instead, users should rely on the ID field of the
+        returned documents.
+
+        This method should **NOT** raise exceptions if no documents are found for
+        some IDs.
+
+        Args:
+            ids: List of ids to retrieve.
+
+        Returns:
+            List of Documents.
+
+        .. versionadded:: 0.6.0
+        """
+        docs = []
+        for doc in self._collection.aggregate([{"$match": {"id": {"$in": ids}}}]):
+            docs.append(Document(page_content=doc["text"], id=doc["id"]))
+        return docs
 
     def bulk_embed_and_insert_texts(
         self,

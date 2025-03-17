@@ -8,7 +8,8 @@ from pymongo import MongoClient
 
 from langchain_mongodb.indexes import MongoDBRecordManager
 
-DB_NAME = "langchain_test_db"
+from ..utils import DB_NAME
+
 COLLECTION_NAME = "langchain_test_docstore"
 NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
 

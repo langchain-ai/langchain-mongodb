@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from copy import deepcopy
 from time import monotonic, sleep
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Union, cast
@@ -17,15 +18,37 @@ from langchain_core.messages import (
     BaseMessage,
 )
 from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from pydantic import model_validator
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.results import DeleteResult, InsertManyResult
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
 from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 
 TIMEOUT = 120
 INTERVAL = 0.5
+CONNECTION_STRING = os.environ.get("MONGODB_URI")
+
+
+DB_NAME = "langchain_test_db"
+
+
+def create_database() -> MongoDBDatabase:
+    client = MongoClient(os.environ["MONGODB_URI"])
+    coll = client[DB_NAME]["test"]
+    coll.delete_many({})
+    coll.insert_one({})
+    return MongoDBDatabase(client, DB_NAME)
+
+
+def create_llm() -> LLM:
+    if os.environ.get("OPENAI_API_KEY"):
+        return ChatOpenAI(model="gpt-4o-mini", timeout=60)
+    return ChatOllama(model="llama3:8b")
 
 
 class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
@@ -165,6 +188,21 @@ class FakeLLM(LLM):
         response = queries[list(queries.keys())[self.response_index]]
         self.response_index = self.response_index + 1
         return response
+
+
+class MockClient:
+    def __getitem__(self, key: str) -> Any:
+        return MockDatabase()
+
+
+class MockDatabase:
+    name = "test"
+
+    def list_collection_names(self) -> list[str]:
+        return ["test"]
+
+    def __getitem__(self, key: str) -> Any:
+        return MockCollection()
 
 
 class MockCollection(Collection):

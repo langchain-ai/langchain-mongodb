@@ -16,11 +16,10 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
 
 CONN_STRING = os.environ.get("MONGODB_URI")
 INDEX_NAME = "langchain-test-index-semantic-cache"
-DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_cache"
 
 DIMENSIONS = 1536  # Meets OpenAI model
@@ -34,10 +33,10 @@ def random_string() -> str:
 @pytest.fixture
 def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    if COLLECTION not in client[DATABASE].list_collection_names():
-        clxn = client[DATABASE].create_collection(COLLECTION)
+    if COLLECTION not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION)
     else:
-        clxn = client[DATABASE][COLLECTION]
+        clxn = client[DB_NAME][COLLECTION]
 
     clxn.delete_many({})
 
@@ -61,7 +60,7 @@ def llm_cache(cls: Any) -> BaseCache:
             embedding=ConsistentFakeEmbeddings(dimensionality=DIMENSIONS),
             connection_string=CONN_STRING,
             collection_name=COLLECTION,
-            database_name=DATABASE,
+            database_name=DB_NAME,
             index_name=INDEX_NAME,
             score_threshold=0.5,
             wait_until_ready=TIMEOUT,

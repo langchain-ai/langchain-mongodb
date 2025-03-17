@@ -5,7 +5,8 @@ from pymongo import MongoClient
 
 from langchain_mongodb.loaders import MongoDBLoader
 
-DB_NAME = "langchain_test_db"
+from ..utils import DB_NAME
+
 COLLECTION_NAME = "langchain_test_loader"
 
 

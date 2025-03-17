@@ -14,14 +14,14 @@ from pymongo.results import BulkWriteResult
 from langchain_mongodb.graphrag.graph import MongoDBGraphStore
 from langchain_mongodb.graphrag.prompts import entity_prompt, query_prompt
 
-MONGODB_URI = os.environ.get("MONGODB_URI")
-DB_NAME = "langchain_test_db"
+from ..utils import CONNECTION_STRING, DB_NAME
+
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
 @pytest.fixture
 def collection() -> Collection:
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db[COLLECTION_NAME].drop()
     collection = db.create_collection(COLLECTION_NAME)
@@ -168,12 +168,12 @@ def test_related_entities(graph_store):
 @flaky
 def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
     # First, create one client just to drop any existing collections
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_addl_examples"
     client[DB_NAME][clxn_name].drop()
     # Test additional examples
     store_with_addl_examples = MongoDBGraphStore(
-        connection_string=MONGODB_URI,
+        connection_string=CONNECTION_STRING,
         database_name=DB_NAME,
         collection_name=clxn_name,
         entity_extraction_model=entity_extraction_model,
@@ -209,12 +209,12 @@ def test_similarity_search(graph_store, query_connection):
 @flaky
 def test_validator(documents, entity_extraction_model):
     # Case 1. No existing collection.
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_validation"
     client[DB_NAME][clxn_name].drop()
     # now we call with validation that can be added without db admin privileges
     store = MongoDBGraphStore(
-        connection_string=MONGODB_URI,
+        connection_string=CONNECTION_STRING,
         database_name=DB_NAME,
         collection_name=clxn_name,
         entity_extraction_model=entity_extraction_model,
@@ -229,7 +229,7 @@ def test_validator(documents, entity_extraction_model):
     client.close()
 
     # Case 2: Existing collection with a validator
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_validation"
     collection = client[DB_NAME][clxn_name]
     collection.delete_many({})
@@ -246,7 +246,7 @@ def test_validator(documents, entity_extraction_model):
     client.close()
 
     # Case 3: Existing collection without a validator
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_validation"
     collection = client[DB_NAME].create_collection(clxn_name)
     store = MongoDBGraphStore(
@@ -265,7 +265,7 @@ def test_allowed_entity_types(documents, entity_extraction_model):
     """Add allowed_entity_types. Use the validator to confirm behaviour."""
     allowed_entity_types = ["Person"]
     # drop collection
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     collection_name = f"{COLLECTION_NAME}_allowed_entity_types"
     client[DB_NAME][collection_name].drop()
     # create knowledge graph with only allowed_entity_types
@@ -274,7 +274,7 @@ def test_allowed_entity_types(documents, entity_extraction_model):
         allowed_entity_types=allowed_entity_types,
         validate=True,
         validation_action="error",
-        connection_string=MONGODB_URI,
+        connection_string=CONNECTION_STRING,
         database_name=DB_NAME,
         collection_name=collection_name,
         entity_extraction_model=entity_extraction_model,
@@ -291,7 +291,7 @@ def test_allowed_entity_types(documents, entity_extraction_model):
 @flaky
 def test_allowed_relationship_types(documents, entity_extraction_model):
     # drop collection
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_allowed_relationship_types"
     client[DB_NAME][clxn_name].drop()
     collection = client[DB_NAME].create_collection(clxn_name)
@@ -302,7 +302,7 @@ def test_allowed_relationship_types(documents, entity_extraction_model):
         allowed_relationship_types=["partner"],
         validate=True,
         validation_action="error",
-        connection_string=MONGODB_URI,
+        connection_string=CONNECTION_STRING,
         database_name=DB_NAME,
         collection_name=clxn_name,
         entity_extraction_model=entity_extraction_model,

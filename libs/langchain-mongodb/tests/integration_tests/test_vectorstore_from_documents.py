@@ -14,9 +14,8 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_from_documents"
 INDEX_NAME = "langchain-test-index-from-documents"
 DIMENSIONS = 5

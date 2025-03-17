@@ -17,9 +17,8 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_retrievers"
 COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"
 VECTOR_INDEX_NAME = "vector_index"

@@ -9,6 +9,8 @@ from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from pymongo import MongoClient
 
+from tests.utils import CONNECTION_STRING
+
 
 @pytest.fixture
 def technical_report_pages() -> List[Document]:
@@ -19,13 +21,8 @@ def technical_report_pages() -> List[Document]:
 
 
 @pytest.fixture
-def connection_string() -> str:
-    return os.environ["MONGODB_URI"]
-
-
-@pytest.fixture
-def client(connection_string: str) -> MongoClient:
-    return MongoClient(connection_string)
+def client() -> MongoClient:
+    return MongoClient(CONNECTION_STRING)
 
 
 @pytest.fixture
