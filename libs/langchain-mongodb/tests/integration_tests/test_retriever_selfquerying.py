@@ -1,12 +1,4 @@
-"""Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator
-
-- Start with a collection of documents.
-- Define your Embedding Model, for search based on symantic similarity.
-- Define AttributeInfo, values that the LLM can use to index and filter on.
-- Create a VectorSearch Index using the model and field indexes
-- Create VectorStore and add Documents
-- Create a MongoDBAtlasSelfQueryRetriever from_llm
-"""
+"""Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator."""
 
 import os
 from typing import Sequence, Union
