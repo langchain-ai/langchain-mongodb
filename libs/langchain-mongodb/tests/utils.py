@@ -87,7 +87,7 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
             if (
                 len(
                     self.similarity_search(
-                        "sandwich", k=min(n_docs, 1), oversampling_factor=1
+                        "sandwich", k=max(n_docs, 1), oversampling_factor=1
                     )
                 )
                 == n_docs

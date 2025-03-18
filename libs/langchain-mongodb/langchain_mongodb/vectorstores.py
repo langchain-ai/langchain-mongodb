@@ -17,11 +17,12 @@ from typing import (
 )
 
 import numpy as np
+from bson import ObjectId
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient
+from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.errors import CollectionInvalid
@@ -408,8 +409,12 @@ class MongoDBAtlasVectorSearch(VectorStore):
         .. versionadded:: 0.6.0
         """
         docs = []
-        for doc in self._collection.aggregate([{"$match": {"id": {"$in": ids}}}]):
-            docs.append(Document(page_content=doc["text"], id=doc["id"]))
+        oids = [str_to_oid(i) for i in ids]
+        for doc in self._collection.aggregate([{"$match": {"_id": {"$in": oids}}}]):
+            _id = doc.pop("_id")
+            text = doc.pop("text")
+            del doc["embedding"]
+            docs.append(Document(page_content=text, id=_id, metadata=doc))
         return docs
 
     def bulk_embed_and_insert_texts(
@@ -426,24 +431,21 @@ class MongoDBAtlasVectorSearch(VectorStore):
             return []
         # Compute embedding vectors
         embeddings = self._embedding.embed_documents(list(texts))
-        if ids:
-            to_insert = [
-                {
-                    "_id": str_to_oid(i),
-                    self._text_key: t,
-                    self._embedding_key: embedding,
-                    **m,
-                }
-                for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
-            ]
-        else:
-            to_insert = [
-                {self._text_key: t, self._embedding_key: embedding, **m}
-                for t, m, embedding in zip(texts, metadatas, embeddings)
-            ]
+        if not ids:
+            ids = [ObjectId() for _ in len(texts)]
+        docs = [
+            {
+                "_id": str_to_oid(i),
+                self._text_key: t,
+                self._embedding_key: embedding,
+                **m,
+            }
+            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
+        ]
+        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas
-        insert_result = self._collection.insert_many(to_insert)  # type: ignore
-        return [oid_to_str(_id) for _id in insert_result.inserted_ids]
+        result = self._collection.bulk_write(operations)
+        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
 
     def add_documents(
         self,
@@ -467,22 +469,19 @@ class MongoDBAtlasVectorSearch(VectorStore):
         n_docs = len(documents)
         if ids:
             assert len(ids) == n_docs, "Number of ids must equal number of documents."
+        else:
+            ids = [doc.id or str(ObjectId()) for doc in documents]
         result_ids = []
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
                 *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
             )
-            if ids:
-                result_ids.extend(
-                    self.bulk_embed_and_insert_texts(
-                        texts=texts, metadatas=metadatas, ids=ids[start:end]
-                    )
+            result_ids.extend(
+                self.bulk_embed_and_insert_texts(
+                    texts=texts, metadatas=metadatas, ids=ids[start:end]
                 )
-            else:
-                result_ids.extend(
-                    self.bulk_embed_and_insert_texts(texts=texts, metadatas=metadatas)
-                )
+            )
             start = end
         return result_ids
 
