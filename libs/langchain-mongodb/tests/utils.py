@@ -85,7 +85,11 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         start = monotonic()
         while monotonic() - start <= TIMEOUT:
             if (
-                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                len(
+                    self.similarity_search(
+                        "sandwich", k=min(n_docs, 1), oversampling_factor=1
+                    )
+                )
                 == n_docs
             ):
                 return ret
