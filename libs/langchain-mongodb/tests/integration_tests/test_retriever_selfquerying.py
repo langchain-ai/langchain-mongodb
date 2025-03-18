@@ -137,14 +137,17 @@ def vectorstore(
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=embedding,
     )
-    # Clean up existing documents and indexes
-    vs.collection.delete_many({})
-    if any(ix["name"] == vs._index_name for ix in vs.collection.list_search_indexes()):
+    # Delete search indexes
+    [
         index.drop_vector_search_index(
-            vs.collection, vs._index_name, wait_until_complete=TIMEOUT
+            vs.collection, ix["name"], wait_until_complete=TIMEOUT
         )
+        for ix in vs.collection.list_search_indexes()
+    ]
+    # Clean up existing documents
+    vs.collection.delete_many({})
 
-    # Create  search index with filters
+    # Create search index with filters
     vs.create_vector_search_index(
         dimensions=dimensions,
         filters=[f.name for f in field_info],
@@ -160,7 +163,7 @@ def vectorstore(
 @pytest.fixture(scope="module")
 def llm() -> ChatOpenAI:
     """Model used for interpreting query."""
-    return ChatOpenAI(model="gpt-4o")
+    return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
 
 
 @pytest.fixture(scope="module")
