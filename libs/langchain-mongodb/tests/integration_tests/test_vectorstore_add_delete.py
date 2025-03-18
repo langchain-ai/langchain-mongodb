@@ -99,10 +99,10 @@ def test_add_texts(
     assert all(isinstance(_id, ObjectId) for _id in docids)  #
     assert set(provided_ids) == set(oid_to_str(oid) for oid in docids)
 
-    # Case 2: Test Document.metadata looks right. i.e. contains _id
+    # Case 2: Test Document.metadata looks right. i.e. contains "a"
     search_res = vectorstore.similarity_search_with_score("sandwich", k=1)
     doc, score = search_res[0]
-    assert "_id" in doc.metadata
+    assert "a" in doc.metadata
 
     # Case 3: Add new ids that are 24-char hex strings
     hex_ids = [oid_to_str(ObjectId()) for _ in range(2)]
@@ -122,7 +122,7 @@ def test_add_texts(
     assert set(out_ids) == set(str_ids)
     assert collection.count_documents({}) == 8
     res = vectorstore.similarity_search("sandwich", k=8)
-    assert any(str_ids[0] in doc.metadata["_id"] for doc in res)
+    assert any(str_ids[0] in doc.id for doc in res)
 
     # Case 5: Test adding in multiple batches
     batch_size = 2
