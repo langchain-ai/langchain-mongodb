@@ -12,10 +12,12 @@ from langchain_mongodb.retrievers.hybrid_search import MongoDBAtlasHybridSearchR
 from langchain_mongodb.retrievers.parent_document import (
     MongoDBAtlasParentDocumentRetriever,
 )
+from langchain_mongodb.retrievers.self_querying import MongoDBAtlasSelfQueryRetriever
 
 __all__ = [
     "MongoDBAtlasHybridSearchRetriever",
     "MongoDBAtlasFullTextSearchRetriever",
     "MongoDBAtlasParentDocumentRetriever",
     "MongoDBGraphRAGRetriever",
+    "MongoDBAtlasSelfQueryRetriever",
 ]

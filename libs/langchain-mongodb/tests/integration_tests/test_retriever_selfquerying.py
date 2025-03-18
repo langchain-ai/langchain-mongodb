@@ -19,10 +19,7 @@ from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
-from langchain_mongodb.retrievers.self_querying import (
-    MongoDBAtlasSelfQueryRetriever,
-    MongoDBStructuredQueryTranslator,
-)
+from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
 from ..utils import PatchedMongoDBAtlasVectorSearch
 
@@ -175,14 +172,13 @@ def llm() -> ChatOpenAI:
 
 
 @pytest.fixture(scope="module")
-def retriever(vectorstore, llm, field_info) -> MongoDBAtlasSelfQueryRetriever:
+def retriever(vectorstore, llm, field_info) -> SelfQueryRetriever:
     """Create the retriever from the VectorStore, an LLM and info about the documents."""
 
     return MongoDBAtlasSelfQueryRetriever.from_llm(
         llm=llm,
         vectorstore=vectorstore,
         metadata_field_info=field_info,
-        structured_query_translator=MongoDBStructuredQueryTranslator(),  # TODO Remove
         document_contents="Descriptions of movies",
         enable_limit=True,
         search_kwargs={"k": 12},
