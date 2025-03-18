@@ -72,6 +72,27 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
                 sleep(INTERVAL)
         raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
 
+    def _similarity_search_with_score(self, query_vector, **kwargs):
+        # Remove the _ids for testing purposes.
+        docs = super()._similarity_search_with_score(query_vector, **kwargs)
+        for doc, _ in docs:
+            del doc.metadata["_id"]
+        return docs
+
+    def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> Optional[bool]:
+        ret = super().delete(ids, **kwargs)
+        n_docs = self.collection.count_documents({})
+        start = monotonic()
+        while monotonic() - start <= TIMEOUT:
+            if (
+                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                == n_docs
+            ):
+                return ret
+            else:
+                sleep(INTERVAL)
+        raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
+
 
 class ConsistentFakeEmbeddings(Embeddings):
     """Fake embeddings functionality for testing."""

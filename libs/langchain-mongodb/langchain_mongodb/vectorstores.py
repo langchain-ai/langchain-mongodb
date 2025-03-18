@@ -813,7 +813,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text = res.pop(self._text_key)
             score = res.pop("score")
             make_serializable(res)
-            docs.append((Document(page_content=text, metadata=res), score))
+            docs.append(
+                (Document(page_content=text, metadata=res, id=res["_id"]), score)
+            )
         return docs
 
     def create_vector_search_index(
