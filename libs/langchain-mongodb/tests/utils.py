@@ -47,8 +47,8 @@ def create_database() -> MongoDBDatabase:
 
 def create_llm() -> LLM:
     if os.environ.get("OPENAI_API_KEY"):
-        return ChatOpenAI(model="gpt-4o-mini", timeout=60)
-    return ChatOllama(model="llama3:8b")
+        return ChatOpenAI(model="gpt-4o-mini", timeout=60, cache=False)
+    return ChatOllama(model="llama3:8b", cache=False)
 
 
 class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
