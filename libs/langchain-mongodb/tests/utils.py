@@ -23,7 +23,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import model_validator
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.results import DeleteResult, InsertManyResult
+from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
@@ -310,6 +310,15 @@ class MockCollection(Collection):
             ):
                 acc.append(document)
         return acc
+
+    def bulk_write(self, requests, **kwargs):
+        upserted = []
+        for ind, request in enumerate(requests):
+            doc = request._doc
+            doc["score"] = "foo"
+            self._data.append(doc)
+            upserted.append(dict(index=ind, _id=doc["_id"]))
+        return BulkWriteResult(dict(upserted=upserted), True)
 
     def aggregate(self, *args, **kwargs) -> List[Any]:  # type: ignore
         if self._simulate_cache_aggregation_query:
