@@ -432,7 +432,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         # Compute embedding vectors
         embeddings = self._embedding.embed_documents(list(texts))
         if not ids:
-            ids = [ObjectId() for _ in len(texts)]
+            ids = [ObjectId() for _ in range(len(texts))]
         docs = [
             {
                 "_id": str_to_oid(i),
