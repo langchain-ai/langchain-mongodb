@@ -171,6 +171,26 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+    )
+
+    query1 = "What did I visit France?"
+    results = retriever.invoke(query1)
+    assert len(results) == 3
+    assert "Paris" in results[0].page_content
+
+    query2 = "When was the last time I visited new orleans?"
+    results = retriever.invoke(query2)
+    assert "New Orleans" in results[0].page_content
+
+
+def test_hybrid_retriever_deprecated_top_k(
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+) -> None:
+    """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
         top_k=3,
     )
 
@@ -191,7 +211,7 @@ def test_hybrid_retriever_nested(
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_nested_vectorstore,
         search_index_name=SEARCH_INDEX_NAME_NESTED,
-        top_k=3,
+        k=3,
     )
 
     query1 = "What did I visit France?"

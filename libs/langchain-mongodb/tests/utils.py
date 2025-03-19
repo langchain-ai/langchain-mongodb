@@ -38,7 +38,7 @@ DB_NAME = "langchain_test_db"
 
 
 def create_database() -> MongoDBDatabase:
-    client = MongoClient(os.environ["MONGODB_URI"])
+    client = MongoClient(CONNECTION_STRING)
     coll = client[DB_NAME]["test"]
     coll.delete_many({})
     coll.insert_one({})

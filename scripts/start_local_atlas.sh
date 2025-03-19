@@ -8,6 +8,8 @@ DOCKER=$(which docker || which podman)
 
 $DOCKER pull $IMAGE
 
+$DOCKER kill mongodb_atlas_local || true
+
 CONTAINER_ID=$($DOCKER run --rm -d --name mongodb_atlas_local -P $IMAGE)
 
 function wait() {
