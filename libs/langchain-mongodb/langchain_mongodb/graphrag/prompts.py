@@ -79,6 +79,7 @@ Output a valid JSON document with a single top-level key, `entities`, as an arra
 Each object must conform to the following schema:
 {entity_schema}
 
+{entity_examples}
 """
 
 
@@ -127,6 +128,10 @@ This example is in the form of a question. There is one entity,
 In the final example, there are no entities.
 Though there are concepts and nouns that might be types or attributes of entities,
 there is nothing here that could be seen as being a unique identifier or name.
+
+### (Optional) Additional Examples
+
+{entity_name_examples}
 """
 
 
