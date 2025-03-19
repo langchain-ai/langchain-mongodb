@@ -10,19 +10,23 @@ from pymongo.collection import Collection
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
-    create_vector_search_index,
 )
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import CONNECTION_STRING, DB_NAME, TIMEOUT, ConsistentFakeEmbeddings
+from ..utils import (
+    CONNECTION_STRING,
+    DB_NAME,
+    TIMEOUT,
+    ConsistentFakeEmbeddings,
+    PatchedMongoDBAtlasVectorSearch,
+)
 
 DIMENSIONS = 5
 COLLECTION_NAME = "langchain_test_retrievers_standard"
 VECTOR_INDEX_NAME = "vector_index"
-EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = "text"
 SEARCH_INDEX_NAME = "text_index"
 SIMILARITY = "cosine"
@@ -38,7 +42,7 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
             coll.drop_search_index(ix["name"])
 
     # Add the docs here.
-    vs = MongoDBAtlasVectorSearch(
+    vs = PatchedMongoDBAtlasVectorSearch(
         coll,
         embedding=ConsistentFakeEmbeddings(DIMENSIONS),
         index_name=VECTOR_INDEX_NAME,
@@ -97,14 +101,6 @@ class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
             collection=coll,
             index_name=SEARCH_INDEX_NAME,
             field=PAGE_CONTENT_FIELD,
-            wait_until_complete=TIMEOUT,
-        )
-        create_vector_search_index(
-            collection=coll,
-            index_name=VECTOR_INDEX_NAME,
-            dimensions=DIMENSIONS,
-            similarity=SIMILARITY,
-            path=EMBEDDING_FIELD,
             wait_until_complete=TIMEOUT,
         )
         return {

@@ -90,7 +90,7 @@ def collection_nested(client: MongoClient, dimensions: int) -> Collection:
             dimensions=dimensions,
             path="embedding",
             similarity="cosine",
-            wait_until_complete=TIMEOUT * 2,
+            wait_until_complete=TIMEOUT,
         )
 
     if not any(
