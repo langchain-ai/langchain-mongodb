@@ -261,6 +261,22 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def collection(self, value: Collection) -> None:
         self._collection = value
 
+    @staticmethod
+    def _cosine_relevance_score_fn(distance: float) -> float:
+        """Return the raw cosine similarity score.
+
+        This method overrides the default behavior in `VectorStore`,
+        as MongoDB Atlas Vector Search provides scores directly in
+        cosine similarity format. No normalization is required.
+
+        Args:
+            distance (float): The cosine similarity score from MongoDB.
+
+        Returns:
+            float: The raw cosine similarity score.
+        """
+        return distance
+
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         scoring: dict[str, Callable] = {
             "euclidean": self._euclidean_relevance_score_fn,
