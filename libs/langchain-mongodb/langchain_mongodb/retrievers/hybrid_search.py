@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -30,10 +31,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     """MongoDBAtlas VectorStore"""
     search_index_name: str
     """Atlas Search Index (full-text) name"""
-    top_k: int = 4
+    k: int = 4
     """Number of documents to return."""
     oversampling_factor: int = 10
-    """This times top_k is the number of candidates chosen at each step"""
+    """This times k is the number of candidates chosen at each step"""
     pre_filter: Optional[Dict[str, Any]] = None
     """(Optional) Any MQL match expression comparing an indexed field"""
     post_filter: Optional[List[Dict[str, Any]]] = None
@@ -44,6 +45,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     """Penalty applied to full-text search results in RRF: scores=1/(rank + penalty)"""
     show_embeddings: float = False
     """If true, returned Document metadata will include vectors."""
+    top_k: Annotated[
+        Optional[int], Field(deprecated='top_k is deprecated, use "k" instead')
+    ] = None
+    """Number of documents to return."""
 
     @property
     def collection(self) -> Collection:
@@ -54,7 +59,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         self.vectorstore.close()
 
     def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs
     ) -> List[Document]:
         """Retrieve documents that are highest scoring / most similar  to query.
 
@@ -73,6 +78,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         scores_fields = ["vector_score", "fulltext_score"]
         pipeline: List[Any] = []
 
+        # Get the appropriate value for k.
+        default_k = self.top_k if self.top_k is not None else self.k
+        k = kwargs.get("k", default_k)
+
         # First we build up the aggregation pipeline,
         # then it is passed to the server to execute
         # Vector Search stage
@@ -81,7 +90,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
                 query_vector=query_vector,
                 search_field=self.vectorstore._embedding_key,
                 index_name=self.vectorstore._index_name,
-                top_k=self.top_k,
+                top_k=k,
                 filter=self.pre_filter,
                 oversampling_factor=self.oversampling_factor,
             )
@@ -95,7 +104,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             query=query,
             search_field=self.vectorstore._text_key,
             index_name=self.search_index_name,
-            limit=self.top_k,
+            limit=k,
             filter=self.pre_filter,
         )
 
@@ -106,9 +115,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         combine_pipelines(pipeline, text_pipeline, self.collection.name)
 
         # Sum and sort stage
-        pipeline.extend(
-            final_hybrid_stage(scores_fields=scores_fields, limit=self.top_k)
-        )
+        pipeline.extend(final_hybrid_stage(scores_fields=scores_fields, limit=k))
 
         # Removal of embeddings unless requested.
         if not self.show_embeddings:
