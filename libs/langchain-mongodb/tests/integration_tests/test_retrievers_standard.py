@@ -37,14 +37,6 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
     coll = client[DB_NAME][COLLECTION_NAME]
     coll.delete_many({})
 
-    if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
-        create_fulltext_search_index(
-            collection=coll,
-            index_name=SEARCH_INDEX_NAME,
-            field=PAGE_CONTENT_FIELD,
-            wait_until_complete=TIMEOUT,
-        )
-
     # Add the docs here.
     vs = PatchedMongoDBAtlasVectorSearch(
         coll,
@@ -60,6 +52,15 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
             Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
         ]
     )
+
+    if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
+        create_fulltext_search_index(
+            collection=coll,
+            index_name=SEARCH_INDEX_NAME,
+            field=PAGE_CONTENT_FIELD,
+            wait_until_complete=TIMEOUT,
+        )
+
     return coll, vs
 
 
