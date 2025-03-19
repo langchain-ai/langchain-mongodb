@@ -42,6 +42,7 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
         dimensions=DIMENSIONS,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
+        auto_index_timeout=TIMEOUT,
     )
 
     if coll.count_documents({}) == 0:
