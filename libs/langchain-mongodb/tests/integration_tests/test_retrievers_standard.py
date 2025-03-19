@@ -35,7 +35,6 @@ SIMILARITY = "cosine"
 def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
     client = MongoClient(CONNECTION_STRING)
     coll = client[DB_NAME][COLLECTION_NAME]
-    coll.delete_many({})
 
     # Add the docs here.
     vs = PatchedMongoDBAtlasVectorSearch(
@@ -44,14 +43,16 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
     )
-    vs.add_documents(
-        [
-            Document(page_content="In 2023, I visited Paris"),
-            Document(page_content="In 2022, I visited New York"),
-            Document(page_content="In 2021, I visited New Orleans"),
-            Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
-        ]
-    )
+
+    if coll.count_documents({}) == 0:
+        vs.add_documents(
+            [
+                Document(page_content="In 2023, I visited Paris"),
+                Document(page_content="In 2022, I visited New York"),
+                Document(page_content="In 2021, I visited New Orleans"),
+                Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
+            ]
+        )
 
     if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
         create_fulltext_search_index(
