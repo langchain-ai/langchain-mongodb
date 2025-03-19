@@ -3,11 +3,13 @@ import builtins
 import sys
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import UpdateOne
+from pymongo.driver_info import DriverInfo
 
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
@@ -123,7 +125,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         """
         client: Optional[AsyncIOMotorClient] = None
         try:
-            client = AsyncIOMotorClient(conn_string)
+            client = AsyncIOMotorClient(
+                conn_string,
+                driver=DriverInfo(
+                    name="Langgraph", version=version("langgraph-checkpoint-mongodb")
+                ),
+            )
             saver = AsyncMongoDBSaver(
                 client,
                 db_name,
