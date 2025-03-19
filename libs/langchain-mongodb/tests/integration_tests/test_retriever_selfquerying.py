@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
-from ..utils import DB_NAME, CONNECTION_STRING, PatchedMongoDBAtlasVectorSearch
+from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120
@@ -154,7 +154,10 @@ def vectorstore(
     # Add documents, including embeddings
     vs.add_documents(fictitious_movies)
 
-    return vs
+    yield vs
+
+    vs.collection.delete_many({})
+    vs.close()
 
 
 @pytest.fixture
@@ -177,12 +180,10 @@ def retriever(vectorstore, llm, field_info) -> SelfQueryRetriever:
     )
 
 
-def test_construction(retriever):
+def test(retriever, fictitious_movies):
     """Confirm that the retriever was initialized."""
     assert isinstance(retriever, SelfQueryRetriever)
 
-
-def test_single_filter(retriever):
     """This example specifies a single filter."""
     res_filter = retriever.invoke("I want to watch a movie rated higher than 8.5")
     assert isinstance(res_filter, list)
@@ -190,8 +191,6 @@ def test_single_filter(retriever):
     assert len(res_filter) == 1
     assert res_filter[0].metadata["title"] == "The Coda Paradox"
 
-
-def test_composite_filter_and(retriever):
     """This example specifies a composite AND filter."""
     res_and = retriever.invoke(
         "Provide movies made after 2030 that are rated lower than 8"
@@ -203,8 +202,6 @@ def test_composite_filter_and(retriever):
         "Neon Tide",
     }
 
-
-def test_composite_filter_or(retriever):
     """This example specifies a composite OR filter."""
     res_or = retriever.invoke("Provide movies made after 2030 or rated higher than 8.4")
     assert isinstance(res_or, list)
@@ -216,14 +213,10 @@ def test_composite_filter_or(retriever):
         "The Coda Paradox",
     }
 
-
-def test_no_filter(retriever, fictitious_movies):
     """This one does not have a filter."""
     res_nofilter = retriever.invoke("Provide movies that take place underwater")
     assert len(res_nofilter) == len(fictitious_movies)
 
-
-def test_limit(retriever):
     """This example gives a limit."""
     res_limit = retriever.invoke("Provide 3 movies")
     assert len(res_limit) == 3
