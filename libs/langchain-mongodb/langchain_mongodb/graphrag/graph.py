@@ -292,6 +292,10 @@ class MongoDBGraphStore:
             validation_action,
         )
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBGraphStore."""
+        self.collection.database.client.close()
+
     def _write_entities(self, entities: List[Entity]) -> BulkWriteResult:
         """Isolate logic to insert and aggregate entities."""
         operations = []

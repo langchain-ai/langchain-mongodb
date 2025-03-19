@@ -10,17 +10,19 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
 )
 
 import numpy as np
+from bson import ObjectId
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient
+from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.errors import CollectionInvalid
@@ -65,8 +67,10 @@ class MongoDBAtlasVectorSearch(VectorStore):
           not the self-managed MongoDB.
           Follow [this guide](https://www.mongodb.com/basics/mongodb-atlas-tutorial)
 
-        * Create a Collection and a Vector Search Index.The procedure is described
+        * Create a Collection and a Vector Search Index.  The procedure is described
           [here](https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/#procedure).
+          You can optionally supply a `dimensions` argument to programmatically create a Vector
+          Search Index.
 
         * Install ``langchain-mongodb``
 
@@ -203,6 +207,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
         text_key: str = "text",
         embedding_key: str = "embedding",
         relevance_score_fn: str = "cosine",
+        dimensions: int = -1,
+        auto_create_index: bool = True,
+        auto_index_timeout: int = 15,
         **kwargs: Any,
     ):
         """
@@ -215,6 +222,10 @@ class MongoDBAtlasVectorSearch(VectorStore):
             vector_index_name: Name of the Atlas Vector Search index
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
+            dimensions: Number of dimensions in embedding.  If the value is set and
+                the index does not exist, an index will be created.
+            auto_index_timeout: Timeout in seconds to wait for an auto-created index
+               to be ready.
         """
         self._collection = collection
         self._embedding = embedding
@@ -222,6 +233,21 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._text_key = text_key
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
+
+        if not auto_create_index or dimensions == -1:
+            return
+        coll = self._collection
+        if not any(
+            [ix["name"] == self._index_name for ix in coll.list_search_indexes()]
+        ):
+            create_vector_search_index(
+                collection=coll,
+                index_name=self._index_name,
+                dimensions=dimensions,
+                path=self._embedding_key,
+                similarity=self._relevance_score_fn,
+                wait_until_complete=auto_index_timeout,
+            )
 
     @property
     def embeddings(self) -> Embeddings:
@@ -275,6 +301,10 @@ class MongoDBAtlasVectorSearch(VectorStore):
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]
         return cls(collection, embedding, **kwargs)
+
+    def close(self) -> None:
+        """Close the resources used by the MongoDBAtlasVectorSearch."""
+        self._collection.database.client.close()
 
     def add_texts(
         self,
@@ -354,6 +384,39 @@ class MongoDBAtlasVectorSearch(VectorStore):
             result_ids.extend(batch_res)
         return result_ids
 
+    def get_by_ids(self, ids: Sequence[str], /) -> list[Document]:
+        """Get documents by their IDs.
+
+        The returned documents are expected to have the ID field set to the ID of the
+        document in the vector store.
+
+        Fewer documents may be returned than requested if some IDs are not found or
+        if there are duplicated IDs.
+
+        Users should not assume that the order of the returned documents matches
+        the order of the input IDs. Instead, users should rely on the ID field of the
+        returned documents.
+
+        This method should **NOT** raise exceptions if no documents are found for
+        some IDs.
+
+        Args:
+            ids: List of ids to retrieve.
+
+        Returns:
+            List of Documents.
+
+        .. versionadded:: 0.6.0
+        """
+        docs = []
+        oids = [str_to_oid(i) for i in ids]
+        for doc in self._collection.aggregate([{"$match": {"_id": {"$in": oids}}}]):
+            _id = doc.pop("_id")
+            text = doc.pop("text")
+            del doc["embedding"]
+            docs.append(Document(page_content=text, id=_id, metadata=doc))
+        return docs
+
     def bulk_embed_and_insert_texts(
         self,
         texts: Union[List[str], Iterable[str]],
@@ -368,24 +431,21 @@ class MongoDBAtlasVectorSearch(VectorStore):
             return []
         # Compute embedding vectors
         embeddings = self._embedding.embed_documents(list(texts))
-        if ids:
-            to_insert = [
-                {
-                    "_id": str_to_oid(i),
-                    self._text_key: t,
-                    self._embedding_key: embedding,
-                    **m,
-                }
-                for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
-            ]
-        else:
-            to_insert = [
-                {self._text_key: t, self._embedding_key: embedding, **m}
-                for t, m, embedding in zip(texts, metadatas, embeddings)
-            ]
+        if not ids:
+            ids = [ObjectId() for _ in range(len(texts))]
+        docs = [
+            {
+                "_id": str_to_oid(i),
+                self._text_key: t,
+                self._embedding_key: embedding,
+                **m,
+            }
+            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
+        ]
+        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas
-        insert_result = self._collection.insert_many(to_insert)  # type: ignore
-        return [oid_to_str(_id) for _id in insert_result.inserted_ids]
+        result = self._collection.bulk_write(operations)
+        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
 
     def add_documents(
         self,
@@ -409,22 +469,19 @@ class MongoDBAtlasVectorSearch(VectorStore):
         n_docs = len(documents)
         if ids:
             assert len(ids) == n_docs, "Number of ids must equal number of documents."
+        else:
+            ids = [doc.id or str(ObjectId()) for doc in documents]
         result_ids = []
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
                 *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
             )
-            if ids:
-                result_ids.extend(
-                    self.bulk_embed_and_insert_texts(
-                        texts=texts, metadatas=metadatas, ids=ids[start:end]
-                    )
+            result_ids.extend(
+                self.bulk_embed_and_insert_texts(
+                    texts=texts, metadatas=metadatas, ids=ids[start:end]
                 )
-            else:
-                result_ids.extend(
-                    self.bulk_embed_and_insert_texts(texts=texts, metadatas=metadatas)
-                )
+            )
             start = end
         return result_ids
 
@@ -755,7 +812,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text = res.pop(self._text_key)
             score = res.pop("score")
             make_serializable(res)
-            docs.append((Document(page_content=text, metadata=res), score))
+            docs.append(
+                (Document(page_content=text, metadata=res, id=res["_id"]), score)
+            )
         return docs
 
     def create_vector_search_index(

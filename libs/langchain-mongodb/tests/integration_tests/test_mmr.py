@@ -11,9 +11,8 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_vectorstores"
 INDEX_NAME = "langchain-test-index-vectorstores"
 DIMENSIONS = 5
@@ -61,3 +60,4 @@ def test_mmr(embeddings: Embeddings, collection: Collection) -> None:
     assert len(output) == len(texts)
     assert output[0].page_content == "foo"
     assert output[1].page_content != "foo"
+    vectorstore.close()

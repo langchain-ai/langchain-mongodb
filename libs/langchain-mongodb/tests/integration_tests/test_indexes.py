@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import AsyncGenerator, Generator
 from unittest.mock import patch
 
 import pytest
@@ -7,25 +8,30 @@ from pymongo import MongoClient
 
 from langchain_mongodb.indexes import MongoDBRecordManager
 
-DB_NAME = "langchain_test_db"
+from ..utils import DB_NAME
+
 COLLECTION_NAME = "langchain_test_docstore"
 NAMESPACE = f"{DB_NAME}.{COLLECTION_NAME}"
 
 
 @pytest.fixture
-def manager(client: MongoClient) -> MongoDBRecordManager:
+def manager(client: MongoClient) -> Generator[None, None, MongoDBRecordManager]:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
-    return document_manager
+    yield document_manager
+    document_manager.close()
 
 
 @pytest_asyncio.fixture
-async def amanager(client: MongoClient) -> MongoDBRecordManager:
+async def amanager(
+    client: MongoClient,
+) -> AsyncGenerator[None, MongoDBRecordManager]:
     """Initialize the test MongoDB and yield the DocumentManager instance."""
     collection = client[DB_NAME][COLLECTION_NAME]
     document_manager = MongoDBRecordManager(collection=collection)
-    return document_manager
+    yield document_manager
+    document_manager.close()
 
 
 def test_update(manager: MongoDBRecordManager) -> None:

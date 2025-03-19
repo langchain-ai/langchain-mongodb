@@ -185,3 +185,8 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             id_key=id_key,
             **kwargs,
         )
+
+    def close(self) -> None:
+        """Close the resources used by the MongoDBAtlasParentDocumentRetriever."""
+        self.vectorstore.close()
+        self.docstore.close()

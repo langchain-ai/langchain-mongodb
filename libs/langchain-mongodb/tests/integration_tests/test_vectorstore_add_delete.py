@@ -14,20 +14,19 @@ from pymongo.collection import Collection
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.utils import oid_to_str
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 INDEX_NAME = "langchain-test-index-vectorstores"
 COLLECTION_NAME = "langchain_test_vectorstores"
 DIMENSIONS = 5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     return client[DB_NAME][COLLECTION_NAME]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -37,7 +36,7 @@ def texts() -> List[str]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def trivial_embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 
@@ -66,6 +65,7 @@ def test_delete(
     assert all(isinstance(i, str) for i in new_ids)
     assert len(new_ids) == 2
     assert clxn.count_documents({}) == 4
+    vectorstore.close()
 
 
 def test_add_texts(
@@ -99,10 +99,10 @@ def test_add_texts(
     assert all(isinstance(_id, ObjectId) for _id in docids)  #
     assert set(provided_ids) == set(oid_to_str(oid) for oid in docids)
 
-    # Case 2: Test Document.metadata looks right. i.e. contains _id
+    # Case 2: Test Document.metadata looks right. i.e. contains "a"
     search_res = vectorstore.similarity_search_with_score("sandwich", k=1)
     doc, score = search_res[0]
-    assert "_id" in doc.metadata
+    assert "a" in doc.metadata
 
     # Case 3: Add new ids that are 24-char hex strings
     hex_ids = [oid_to_str(ObjectId()) for _ in range(2)]
@@ -122,7 +122,7 @@ def test_add_texts(
     assert set(out_ids) == set(str_ids)
     assert collection.count_documents({}) == 8
     res = vectorstore.similarity_search("sandwich", k=8)
-    assert any(str_ids[0] in doc.metadata["_id"] for doc in res)
+    assert any(str_ids[0] in doc.id for doc in res)
 
     # Case 5: Test adding in multiple batches
     batch_size = 2
@@ -158,6 +158,7 @@ def test_add_texts(
         i += 1
     returned_ids = vectorstore.add_texts(texts=texts, metadatas=metadatas)
     assert len(set(returned_ids).intersection(set(_ids))) == 0
+    vectorstore.close()
 
 
 def test_add_documents(
@@ -206,3 +207,4 @@ def test_add_documents(
     result_ids = vectorstore.add_documents(docs, ids, batch_size=batch_size)
     assert len(result_ids) == n_docs
     assert set(ids) == set(collection.distinct("_id"))
+    vectorstore.close()

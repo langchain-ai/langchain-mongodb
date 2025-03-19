@@ -76,6 +76,10 @@ class MongoDBDatabase:
         database = database or client.get_default_database().name
         return cls(client, database, **kwargs)
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBDatabase."""
+        self._client.close()
+
     def get_usable_collection_names(self) -> Iterable[str]:
         """Get names of collections available."""
         if self._include_colls:

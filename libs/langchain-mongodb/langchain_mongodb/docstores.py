@@ -61,6 +61,10 @@ class MongoDBDocStore(BaseStore):
         collection = client[db_name][collection_name]
         return cls(collection=collection)
 
+    def close(self) -> None:
+        """Close the resources used by the MongoDBDocStore."""
+        self.collection.database.client.close()
+
     def mget(self, keys: Sequence[str]) -> list[Optional[Document]]:
         """Get the values associated with the given keys.
 

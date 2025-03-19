@@ -5,7 +5,8 @@ from pymongo import MongoClient
 
 from langchain_mongodb.loaders import MongoDBLoader
 
-DB_NAME = "langchain_test_db"
+from ..utils import DB_NAME
+
 COLLECTION_NAME = "langchain_test_loader"
 
 
@@ -50,3 +51,5 @@ async def test_load_with_filters(client: MongoClient) -> None:
     documents = await loader.aload()
 
     assert documents == expected_documents()
+
+    loader.close()

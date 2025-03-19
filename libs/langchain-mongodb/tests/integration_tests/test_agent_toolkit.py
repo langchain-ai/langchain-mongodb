@@ -13,6 +13,7 @@ from langchain_mongodb.agent_toolkit import (
     MongoDBDatabase,
     MongoDBDatabaseToolkit,
 )
+from tests.utils import CONNECTION_STRING
 
 DB_NAME = "langchain_test_db_chinook"
 
@@ -48,9 +49,9 @@ def db(client: MongoClient) -> MongoDBDatabase:
 @pytest.mark.skipif(
     "OPENAI_API_KEY" not in os.environ, reason="test requires OpenAI for chat responses"
 )
-def test_toolkit_response(db, connection_string: str):
+def test_toolkit_response(db):
     db_wrapper = MongoDBDatabase.from_connection_string(
-        connection_string, database=DB_NAME
+        CONNECTION_STRING, database=DB_NAME
     )
     llm = ChatOpenAI(model="gpt-4o-mini", timeout=60)
 

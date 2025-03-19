@@ -25,7 +25,14 @@ from .utils import dumps_metadata, loads_metadata
 
 
 class MongoDBSaver(BaseCheckpointSaver):
-    """A checkpoint saver that stores StateGraph checkpoints in a MongoDB database.
+    """A checkpointer that stores StateGraph checkpoints in a MongoDB database.
+
+    A compound index as shown below will be added to each of the collections
+    backing the saver (checkpoints, pending writes). If the collections pre-exist,
+    and have indexes already, nothing will be done during initialization::
+
+        keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+        unique=True,
 
     Args:
         client (MongoClient): The MongoDB connection.
@@ -70,6 +77,23 @@ class MongoDBSaver(BaseCheckpointSaver):
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
 
+        # Create indexes if not present
+        if len(self.checkpoint_collection.list_indexes().to_list()) < 2:
+            self.checkpoint_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
+        if len(self.writes_collection.list_indexes().to_list()) < 2:
+            self.writes_collection.create_index(
+                keys=[
+                    ("thread_id", 1),
+                    ("checkpoint_ns", 1),
+                    ("checkpoint_id", -1),
+                    ("idx", 1),
+                ],
+                unique=True,
+            )
+
     @classmethod
     @contextmanager
     def from_conn_string(
@@ -81,6 +105,14 @@ class MongoDBSaver(BaseCheckpointSaver):
         **kwargs: Any,
     ) -> Iterator["MongoDBSaver"]:
         """Context manager to create a MongoDB checkpoint saver.
+
+        A compound index as shown below will be added to each of the collections
+        backing the saver (checkpoints, pending writes). If the collections pre-exist,
+        and have indexes already, nothing will be done during initialization::
+
+        keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+        unique=True
+
         Args:
             conn_string: MongoDB connection string. See [class:~pymongo.MongoClient].
             db_name: Database name. It will be created if it doesn't exist.
@@ -106,6 +138,10 @@ class MongoDBSaver(BaseCheckpointSaver):
         finally:
             if client:
                 client.close()
+
+    def close(self) -> None:
+        """Close the resources used by the MongoDBSaver."""
+        self.client.close()
 
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database.

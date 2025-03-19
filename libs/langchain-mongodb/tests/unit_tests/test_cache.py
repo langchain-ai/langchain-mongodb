@@ -82,6 +82,14 @@ def llm_cache(cls: Any) -> BaseCache:
     return get_llm_cache()
 
 
+@pytest.fixture(scope="module", autouse=True)
+def reset_cache():
+    """Prevents global cache being affected in other module's tests."""
+    yield
+    print("\nAll cache tests have finished. Setting global cache to None.")
+    set_llm_cache(None)
+
+
 def _execute_test(
     prompt: Union[str, List[BaseMessage]],
     llm: Union[str, FakeLLM, FakeChatModel],

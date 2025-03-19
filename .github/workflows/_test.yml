@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Install dependencies
         shell: bash
@@ -41,9 +41,9 @@ jobs:
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.12.0
 
-      - name: Run core tests
+      - name: Run unit tests
         shell: bash
-        run: just tests
+        run: just unit_tests
 
       - name: Start local Atlas
         working-directory: .
@@ -77,4 +77,4 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
-          just tests
+          just unit_tests

@@ -4,7 +4,10 @@ from typing import Any, List, Union
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.caches import BaseCache
-from langchain_core.globals import get_llm_cache, set_llm_cache
+from langchain_core.globals import (
+    get_llm_cache,
+    set_llm_cache,
+)
 from langchain_core.load.dump import dumps
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, Generation, LLMResult
@@ -16,11 +19,10 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, FakeChatModel, FakeLLM
 
 CONN_STRING = os.environ.get("MONGODB_URI")
 INDEX_NAME = "langchain-test-index-semantic-cache"
-DATABASE = "langchain_test_db"
 COLLECTION = "langchain_test_cache"
 
 DIMENSIONS = 1536  # Meets OpenAI model
@@ -31,13 +33,13 @@ def random_string() -> str:
     return str(uuid.uuid4())
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
-    if COLLECTION not in client[DATABASE].list_collection_names():
-        clxn = client[DATABASE].create_collection(COLLECTION)
+    if COLLECTION not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION)
     else:
-        clxn = client[DATABASE][COLLECTION]
+        clxn = client[DB_NAME][COLLECTION]
 
     clxn.delete_many({})
 
@@ -61,7 +63,7 @@ def llm_cache(cls: Any) -> BaseCache:
             embedding=ConsistentFakeEmbeddings(dimensionality=DIMENSIONS),
             connection_string=CONN_STRING,
             collection_name=COLLECTION,
-            database_name=DATABASE,
+            database_name=DB_NAME,
             index_name=INDEX_NAME,
             score_threshold=0.5,
             wait_until_ready=TIMEOUT,
@@ -69,6 +71,14 @@ def llm_cache(cls: Any) -> BaseCache:
     )
     assert get_llm_cache()
     return get_llm_cache()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reset_cache():
+    """Prevents global cache being affected in other module's tests."""
+    yield
+    print("\nAll cache tests have finished. Setting global cache to None.")
+    set_llm_cache(None)
 
 
 def _execute_test(

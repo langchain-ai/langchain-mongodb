@@ -14,15 +14,14 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "langchain_test_from_texts"
 INDEX_NAME = "langchain-test-index-from-texts"
 DIMENSIONS = 5
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
@@ -45,7 +44,7 @@ def collection(client: MongoClient) -> Collection:
     return clxn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -55,17 +54,17 @@ def texts() -> List[str]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def metadatas() -> List[Dict]:
     return [{"a": 1}, {"b": 1}, {"c": 1}, {"d": 1, "e": 2}]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def vectorstore(
     collection: Collection,
     texts: List[str],
@@ -88,6 +87,7 @@ def vectorstore(
     yield vectorstore_from_texts
 
     vectorstore_from_texts.collection.delete_many({})
+    vectorstore_from_texts.close()
 
 
 def test_search_with_metadatas_and_pre_filter(

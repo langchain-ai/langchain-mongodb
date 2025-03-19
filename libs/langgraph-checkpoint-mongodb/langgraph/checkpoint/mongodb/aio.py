@@ -82,7 +82,30 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.db = self.client[db_name]
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
+        self._setup_future = None
         self.loop = asyncio.get_running_loop()
+
+    async def _setup(self):
+        """Create indexes if not present."""
+        if self._setup_future is not None:
+            return await self._setup_future
+        self._setup_future = asyncio.Future()
+        if len(await self.checkpoint_collection.list_indexes().to_list()) < 2:
+            await self.checkpoint_collection.create_index(
+                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+                unique=True,
+            )
+        if len(await self.writes_collection.list_indexes().to_list()) < 2:
+            await self.writes_collection.create_index(
+                keys=[
+                    ("thread_id", 1),
+                    ("checkpoint_ns", 1),
+                    ("checkpoint_id", -1),
+                    ("idx", 1),
+                ],
+                unique=True,
+            )
+        self._setup_future.set_result(None)
 
     @classmethod
     @asynccontextmanager
@@ -94,16 +117,23 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         writes_collection_name: str = "checkpoint_writes_aio",
         **kwargs: Any,
     ) -> AsyncIterator["AsyncMongoDBSaver"]:
+        """Create asynchronous checkpointer
+
+        This includes creation of collections and indexes if they don't exist
+        """
         client: Optional[AsyncIOMotorClient] = None
         try:
             client = AsyncIOMotorClient(conn_string)
-            yield AsyncMongoDBSaver(
+            saver = AsyncMongoDBSaver(
                 client,
                 db_name,
                 checkpoint_collection_name,
                 writes_collection_name,
                 **kwargs,
             )
+            await saver._setup()
+            yield saver
+
         finally:
             if client:
                 client.close()
@@ -122,6 +152,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         Returns:
             Optional[CheckpointTuple]: The retrieved checkpoint tuple, or None if no matching checkpoint was found.
         """
+        await self._setup()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"].get("checkpoint_ns", "")
         if checkpoint_id := get_checkpoint_id(config):
@@ -192,6 +223,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         Yields:
             AsyncIterator[CheckpointTuple]: An asynchronous iterator of matching checkpoint tuples.
         """
+        await self._setup()
         query = {}
         if config is not None:
             if "thread_id" in config["configurable"]:
@@ -271,6 +303,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         Returns:
             RunnableConfig: Updated configuration after storing the checkpoint.
         """
+        await self._setup()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]
@@ -313,6 +346,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             writes (Sequence[tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
             task_id (str): Identifier for the task creating the writes.
         """
+        await self._setup()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = config["configurable"]["checkpoint_id"]
