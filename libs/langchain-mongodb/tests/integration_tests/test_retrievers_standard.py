@@ -37,9 +37,13 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
     coll = client[DB_NAME][COLLECTION_NAME]
     coll.delete_many({})
 
-    for ix in list(coll.list_search_indexes()):
-        if ix["name"] in [SEARCH_INDEX_NAME, VECTOR_INDEX_NAME]:
-            coll.drop_search_index(ix["name"])
+    if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
+        create_fulltext_search_index(
+            collection=coll,
+            index_name=SEARCH_INDEX_NAME,
+            field=PAGE_CONTENT_FIELD,
+            wait_until_complete=TIMEOUT,
+        )
 
     # Add the docs here.
     vs = PatchedMongoDBAtlasVectorSearch(
@@ -68,12 +72,6 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
     @property
     def retriever_constructor_params(self) -> dict:
         coll, _ = setup_test()
-        create_fulltext_search_index(
-            collection=coll,
-            index_name=SEARCH_INDEX_NAME,
-            field=PAGE_CONTENT_FIELD,
-            wait_until_complete=TIMEOUT,
-        )
         return {
             "collection": coll,
             "search_index_name": SEARCH_INDEX_NAME,
@@ -97,12 +95,6 @@ class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
     @property
     def retriever_constructor_params(self) -> dict:
         coll, vs = setup_test()
-        create_fulltext_search_index(
-            collection=coll,
-            index_name=SEARCH_INDEX_NAME,
-            field=PAGE_CONTENT_FIELD,
-            wait_until_complete=TIMEOUT,
-        )
         return {
             "vectorstore": vs,
             "collection": coll,
