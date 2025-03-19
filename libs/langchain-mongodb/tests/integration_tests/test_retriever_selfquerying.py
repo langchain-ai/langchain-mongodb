@@ -12,9 +12,8 @@ from langchain_openai import ChatOpenAI
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
-from ..utils import PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
-DB_NAME = "langchain_test_db"
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120
 
