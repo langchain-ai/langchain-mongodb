@@ -24,13 +24,6 @@ dev = [
     "ipython>=8.18.1",
 ]
 
-test = [
-    "pytest>=7.3.0",
-    "syrupy>=4.0.2",
-    "pytest-watcher>=0.3.4",
-    "pytest-asyncio>=0.21.1",
-    "mongomock>=4.2.0.post1",
-]
 [tool.uv.sources]
 langchain-mongodb = { path = "libs/langchain-mongodb", editable = true }
 langgraph-checkpoint-mongodb = { path = "libs/langgraph-checkpoint-mongodb", editable = true }
