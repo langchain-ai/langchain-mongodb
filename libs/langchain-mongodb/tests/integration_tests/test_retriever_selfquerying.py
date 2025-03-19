@@ -21,7 +21,7 @@ if "OPENAI_API_KEY" not in os.environ:
     pytest.skip("Requires OpenAI for chat responses.", allow_module_level=True)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def fictitious_movies() -> list[Document]:
     """A list of documents that a typical LLM would not know without RAG"""
 
@@ -92,7 +92,7 @@ def fictitious_movies() -> list[Document]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def field_info() -> Sequence[Union[AttributeInfo, dict]]:
     return [
         AttributeInfo(
@@ -116,7 +116,7 @@ def field_info() -> Sequence[Union[AttributeInfo, dict]]:
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def vectorstore(
     embedding,
     fictitious_movies,
@@ -157,13 +157,13 @@ def vectorstore(
     return vs
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def llm() -> ChatOpenAI:
     """Model used for interpreting query."""
     return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def retriever(vectorstore, llm, field_info) -> SelfQueryRetriever:
     """Create the retriever from the VectorStore, an LLM and info about the documents."""
 
