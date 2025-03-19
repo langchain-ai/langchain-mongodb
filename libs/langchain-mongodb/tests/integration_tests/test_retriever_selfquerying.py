@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
-from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, CONNECTION_STRING, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120
@@ -118,7 +118,6 @@ def field_info() -> Sequence[Union[AttributeInfo, dict]]:
 
 @pytest.fixture(scope="module")
 def vectorstore(
-    connection_string,
     embedding,
     fictitious_movies,
     dimensions,
@@ -131,7 +130,7 @@ def vectorstore(
     - search index with filters defined by the attributes provided
     """
     vs = PatchedMongoDBAtlasVectorSearch.from_connection_string(
-        connection_string,
+        CONNECTION_STRING,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=embedding,
     )
