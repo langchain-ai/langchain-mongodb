@@ -60,6 +60,9 @@ def create_vector_search_index(
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
 
+    if collection.name not in collection.database.list_collection_names():
+        collection.database.create_collection(collection.name)
+
     result = collection.create_search_index(
         SearchIndexModel(
             definition=_vector_search_index_definition(
@@ -215,6 +218,9 @@ def create_fulltext_search_index(
         kwargs: Keyword arguments supplying any additional options to SearchIndexModel.
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
+
+    if collection.name not in collection.database.list_collection_names():
+        collection.database.create_collection(collection.name)
 
     definition = {
         "mappings": {"dynamic": False, "fields": {field: [{"type": "string"}]}}

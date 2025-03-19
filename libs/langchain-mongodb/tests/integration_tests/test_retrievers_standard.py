@@ -29,17 +29,17 @@ COLLECTION_NAME = "langchain_test_retrievers_standard"
 VECTOR_INDEX_NAME = "vector_index"
 PAGE_CONTENT_FIELD = "text"
 SEARCH_INDEX_NAME = "text_index"
-SIMILARITY = "cosine"
 
 
 def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
     client = MongoClient(CONNECTION_STRING)
     coll = client[DB_NAME][COLLECTION_NAME]
 
-    # Add the docs here.
+    # Set up the vector search index and add the documents if needed.
     vs = PatchedMongoDBAtlasVectorSearch(
         coll,
         embedding=ConsistentFakeEmbeddings(DIMENSIONS),
+        dimensions=DIMENSIONS,
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
     )
@@ -54,6 +54,7 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
             ]
         )
 
+    # Set up the search index if needed.
     if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
         create_fulltext_search_index(
             collection=coll,
