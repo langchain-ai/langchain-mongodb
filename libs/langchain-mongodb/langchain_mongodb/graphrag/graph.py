@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_core.prompts.chat import ChatPromptTemplate, SystemMessagePromptTemplate
+from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnableSequence
 from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
@@ -103,7 +103,7 @@ class MongoDBGraphStore:
         allowed_entity_types: List[str] = None,
         allowed_relationship_types: List[str] = None,
         entity_examples: str = None,
-        entity_name_examples: str = None,
+        entity_name_examples: str = "",
         validate: bool = False,
         validation_action: str = "warn",
     ):
@@ -192,6 +192,13 @@ class MongoDBGraphStore:
         self.query_prompt = (
             prompts.query_prompt if query_prompt is None else query_prompt
         )
+        self.entity_examples = (
+            example_templates.entity_extraction
+            if entity_examples is None
+            else entity_examples
+        )
+        self.entity_name_examples = entity_name_examples
+
         self.max_depth = max_depth
         self._schema = deepcopy(entity_schema)
         if allowed_entity_types:
@@ -208,21 +215,6 @@ class MongoDBGraphStore:
             ] = allowed_relationship_types
         else:
             self.allowed_relationship_types = []
-
-        # Include examples
-        if entity_examples is None:
-            entity_examples = example_templates.entity_extraction
-        self.entity_prompt.messages.insert(
-            1,
-            SystemMessagePromptTemplate.from_template(entity_examples),
-        )
-        if entity_name_examples:
-            self.query_prompt.messages.insert(
-                1,
-                SystemMessagePromptTemplate.from_template(
-                    f"## Additional Examples \n {entity_name_examples}"
-                ),
-            )
 
     @property
     def entity_schema(self):
@@ -377,6 +369,7 @@ class MongoDBGraphStore:
             dict(
                 input_document=raw_document,
                 entity_schema=self.entity_schema,
+                entity_examples=self.entity_examples,
                 allowed_entity_types=self.allowed_entity_types,
                 allowed_relationship_types=self.allowed_relationship_types,
             )
@@ -407,6 +400,7 @@ class MongoDBGraphStore:
         response: AIMessage = chain.invoke(
             dict(
                 input_document=raw_document,
+                entity_name_examples=self.entity_name_examples,
                 allowed_entity_types=self.allowed_entity_types,
             )
         )
