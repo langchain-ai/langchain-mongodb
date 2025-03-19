@@ -4,7 +4,10 @@ from typing import Any, List, Union
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.caches import BaseCache
-from langchain_core.globals import get_llm_cache, set_llm_cache
+from langchain_core.globals import (
+    get_llm_cache,
+    set_llm_cache,
+)
 from langchain_core.load.dump import dumps
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, Generation, LLMResult
@@ -68,6 +71,14 @@ def llm_cache(cls: Any) -> BaseCache:
     )
     assert get_llm_cache()
     return get_llm_cache()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reset_cache():
+    """Prevents global cache being affected in other module's tests."""
+    yield
+    print("\nAll cache tests have finished. Setting global cache to None.")
+    set_llm_cache(None)
 
 
 def _execute_test(
