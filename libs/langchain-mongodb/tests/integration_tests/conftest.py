@@ -9,7 +9,7 @@ from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from pymongo import MongoClient
 
-from tests.utils import CONNECTION_STRING
+from ..utils import CONNECTION_STRING
 
 
 @pytest.fixture
