@@ -215,3 +215,7 @@ class MongoDBAtlasSelfQueryRetriever(SelfQueryRetriever):
             use_original_query=use_original_query,
             **kwargs,
         )
+
+    def close(self) -> None:
+        """Close the resources used by the retriever."""
+        self.vectorstore.close()
