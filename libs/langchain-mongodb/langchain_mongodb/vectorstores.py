@@ -262,17 +262,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._collection = value
 
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
-        scoring: dict[str, Callable] = {
-            "euclidean": self._euclidean_relevance_score_fn,
-            "dotProduct": self._max_inner_product_relevance_score_fn,
-            "cosine": self._cosine_relevance_score_fn,
-        }
-        if self._relevance_score_fn in scoring:
-            return scoring[self._relevance_score_fn]
-        else:
-            raise NotImplementedError(
-                f"No relevance score function for ${self._relevance_score_fn}"
-            )
+        """All Atlas Vector Search Scores are normalized in [0,1] so no change needed."""
+        return lambda score: score
 
     @classmethod
     def from_connection_string(
