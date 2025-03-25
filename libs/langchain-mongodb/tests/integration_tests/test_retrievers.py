@@ -174,7 +174,7 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
         k=3,
     )
 
-    query1 = "What did I visit France?"
+    query1 = "When did I visit France?"
     results = retriever.invoke(query1)
     assert len(results) == 3
     assert "Paris" in results[0].page_content
@@ -194,7 +194,7 @@ def test_hybrid_retriever_deprecated_top_k(
         top_k=3,
     )
 
-    query1 = "What did I visit France?"
+    query1 = "When did I visit France?"
     results = retriever.invoke(query1)
     assert len(results) == 3
     assert "Paris" in results[0].page_content
