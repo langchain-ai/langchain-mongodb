@@ -9,7 +9,7 @@ description = "Library with a MongoDB implementation of LangGraph checkpoint sav
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "langgraph-checkpoint>=2.0.0",
+    "langgraph-checkpoint>=2.0.23,<3.0.0",
     "pymongo>=4.9,<4.12",
     "motor>3.5.0",
 ]

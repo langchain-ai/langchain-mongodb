@@ -103,6 +103,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                     ("thread_id", 1),
                     ("checkpoint_ns", 1),
                     ("checkpoint_id", -1),
+                    ("task_id", 1),
                     ("idx", 1),
                 ],
                 unique=True,
@@ -343,6 +344,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         config: RunnableConfig,
         writes: Sequence[tuple[str, Any]],
         task_id: str,
+        task_path: str = "",
     ) -> None:
         """Store intermediate writes linked to a checkpoint asynchronously.
 
@@ -352,6 +354,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             config (RunnableConfig): Configuration of the related checkpoint.
             writes (Sequence[tuple[str, Any]]): List of writes to store, each as (channel, value) pair.
             task_id (str): Identifier for the task creating the writes.
+            task_path (str): Path of the task creating the writes.
         """
         await self._setup()
         thread_id = config["configurable"]["thread_id"]
@@ -367,6 +370,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 "checkpoint_ns": checkpoint_ns,
                 "checkpoint_id": checkpoint_id,
                 "task_id": task_id,
+                "task_path": task_path,
                 "idx": WRITES_IDX_MAP.get(channel, idx),
             }
             type_, serialized_value = self.serde.dumps_typed(value)
