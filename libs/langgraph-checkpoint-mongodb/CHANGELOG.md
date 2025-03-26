@@ -4,7 +4,7 @@
 
 ## Changes in version 0.1.2 (2025/03/26)
 
-- Add compatibility with `langgraph` 2.0.23.
+- Add compatibility with `langgraph-checkpoint` 2.0.23.
 
 ## Changes in version 0.1.1 (2025/02/26)
 
