@@ -2,9 +2,18 @@
 
 ---
 
+## Changes in version 0.6 (2025/03/26)
+
+- Added Natural language to MQL Database tool.
+- Added `MongoDBAtlasSelfQueryRetriever`.
+- Added logic for vector stores to optionally create vector search indexes.
+- Added `close()` methods to classes to ensure proper cleanup of resources.
+- Changed the default `batch_size` to 100 to align with resource constraints on
+  AI model APIs.
+
 ## Changes in version 0.5 (2025/02/25)
 
-- Added GraphRAG support via `MongoDBGraphStore`
+- Added GraphRAG support via `MongoDBGraphStore`.
 
 ## Changes in version 0.4 (2025/01/09)
 
