@@ -13,7 +13,7 @@ from langchain_mongodb.utils import (
     make_serializable,
 )
 
-DEFAULT_INSERT_BATCH_SIZE = 100_000
+DEFAULT_INSERT_BATCH_SIZE = 100
 
 
 class MongoDBDocStore(BaseStore):
@@ -94,6 +94,8 @@ class MongoDBDocStore(BaseStore):
 
         Args:
             key_value_pairs: A sequence of key-value pairs.
+            batch_size: Number of documents to insert at a time.
+                Tuning this may help with performance and sidestep MongoDB limits.
         """
         keys, docs = zip(*key_value_pairs)
         n_docs = len(docs)

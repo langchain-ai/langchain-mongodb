@@ -43,7 +43,7 @@ VST = TypeVar("VST", bound=VectorStore)
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_INSERT_BATCH_SIZE = 100_000
+DEFAULT_INSERT_BATCH_SIZE = 100
 
 
 class MongoDBAtlasVectorSearch(VectorStore):
@@ -302,6 +302,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         texts: Iterable[str],
         metadatas: Optional[List[Dict[str, Any]]] = None,
         ids: Optional[List[str]] = None,
+        batch_size: int = DEFAULT_INSERT_BATCH_SIZE,
         **kwargs: Any,
     ) -> List[str]:
         """Add texts, create embeddings, and add to the Collection and index.
@@ -319,6 +320,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas: Optional list of metadatas associated with the texts.
             ids: Optional list of unique ids that will be used as index in VectorStore.
                 See note on ids.
+            batch_size: Number of documents to insert at a time.
+                Tuning this may help with performance and sidestep MongoDB limits.
 
         Returns:
             List of ids added to the vectorstore.
@@ -339,7 +342,6 @@ class MongoDBAtlasVectorSearch(VectorStore):
         metadatas_batch = _metadatas
 
         result_ids = []
-        batch_size = kwargs.get("batch_size", DEFAULT_INSERT_BATCH_SIZE)
         if batch_size:
             texts_batch = []
             metadatas_batch = []
