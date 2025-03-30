@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from importlib.metadata import version
@@ -7,7 +9,7 @@ from typing import (
 )
 
 from langchain_core.runnables import RunnableConfig
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient, UpdateOne, ASCENDING
 from pymongo.database import Database as MongoDatabase
 from pymongo.driver_info import DriverInfo
 
@@ -69,6 +71,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints",
         writes_collection_name: str = "checkpoint_writes",
+        ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -76,6 +79,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         self.db = self.client[db_name]
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
+        self.ttl = ttl
 
         # Create indexes if not present
         if len(self.checkpoint_collection.list_indexes().to_list()) < 2:
@@ -83,6 +87,12 @@ class MongoDBSaver(BaseCheckpointSaver):
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
+
+            if self.ttl:
+                self.checkpoint_collection.create_index(
+                    keys=[("created_at", ASCENDING)],
+                    expireAfterSeconds=self.ttl,
+                )
         if len(self.writes_collection.list_indexes().to_list()) < 2:
             self.writes_collection.create_index(
                 keys=[
@@ -94,6 +104,11 @@ class MongoDBSaver(BaseCheckpointSaver):
                 ],
                 unique=True,
             )
+            if self.ttl:
+                self.writes_collection.create_index(
+                    keys=[("created_at", ASCENDING)],
+                    expireAfterSeconds=self.ttl,
+                )
 
     @classmethod
     @contextmanager
@@ -361,6 +376,9 @@ class MongoDBSaver(BaseCheckpointSaver):
             "checkpoint_ns": checkpoint_ns,
             "checkpoint_id": checkpoint_id,
         }
+        if self.ttl:
+            upsert_query["created_at"] = datetime.now()
+
         self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
         return {
             "configurable": {
@@ -403,6 +421,9 @@ class MongoDBSaver(BaseCheckpointSaver):
                 "task_path": task_path,
                 "idx": WRITES_IDX_MAP.get(channel, idx),
             }
+            if self.ttl:
+                upsert_query["created_at"] = datetime.now()
+
             type_, serialized_value = self.serde.dumps_typed(value)
             operations.append(
                 UpdateOne(
