@@ -9,6 +9,8 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import UpdateOne
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 from pymongo.driver_info import DriverInfo
 
 from langgraph.checkpoint.base import (
@@ -68,12 +70,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         input=3, output=4
     """
 
-    client: AsyncIOMotorClient
-    db: AsyncIOMotorDatabase
+    client: AsyncIOMotorClient | AsyncMongoClient
+    db: AsyncIOMotorDatabase | AsyncDatabase
 
     def __init__(
         self,
-        client: AsyncIOMotorClient,
+        client: AsyncIOMotorClient | AsyncMongoClient,
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
@@ -92,12 +94,24 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         if self._setup_future is not None:
             return await self._setup_future
         self._setup_future = asyncio.Future()
-        if len(await (await self.checkpoint_collection.list_indexes()).to_list()) < 2:
+        if isinstance(self.client, AsyncMongoClient):
+            num_indexes = len(
+                await (await self.checkpoint_collection.list_indexes()).to_list()
+            )
+        else:
+            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())
+        if num_indexes < 2:
             await self.checkpoint_collection.create_index(
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
-        if len(await (await self.writes_collection.list_indexes()).to_list()) < 2:
+        if isinstance(self.client, AsyncMongoClient):
+            num_indexes = len(
+                await (await self.writes_collection.list_indexes()).to_list()
+            )
+        else:
+            num_indexes = len(await self.writes_collection.list_indexes().to_list())
+        if num_indexes < 2:
             await self.writes_collection.create_index(
                 keys=[
                     ("thread_id", 1),
