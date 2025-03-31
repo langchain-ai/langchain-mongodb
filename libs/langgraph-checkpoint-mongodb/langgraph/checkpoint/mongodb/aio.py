@@ -92,12 +92,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         if self._setup_future is not None:
             return await self._setup_future
         self._setup_future = asyncio.Future()
-        if len(await self.checkpoint_collection.list_indexes().to_list()) < 2:
+        if len(await (await self.checkpoint_collection.list_indexes()).to_list()) < 2:
             await self.checkpoint_collection.create_index(
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
-        if len(await self.writes_collection.list_indexes().to_list()) < 2:
+        if len(await (await self.writes_collection.list_indexes()).to_list()) < 2:
             await self.writes_collection.create_index(
                 keys=[
                     ("thread_id", 1),
