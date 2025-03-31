@@ -47,3 +47,14 @@ repos:
       args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
+
+- repo: local
+  hooks:
+    - id: update-locks
+      name: update-locks
+      entry: bash ./scripts/update-locks.sh
+      language: python
+      require_serial: true
+      fail_fast: true
+      additional_dependencies:
+        - uv
