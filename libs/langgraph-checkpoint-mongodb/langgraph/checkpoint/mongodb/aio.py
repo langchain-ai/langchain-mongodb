@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import builtins
 import sys
@@ -133,7 +135,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
         **kwargs: Any,
-    ) -> AsyncIterator["AsyncMongoDBSaver"]:
+    ) -> AsyncIterator[AsyncMongoDBSaver]:
         """Create asynchronous checkpointer
 
         This includes creation of collections and indexes if they don't exist
