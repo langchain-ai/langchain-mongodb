@@ -34,7 +34,6 @@ dev = [
     "simsimd>=5.0.0",
     "langchain-ollama>=0.2.2",
     "langchain-openai>=0.2.14",
-    "langchain-aws>=0.2.16",
     "langchain-community>=0.3.14",
     "pypdf>=5.0.1",
     "langgraph>=0.2.72",

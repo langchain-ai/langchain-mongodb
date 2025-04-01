@@ -35,35 +35,12 @@ if "OPENAI_API_KEY" not in os.environ:
 
 
 @pytest.fixture
-def entity_extraction_model_openai() -> BaseChatModel:
+def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
         return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
     except Exception:
         pass
-
-
-@pytest.fixture
-def entity_extraction_model_bedrock() -> BaseChatModel:
-    """LLM for converting documents into Graph of Entities and Relationships"""
-    try:
-        from langchain_aws import ChatBedrock
-
-        llm = ChatBedrock(
-            credentials_profile_name=os.environ.get("AWS_PROFILE"),
-            model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            region_name="us-east-1",
-        )
-        return llm
-    except Exception:
-        pass
-
-
-@pytest.fixture
-def entity_extraction_model(
-    entity_extraction_model_openai, entity_extraction_model_bedrock
-):
-    return entity_extraction_model_bedrock
 
 
 @pytest.fixture
@@ -168,9 +145,7 @@ def test_add_docs_store(graph_store):
 
 
 @flaky
-def test_extract_entity_names(
-    graph_store, query_connection, entity_extraction_model
-):
+def test_extract_entity_names(graph_store, query_connection):
     query_entity_names = graph_store.extract_entity_names(query_connection)
     assert set(query_entity_names) == {"John Doe", "Jane Smith"}
 
