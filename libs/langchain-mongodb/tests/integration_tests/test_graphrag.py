@@ -44,7 +44,7 @@ def entity_extraction_model_openai() -> BaseChatModel:
 
 
 @pytest.fixture
-def entity_extraction_model_anthropic() -> BaseChatModel:
+def entity_extraction_model_bedrock() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
         from langchain_aws import ChatBedrock
@@ -61,10 +61,9 @@ def entity_extraction_model_anthropic() -> BaseChatModel:
 
 @pytest.fixture
 def entity_extraction_model(
-    entity_extraction_model_openai, entity_extraction_model_anthropic
+    entity_extraction_model_openai, entity_extraction_model_bedrock
 ):
-    return entity_extraction_model_anthropic
-    # return entity_extraction_model_openai
+    return entity_extraction_model_bedrock
 
 
 @pytest.fixture
