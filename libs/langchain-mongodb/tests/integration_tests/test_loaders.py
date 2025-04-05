@@ -51,5 +51,3 @@ async def test_load_with_filters(client: MongoClient) -> None:
     documents = await loader.aload()
 
     assert documents == expected_documents()
-
-    loader.close()

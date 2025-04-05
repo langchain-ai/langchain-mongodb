@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Generator
-
 import pytest  # type: ignore[import-not-found]
 from langchain_core.vectorstores import VectorStore
 from langchain_tests.integration_tests import VectorStoreIntegrationTests
@@ -46,15 +44,11 @@ def collection(client: MongoClient) -> Collection:
 
 class TestMongoDBAtlasVectorSearch(VectorStoreIntegrationTests):
     @pytest.fixture()
-    def vectorstore(self, collection) -> Generator[VectorStore, None, None]:  # type: ignore
+    def vectorstore(self, collection) -> VectorStore:  # type: ignore
         """Get an empty vectorstore for unit tests."""
         store = PatchedMongoDBAtlasVectorSearch(
             collection, self.get_embeddings(), index_name=INDEX_NAME
         )
         # note: store should be EMPTY at this point
         # if you need to delete data, you may do so here
-        try:
-            yield store
-        finally:
-            # cleanup operations, or deleting data
-            store.close()
+        return store

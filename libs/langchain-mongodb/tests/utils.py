@@ -240,9 +240,13 @@ class MockCollection(Collection):
 
     def __init__(self) -> None:
         self._data = []
+        self.is_closed = False
         self._aggregate_result = []
         self._insert_result = None
         self._simulate_cache_aggregation_query = False
+
+    def close(self):
+        self.is_closed = True
 
     def delete_many(self, *args, **kwargs) -> DeleteResult:  # type: ignore
         old_len = len(self._data)

@@ -2,7 +2,6 @@
 """Test MongoDB database wrapper."""
 
 import json
-from typing import Generator
 
 import pytest
 from pymongo import MongoClient
@@ -13,15 +12,13 @@ DB_NAME = "langchain_test_db_user"
 
 
 @pytest.fixture
-def db(client: MongoClient) -> Generator[None, None, MongoDBDatabase]:
+def db(client: MongoClient) -> MongoDBDatabase:
     client[DB_NAME].user.delete_many({})
     user = dict(name="Alice", bio="Engineer from Ohio")
     client[DB_NAME]["user"].insert_one(user)
     company = dict(name="Acme", location="Montana")
     client[DB_NAME]["company"].insert_one(company)
-    db = MongoDBDatabase(client, DB_NAME)
-    yield db
-    db.close()
+    return MongoDBDatabase(client, DB_NAME)
 
 
 def test_collection_info(db: MongoDBDatabase) -> None:

@@ -60,4 +60,3 @@ def test_mmr(embeddings: Embeddings, collection: Collection) -> None:
     assert len(output) == len(texts)
     assert output[0].page_content == "foo"
     assert output[1].page_content != "foo"
-    vectorstore.close()

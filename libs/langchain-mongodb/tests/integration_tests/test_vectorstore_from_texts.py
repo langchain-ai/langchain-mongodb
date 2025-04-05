@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Generator, List
+from typing import Dict, List
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.embeddings import Embeddings
@@ -21,7 +21,7 @@ INDEX_NAME = "langchain-test-index-from-texts"
 DIMENSIONS = 5
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
@@ -44,7 +44,7 @@ def collection(client: MongoClient) -> Collection:
     return clxn
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -54,23 +54,23 @@ def texts() -> List[str]:
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def metadatas() -> List[Dict]:
     return [{"a": 1}, {"b": 1}, {"c": 1}, {"d": 1, "e": 2}]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def vectorstore(
     collection: Collection,
     texts: List[str],
     embeddings: Embeddings,
     metadatas: List[dict],
-) -> Generator[MongoDBAtlasVectorSearch, None, None]:
+) -> MongoDBAtlasVectorSearch:
     """VectorStore created with a few documents and a trivial embedding model.
 
     Note: PatchedMongoDBAtlasVectorSearch is MongoDBAtlasVectorSearch in all
@@ -87,7 +87,6 @@ def vectorstore(
     yield vectorstore_from_texts
 
     vectorstore_from_texts.collection.delete_many({})
-    vectorstore_from_texts.close()
 
 
 def test_search_with_metadatas_and_pre_filter(

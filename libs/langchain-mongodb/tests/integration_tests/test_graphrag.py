@@ -1,5 +1,4 @@
 import os
-from typing import Generator
 
 import pytest
 from flaky import flaky
@@ -19,13 +18,14 @@ from ..utils import CONNECTION_STRING, DB_NAME
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection() -> Collection:
     client = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db[COLLECTION_NAME].drop()
     collection = db.create_collection(COLLECTION_NAME)
-    return collection
+    yield collection
+    collection.close()
 
 
 if "OPENAI_API_KEY" not in os.environ:
@@ -34,7 +34,7 @@ if "OPENAI_API_KEY" not in os.environ:
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def entity_extraction_model() -> BaseChatModel:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
@@ -43,7 +43,7 @@ def entity_extraction_model() -> BaseChatModel:
         pass
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def documents():
     return [
         Document(
@@ -77,7 +77,7 @@ The project is set to expand across multiple regions, marking a milestone in the
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def entity_example():
     return """
 Input:
@@ -116,10 +116,8 @@ Output:
 """
 
 
-@pytest.fixture
-def graph_store(
-    collection, entity_extraction_model, documents
-) -> Generator[None, None, MongoDBGraphStore]:
+@pytest.fixture(scope="module")
+def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection=collection,
         entity_extraction_model=entity_extraction_model,
@@ -129,8 +127,7 @@ def graph_store(
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
     assert isinstance(bulkwrite_results[0], BulkWriteResult)
-    yield store
-    store.close()
+    return store
 
 
 @pytest.fixture

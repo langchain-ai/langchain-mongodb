@@ -38,5 +38,3 @@ def test_memory_with_message_store() -> None:
     memory.chat_memory.clear()
 
     assert memory.chat_memory.messages == []
-
-    message_history.close()

@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import Generator, List
 
 import pytest
 from langchain_community.document_loaders import PyPDFLoader
@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from ..utils import CONNECTION_STRING
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def technical_report_pages() -> List[Document]:
     """Returns a Document for each of the 100 pages of a GPT-4 Technical Report"""
     loader = PyPDFLoader("https://arxiv.org/pdf/2303.08774.pdf")
@@ -20,12 +20,14 @@ def technical_report_pages() -> List[Document]:
     return pages
 
 
-@pytest.fixture
-def client() -> MongoClient:
-    return MongoClient(CONNECTION_STRING)
+@pytest.fixture(scope="session")
+def client() -> Generator[None, None, MongoClient]:
+    client = MongoClient(CONNECTION_STRING)
+    yield client
+    client.close()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def embedding() -> Embeddings:
     if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
@@ -36,7 +38,7 @@ def embedding() -> Embeddings:
     return OllamaEmbeddings(model="all-minilm:l6-v2")
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dimensions() -> int:
     if os.environ.get("OPENAI_API_KEY"):
         return 1536
