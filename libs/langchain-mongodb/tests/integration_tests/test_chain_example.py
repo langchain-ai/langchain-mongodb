@@ -46,8 +46,7 @@ def collection(client: MongoClient) -> Collection:
             wait_until_complete=TIMEOUT,
         )
 
-    yield clxn
-    clxn.close()
+    return clxn
 
 
 @pytest.mark.skipif(
