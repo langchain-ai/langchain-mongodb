@@ -245,6 +245,10 @@ class MockCollection(Collection):
         self._insert_result = None
         self._simulate_cache_aggregation_query = False
 
+    @property
+    def database(self):
+        return MockDatabase()
+
     def close(self):
         self.is_closed = True
 
