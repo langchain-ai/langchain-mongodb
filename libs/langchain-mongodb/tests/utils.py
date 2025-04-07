@@ -216,18 +216,26 @@ class FakeLLM(LLM):
 
 
 class MockClient:
+    is_closed: False
+
     def __getitem__(self, key: str) -> Any:
-        return MockDatabase()
+        return MockDatabase(self)
+
+    def close(self):
+        self.is_closed = True
 
 
 class MockDatabase:
     name = "test"
 
+    def __init__(self, client=None):
+        self.client = client or MockClient()
+
     def list_collection_names(self) -> list[str]:
         return ["test"]
 
     def __getitem__(self, key: str) -> Any:
-        return MockCollection()
+        return MockCollection(self)
 
 
 class MockCollection(Collection):
@@ -238,16 +246,17 @@ class MockCollection(Collection):
     _data: List[Any]
     _simulate_cache_aggregation_query: bool
 
-    def __init__(self) -> None:
+    def __init__(self, database=None) -> None:
         self._data = []
         self.is_closed = False
         self._aggregate_result = []
         self._insert_result = None
         self._simulate_cache_aggregation_query = False
+        self._database = database or MockDatabase()
 
     @property
     def database(self):
-        return MockDatabase()
+        return self._database
 
     def close(self):
         self.is_closed = True

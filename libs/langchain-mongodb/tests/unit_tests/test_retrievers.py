@@ -1,4 +1,5 @@
 import pytest
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.retrievers import (
@@ -26,19 +27,22 @@ def test_full_text_search(collection):
         collection=collection, search_index_name="foo", search_field="bar"
     )
     search.close()
-    assert collection.is_closed
+    assert collection.database.client.is_closed
 
 
 def test_hybrid_search(collection, embeddings):
     vs = MongoDBAtlasVectorSearch(collection, embeddings)
     search = MongoDBAtlasHybridSearchRetriever(vectorstore=vs, search_index_name="foo")
     search.close()
-    assert collection.is_closed
+    assert collection.database.client.is_closed
 
 
 def test_parent_retriever(collection, embeddings):
     vs = MongoDBAtlasVectorSearch(collection, embeddings)
     ds = MongoDBDocStore(collection)
-    retriever = MongoDBAtlasParentDocumentRetriever(vectorstore=vs, docstore=ds)
+    cs = RecursiveCharacterTextSplitter(chunk_size=400)
+    retriever = MongoDBAtlasParentDocumentRetriever(
+        vectorstore=vs, docstore=ds, child_splitter=cs
+    )
     retriever.close()
-    assert collection.is_closed
+    assert collection.database.client.is_closed

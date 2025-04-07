@@ -102,7 +102,7 @@ class TestMongoDBAtlasVectorSearch:
             vectorstore, collection, metadata=documents[2].metadata["c"]
         )
         vectorstore.close()
-        assert collection.is_closed
+        assert collection.database.client.is_closed
 
     def test_from_texts(
         self, embedding_openai: Embeddings, collection: MockCollection

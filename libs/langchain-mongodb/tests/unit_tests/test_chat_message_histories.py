@@ -22,6 +22,8 @@ class PatchedMongoDBChatMessageHistory(MongoDBChatMessageHistory):
         self.session_id_key = "SessionId"
         self.history_key = "History"
         self.history_size = None
+        self.db = self.collection.database
+        self.client = self.db.client
 
 
 def test_memory_with_message_store() -> None:
@@ -49,7 +51,7 @@ def test_memory_with_message_store() -> None:
     assert memory.chat_memory.messages == []
 
     message_history.close()
-    assert message_history.collection.is_closed
+    assert message_history.client.is_closed
 
 
 def test_init_with_connection_string(mocker: MockerFixture) -> None:
