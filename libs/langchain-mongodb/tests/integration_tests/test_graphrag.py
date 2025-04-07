@@ -25,7 +25,7 @@ def collection() -> Collection:
     db[COLLECTION_NAME].drop()
     collection = db.create_collection(COLLECTION_NAME)
     yield collection
-    collection.close()
+    client.close()
 
 
 if "OPENAI_API_KEY" not in os.environ:
