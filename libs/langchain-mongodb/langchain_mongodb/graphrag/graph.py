@@ -23,7 +23,7 @@ from .schema import entity_schema
 
 if TYPE_CHECKING:
     try:
-        from typing import TypeAlias  # Python 3.10+
+        from typing import TypeAlias  # type:ignore[attr-defined]  # Python 3.10+
     except ImportError:
         from typing_extensions import TypeAlias  # Python 3.9 fallback
 
