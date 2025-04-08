@@ -122,7 +122,7 @@ def vectorstore(
     fictitious_movies,
     dimensions,
     field_info,
-) -> Generator[MongoDBAtlasVectorSearch]:
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Fully configured vector store.
 
     Includes
