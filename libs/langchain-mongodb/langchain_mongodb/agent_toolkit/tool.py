@@ -1,19 +1,19 @@
-# flake8: noqa
 """Tools for interacting with a MongoDB database."""
 
-from typing import Any, Dict, Optional, Sequence, Type, Union
+from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Any, Dict, Optional, Type
 
-from langchain_core.language_models import BaseLanguageModel
 from langchain_core.callbacks import (
-    AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
+from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import PromptTemplate
-from .database import MongoDBDatabase
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pymongo.cursor import Cursor
+
+from .database import MongoDBDatabase
 from .prompt import MONGODB_QUERY_CHECKER
 
 

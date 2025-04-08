@@ -825,6 +825,7 @@ dev = [
     { name = "pytest-watcher" },
     { name = "simsimd" },
     { name = "syrupy" },
+    { name = "typing-extensions" },
 ]
 
 [package.metadata]
@@ -860,6 +861,7 @@ dev = [
     { name = "pytest-watcher", specifier = ">=0.3.4" },
     { name = "simsimd", specifier = ">=5.0.0" },
     { name = "syrupy", specifier = ">=4.0.2" },
+    { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
 
 [[package]]

@@ -41,6 +41,7 @@ dev = [
     "flaky>=3.8.1",
     "langchain-tests==0.3.14",
     "pip>=25.0.1",
+    "typing-extensions>=4.12.2",
 ]
 
 [tool.pytest.ini_options]
