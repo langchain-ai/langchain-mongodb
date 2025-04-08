@@ -88,20 +88,20 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.db = self.client[db_name]
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
-        self._setup_future = None
+        self._setup_future: asyncio.Future | None = None
         self.loop = asyncio.get_running_loop()
 
-    async def _setup(self):
+    async def _setup(self) -> None:
         """Create indexes if not present."""
         if self._setup_future is not None:
             return await self._setup_future
         self._setup_future = asyncio.Future()
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.checkpoint_collection.list_indexes()).to_list()
+                await (await self.checkpoint_collection.list_indexes()).to_list()  # type:ignore[misc]
             )
         else:
-            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())
+            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())  # type:ignore[union-attr]
         if num_indexes < 2:
             await self.checkpoint_collection.create_index(
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
@@ -109,10 +109,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             )
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.writes_collection.list_indexes()).to_list()
+                await (await self.writes_collection.list_indexes()).to_list()  # type:ignore[misc]
             )
         else:
-            num_indexes = len(await self.writes_collection.list_indexes().to_list())
+            num_indexes = len(await self.writes_collection.list_indexes().to_list())  # type:ignore[union-attr]
         if num_indexes < 2:
             await self.writes_collection.create_index(
                 keys=[
@@ -498,6 +498,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         config: RunnableConfig,
         writes: Sequence[tuple[str, Any]],
         task_id: str,
+        task_path: str = "",
     ) -> None:
         """Store intermediate writes linked to a checkpoint.
 
@@ -509,5 +510,5 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             task_id (str): Identifier for the task creating the writes.
         """
         return asyncio.run_coroutine_threadsafe(
-            self.aput_writes(config, writes, task_id), self.loop
+            self.aput_writes(config, writes, task_id, task_path), self.loop
         ).result()

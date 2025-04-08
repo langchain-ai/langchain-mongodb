@@ -122,7 +122,7 @@ def test_add_texts(
     assert set(out_ids) == set(str_ids)
     assert collection.count_documents({}) == 8
     res = vectorstore.similarity_search("sandwich", k=8)
-    assert any(str_ids[0] in doc.id for doc in res)
+    assert any(str_ids[0] in doc.id for doc in res)  # type:ignore[operator]
 
     # Case 5: Test adding in multiple batches
     batch_size = 2

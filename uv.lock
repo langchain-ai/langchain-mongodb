@@ -925,6 +925,7 @@ dev = [
     { name = "langgraph", specifier = ">=0.2.72" },
     { name = "mongomock", specifier = ">=4.2.0.post1" },
     { name = "mypy", specifier = ">=1.10" },
+    { name = "pip", specifier = ">=25.0.1" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pypdf", specifier = ">=5.0.1" },
     { name = "pytest", specifier = ">=7.3.0" },

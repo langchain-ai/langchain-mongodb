@@ -1,7 +1,8 @@
 import os
+from typing import Generator
 
 import pytest
-from flaky import flaky
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -19,7 +20,7 @@ COLLECTION_NAME = "langchain_test_graphrag"
 
 
 @pytest.fixture(scope="module")
-def collection() -> Collection:
+def collection() -> Generator[Collection]:
     client = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db[COLLECTION_NAME].drop()
@@ -35,12 +36,13 @@ if "OPENAI_API_KEY" not in os.environ:
 
 
 @pytest.fixture(scope="module")
-def entity_extraction_model() -> BaseChatModel:
+def entity_extraction_model() -> BaseChatModel | None:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
         return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
     except Exception:
         pass
+    return None
 
 
 @pytest.fixture(scope="module")

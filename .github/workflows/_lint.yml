@@ -61,3 +61,7 @@ jobs:
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}
         run: just lint
+
+      - name: Checking the types
+        working-directory: ${{ inputs.working-directory }}
+        run: just typing

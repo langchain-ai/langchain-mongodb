@@ -59,7 +59,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         self.vectorstore.close()
 
     def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs: Any
     ) -> List[Document]:
         """Retrieve documents that are highest scoring / most similar  to query.
 

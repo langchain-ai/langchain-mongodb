@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
-from langchain_core.runnables import RunnableSequence
 from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
@@ -97,12 +96,12 @@ class MongoDBGraphStore:
         collection_name: Optional[str] = None,
         collection: Optional[Collection] = None,
         entity_extraction_model: BaseChatModel,
-        entity_prompt: ChatPromptTemplate = None,
-        query_prompt: ChatPromptTemplate = None,
+        entity_prompt: Optional[ChatPromptTemplate] = None,
+        query_prompt: Optional[ChatPromptTemplate] = None,
         max_depth: int = 2,
-        allowed_entity_types: List[str] = None,
-        allowed_relationship_types: List[str] = None,
-        entity_examples: str = None,
+        allowed_entity_types: Optional[List[str]] = None,
+        allowed_relationship_types: Optional[List[str]] = None,
+        entity_examples: Optional[str] = None,
         entity_name_examples: str = "",
         validate: bool = False,
         validation_action: str = "warn",
@@ -137,6 +136,8 @@ class MongoDBGraphStore:
                 "OR a MongoDB Collection."
             )
         if collection is None:  # collection is specified by uri and names
+            assert collection_name is not None
+            assert database_name is not None
             client: MongoClient = MongoClient(
                 connection_string,
                 driver=DriverInfo(
@@ -203,21 +204,21 @@ class MongoDBGraphStore:
         self._schema = deepcopy(entity_schema)
         if allowed_entity_types:
             self.allowed_entity_types = allowed_entity_types
-            self._schema["properties"]["type"]["enum"] = allowed_entity_types
+            self._schema["properties"]["type"]["enum"] = allowed_entity_types  # type:ignore[index]
         else:
             self.allowed_entity_types = []
         if allowed_relationship_types:
             # Update Prompt
             self.allowed_relationship_types = allowed_relationship_types
             # Update schema. Disallow other keys..
-            self._schema["properties"]["relationships"]["properties"]["types"][
+            self._schema["properties"]["relationships"]["properties"]["types"][  # type:ignore[index]
                 "enum"
             ] = allowed_relationship_types
         else:
             self.allowed_relationship_types = []
 
     @property
-    def entity_schema(self):
+    def entity_schema(self) -> dict[str, Any]:
         """JSON Schema Object of Entities. Will be applied if validate is True.
 
         See Also:
@@ -235,10 +236,10 @@ class MongoDBGraphStore:
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
         max_depth: int = 2,
-        allowed_entity_types: List[str] = None,
-        allowed_relationship_types: List[str] = None,
-        entity_examples: str = None,
-        entity_name_examples: str = None,
+        allowed_entity_types: Optional[List[str]] = None,
+        allowed_relationship_types: Optional[List[str]] = None,
+        entity_examples: Optional[str] = None,
+        entity_name_examples: str = "",
         validate: bool = False,
         validation_action: str = "warn",
     ) -> MongoDBGraphStore:
@@ -271,24 +272,24 @@ class MongoDBGraphStore:
         )
         collection = client[database_name].create_collection(collection_name)
         return cls(
-            collection,
-            entity_extraction_model,
-            entity_prompt,
-            query_prompt,
-            max_depth,
-            allowed_entity_types,
-            allowed_relationship_types,
-            entity_examples,
-            entity_name_examples,
-            validate,
-            validation_action,
+            collection=collection,
+            entity_extraction_model=entity_extraction_model,
+            entity_prompt=entity_prompt,
+            query_prompt=query_prompt,
+            max_depth=max_depth,
+            allowed_entity_types=allowed_entity_types,
+            allowed_relationship_types=allowed_relationship_types,
+            entity_examples=entity_examples,
+            entity_name_examples=entity_name_examples,
+            validate=validate,
+            validation_action=validation_action,
         )
 
     def close(self) -> None:
         """Close the resources used by the MongoDBGraphStore."""
         self.collection.database.client.close()
 
-    def _write_entities(self, entities: List[Entity]) -> BulkWriteResult:
+    def _write_entities(self, entities: List[Entity]) -> BulkWriteResult | None:
         """Isolate logic to insert and aggregate entities."""
         operations = []
         for entity in entities:
@@ -330,6 +331,7 @@ class MongoDBGraphStore:
         # Execute bulk write for the entities
         if operations:
             return self.collection.bulk_write(operations)
+        return None
 
     def add_documents(
         self, documents: Union[Document, List[Document]]
@@ -351,7 +353,9 @@ class MongoDBGraphStore:
             entities = self.extract_entities(doc.page_content)
             logger.debug(f"Entities found: {[e['_id'] for e in entities]}")
             # Insert new or combine with existing entities
-            results.append(self._write_entities(entities))
+            new_results = self._write_entities(entities)
+            assert new_results is not None
+            results.append(new_results)
         return results
 
     def extract_entities(self, raw_document: str, **kwargs: Any) -> List[Entity]:
@@ -363,9 +367,9 @@ class MongoDBGraphStore:
             List of Entity dictionaries.
         """
         # Combine the LLM with the prompt template to form a chain
-        chain: RunnableSequence = self.entity_prompt | self.entity_extraction_model
+        chain = self.entity_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
-        response: AIMessage = chain.invoke(
+        response = chain.invoke(
             dict(
                 input_document=raw_document,
                 entity_schema=self.entity_schema,
@@ -376,6 +380,7 @@ class MongoDBGraphStore:
         )
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and trailing ```
+        assert isinstance(response.content, str)
         json_string = (
             response.content.removeprefix("```json").removesuffix("```").strip()
         )
@@ -395,9 +400,9 @@ class MongoDBGraphStore:
             List of entity names / _ids.
         """
         # Combine the llm with the prompt template to form a chain
-        chain: RunnableSequence = self.query_prompt | self.entity_extraction_model
+        chain = self.query_prompt | self.entity_extraction_model
         # Invoke on a document to extract entities and relationships
-        response: AIMessage = chain.invoke(
+        response = chain.invoke(
             dict(
                 input_document=raw_document,
                 entity_name_examples=self.entity_name_examples,
@@ -406,6 +411,7 @@ class MongoDBGraphStore:
         )
         # Post-Process output string into list of entity json documents
         # Strip the ```json prefix and suffix
+        assert isinstance(response.content, str)
         json_string = (
             response.content.removeprefix("```json").removesuffix("```").strip()
         )
@@ -489,7 +495,7 @@ class MongoDBGraphStore:
                 }
             },
         ]
-        return list(self.collection.aggregate(pipeline))
+        return list(self.collection.aggregate(pipeline))  # type:ignore[arg-type]
 
     def similarity_search(self, input_document: str) -> List[Entity]:
         """Retrieve list of connected Entities found via traversal of KnowledgeGraph.
@@ -509,9 +515,9 @@ class MongoDBGraphStore:
     def chat_response(
         self,
         query: str,
-        chat_model: BaseChatModel = None,
-        prompt: ChatPromptTemplate = None,
-    ) -> AIMessage:
+        chat_model: Optional[BaseChatModel] = None,
+        prompt: Optional[ChatPromptTemplate] = None,
+    ) -> BaseMessage:
         """Responds to a query given information found in Knowledge Graph.
 
         Args:
@@ -529,7 +535,7 @@ class MongoDBGraphStore:
         # Perform Retrieval on knowledge graph
         related_entities = self.similarity_search(query)
         # Combine the LLM with the prompt template to form a chain
-        chain: RunnableSequence = prompt | chat_model
+        chain = prompt | chat_model
         # Invoke with query
         return chain.invoke(
             dict(

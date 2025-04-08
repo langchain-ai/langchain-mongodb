@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from importlib.metadata import version
-from typing import Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -82,7 +82,7 @@ class MongoDBLoader(BaseLoader):
             include_db_collection_in_metadata (bool): Flag to include database and
             collection names in metadata.
         """
-        client = MongoClient(
+        client: MongoClient[dict[str, Any]] = MongoClient(
             connection_string,
             driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
         )

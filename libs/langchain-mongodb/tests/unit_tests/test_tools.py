@@ -20,7 +20,7 @@ class TestQueryMongoDBDatabaseToolUnit(ToolsUnitTests):
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=MongoDBDatabase(MockClient(), "test"))
+        return dict(db=MongoDBDatabase(MockClient(), "test"))  # type:ignore[arg-type]
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -34,7 +34,7 @@ class TestInfoMongoDBDatabaseToolUnit(ToolsUnitTests):
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=MongoDBDatabase(MockClient(), "test"))
+        return dict(db=MongoDBDatabase(MockClient(), "test"))  # type:ignore[arg-type]
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -48,7 +48,7 @@ class TestListMongoDBDatabaseToolUnit(ToolsUnitTests):
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=MongoDBDatabase(MockClient(), "test"))
+        return dict(db=MongoDBDatabase(MockClient(), "test"))  # type:ignore[arg-type]
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -62,7 +62,7 @@ class TestQueryMongoDBCheckerToolUnit(ToolsUnitTests):
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=MongoDBDatabase(MockClient(), "test"), llm=FakeLLM())
+        return dict(db=MongoDBDatabase(MockClient(), "test"), llm=FakeLLM())  # type:ignore[arg-type]
 
     @property
     def tool_invoke_params_example(self) -> dict:

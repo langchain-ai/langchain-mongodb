@@ -178,7 +178,7 @@ class MongoDBAtlasSelfQueryRetriever(SelfQueryRetriever):
     """Use original query instead of the LLM's revised query that removes statements with filters."""
 
     @classmethod
-    def from_llm(
+    def from_llm(  # type:ignore[override]
         cls,
         llm: BaseLanguageModel,
         vectorstore: VectorStore,

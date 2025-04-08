@@ -11,7 +11,7 @@ from langchain_core.callbacks.manager import (
     CallbackManagerForLLMRun,
 )
 from langchain_core.embeddings import Embeddings
-from langchain_core.language_models.chat_models import SimpleChatModel
+from langchain_core.language_models.chat_models import BaseChatModel, SimpleChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import (
     AIMessage,
@@ -31,7 +31,7 @@ from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 
 TIMEOUT = 120
 INTERVAL = 0.5
-CONNECTION_STRING = os.environ.get("MONGODB_URI")
+CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
 
 
 DB_NAME = "langchain_test_db"
@@ -45,7 +45,7 @@ def create_database() -> MongoDBDatabase:
     return MongoDBDatabase(client, DB_NAME)
 
 
-def create_llm() -> LLM:
+def create_llm() -> BaseChatModel:
     if os.environ.get("OPENAI_API_KEY"):
         return ChatOpenAI(model="gpt-4o-mini", timeout=60, cache=False)
     return ChatOllama(model="llama3:8b", cache=False)
@@ -216,7 +216,7 @@ class FakeLLM(LLM):
 
 
 class MockClient:
-    is_closed: False
+    is_closed = False
 
     def __getitem__(self, key: str) -> Any:
         return MockDatabase(self)
@@ -246,13 +246,13 @@ class MockCollection(Collection):
     _data: List[Any]
     _simulate_cache_aggregation_query: bool
 
-    def __init__(self, database=None) -> None:
+    def __init__(self, database: MockDatabase | None = None) -> None:
         self._data = []
         self.is_closed = False
         self._aggregate_result = []
         self._insert_result = None
         self._simulate_cache_aggregation_query = False
-        self._database = database or MockDatabase()
+        self._database = database or MockDatabase()  # type:ignore[assignment]
 
     @property
     def database(self):

@@ -13,6 +13,7 @@ from langchain_core.callbacks import (
 from langchain_core.prompts import PromptTemplate
 from .database import MongoDBDatabase
 from langchain_core.tools import BaseTool
+from pymongo.cursor import Cursor
 from .prompt import MONGODB_QUERY_CHECKER
 
 
@@ -41,7 +42,7 @@ class QueryMongoDBDatabaseTool(BaseMongoDBDatabaseTool, BaseTool):  # type: igno
     """
     args_schema: Type[BaseModel] = _QueryMongoDBDatabaseToolInput
 
-    def _run(self, query: str, **kwargs: Any) -> Union[str, Sequence[Dict[str, Any]]]:
+    def _run(self, query: str, **kwargs: Any) -> str | Cursor:
         """Execute the query, return the results or an error message."""
         return self.db.run_no_throw(query)
 
@@ -131,10 +132,10 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
 
     def _run(
         self,
-        query: str,
+        input: dict[str, Any],
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
         """Use the LLM to check the query."""
         # TODO: check the query using pymongo first.
         chain = self.prompt | self.llm
-        return chain.invoke(query)
+        return chain.invoke(input)

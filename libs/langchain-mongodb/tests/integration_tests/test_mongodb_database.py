@@ -75,6 +75,7 @@ def test_database_run(db: MongoDBDatabase) -> None:
     # Query and verify.
     command = """db.user.aggregate([ { "$match": { "name": "Harrison" } } ])"""
     output = db.run(command)
+    assert isinstance(output, str)
     docs = json.loads(output.strip())
     del docs[0]["_id"]
     del user["_id"]

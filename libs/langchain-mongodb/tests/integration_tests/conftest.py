@@ -21,7 +21,7 @@ def technical_report_pages() -> List[Document]:
 
 
 @pytest.fixture(scope="session")
-def client() -> Generator[None, None, MongoClient]:
+def client() -> Generator[MongoClient]:
     client = MongoClient(CONNECTION_STRING)
     yield client
     client.close()

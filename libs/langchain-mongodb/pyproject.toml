@@ -40,6 +40,7 @@ dev = [
     "langgraph>=0.2.72",
     "flaky>=3.8.1",
     "langchain-tests==0.3.14",
+    "pip>=25.0.1",
 ]
 
 [tool.pytest.ini_options]
@@ -53,6 +54,10 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disable_error_code = ["no-untyped-def", "no-untyped-call", "var-annotated"]
 
 [tool.ruff]
 lint.select = [
