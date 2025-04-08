@@ -132,10 +132,10 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
 
     def _run(
         self,
-        input: dict[str, Any],
+        query: str,
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
         """Use the LLM to check the query."""
         # TODO: check the query using pymongo first.
         chain = self.prompt | self.llm
-        return chain.invoke(input)
+        return chain.invoke(query)  # type:ignore[arg-type]
