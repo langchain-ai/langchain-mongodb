@@ -2,6 +2,11 @@
 
 ---
 
+## Changes in version 0.6.1 (2025/04/16)
+
+- Fixed a syntax error in a docstring.
+- Fixed some incorrect typings.
+
 ## Changes in version 0.6 (2025/03/26)
 
 - Added Natural language to MQL Database tool.
