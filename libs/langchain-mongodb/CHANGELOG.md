@@ -6,6 +6,8 @@
 
 - Fixed a syntax error in a docstring.
 - Fixed some incorrect typings.
+- Added detail to README
+- Added MongoDBDocStore to README.
 
 ## Changes in version 0.6 (2025/03/26)
 
