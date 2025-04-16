@@ -68,7 +68,7 @@ def maximal_marginal_relevance(
     lambda_mult: float = 0.5,
     k: int = 4,
 ) -> List[int]:
-    """Compute Maximal Marginal Relevance (MMR).
+    r"""Compute Maximal Marginal Relevance (MMR).
 
     MMR is a technique used to select documents that are both relevant to the query
     and diverse among themselves. This function returns the indices
