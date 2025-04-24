@@ -3,10 +3,12 @@ from collections.abc import Generator
 from datetime import datetime
 
 import pytest
+from langchain_ollama.embeddings import OllamaEmbeddings
 from pymongo import MongoClient
 
 from langgraph.store.base import (
     GetOp,
+    IndexConfig,
     Item,
     ListNamespacesOp,
     MatchCondition,
@@ -309,7 +311,7 @@ def test_batch(store: MongoDBStore) -> None:
         assert len(results) == 0
 
 
-def test_search(store: MongoDBStore) -> None:
+def test_search_basic(store: MongoDBStore) -> None:
     result = store.search(("a", "b"))
     assert len(result) == 4
     assert all(isinstance(res, Item) for res in result)
@@ -318,3 +320,41 @@ def test_search(store: MongoDBStore) -> None:
     store.put(namespace=namespace, key="id_foo", value={"data": "value_foo"})
     result = store.search(namespace, filter={"value.data": "value_foo"})
     assert len(result) == 1
+
+
+def test_search_semantic(store: MongoDBStore) -> None:
+    """
+    - Test filter as well as query
+    - Test embedding of value dictionary.
+        - First, that it works.
+        - 2nd - what forms we can take
+        - is it always dict[str]
+    """
+
+    index_config = IndexConfig(
+        dims=384, fields=["data"], embed=OllamaEmbeddings(model="all-minilm:l6-v2")
+    )
+
+    with MongoDBStore.from_conn_string(
+        conn_string=MONGODB_URI,
+        db_name=DB_NAME,
+        collection_name="semantic_search",
+        vector_index_config=index_config,
+    ) as store:
+        namespaces = [
+            ("a", "b", "c"),
+            ("a", "b", "d", "e"),
+            ("a", "b", "d", "i"),
+            ("a", "b", "f"),
+            ("a", "c", "f"),
+            ("b", "a", "f"),
+            ("users", "123"),
+            ("users", "456", "settings"),
+            ("admin", "users", "789"),
+        ]
+        # Case 1: fields is a string:
+        for i, ns in enumerate(namespaces):
+            store.put(namespace=ns, key=f"id_{i}", value={"data": f"value_{i:02d}"})
+
+        result = store.search(("a",), query="Please return values for 4")
+        assert result is not None

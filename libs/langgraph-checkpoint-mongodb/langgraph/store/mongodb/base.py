@@ -6,7 +6,9 @@ from importlib.metadata import version
 from typing import Any, Literal, Optional, TypeVar, Union
 
 from bson import SON
+from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
+from langchain_mongodb.index import create_vector_search_index
 from pymongo import (
     DeleteOne,
     MongoClient,
@@ -19,6 +21,7 @@ from langgraph.store.base import (
     NOT_PROVIDED,
     BaseStore,
     GetOp,
+    IndexConfig,
     Item,
     ListNamespacesOp,
     NamespacePath,
@@ -48,25 +51,38 @@ class MongoDBStore(BaseStore):
     """
 
     supports_ttl: bool = True
-    """TTL is supported by a TTL index of field: updated_at."""
 
     def __init__(
         self,
         collection: Collection,
         ttl_config: Optional[TTLConfig] = None,
+        vector_index_config: Optional[
+            IndexConfig
+        ] = None,  # includes Embeddings, dimensions, fields
+        index_name: str = "vector_index",  # TODO Change name to vector_index_name
+        relevance_score_fn: str = "cosine",
+        auto_index_timeout: int = 15,
         **kwargs: Any,
     ):
         """Construct store and its indexes.
 
+        Semantic search is supported by a Atlas vector search index
+        TTL (time to live)  is supported by a TTL index of field: updated_at.
+
         Args:
             collection: Collection of Items backing the store.
             ttl_config: Optionally define a TTL and whether to update on reads(get/search).
+            # TODO Add remaining
 
         Returns:
             Instance of MongoDBStore.
         """
         self.collection = collection
         self.ttl_config = ttl_config
+        self.vector_index_config = vector_index_config
+        self._index_name = index_name
+        self._relevance_score_fn = relevance_score_fn
+
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
@@ -82,6 +98,28 @@ class MongoDBStore(BaseStore):
             self.collection.create_index(
                 "updated_at", expireAfterSeconds=self.ttl_config["default_ttl"]
             )
+
+        # If details provided, create a vector index for semantic queries
+        if vector_index_config:
+            self._embedding = vector_index_config.get("embed", None)
+            if not isinstance(self._embedding, Embeddings):
+                raise ValueError(
+                    "vector_index_config[embed] must have an Embeddings instance."
+                )
+            if not any(
+                [
+                    ix["name"] == self._index_name
+                    for ix in collection.list_search_indexes()
+                ]
+            ):
+                create_vector_search_index(
+                    collection=collection,
+                    index_name=self._index_name,
+                    dimensions=vector_index_config["dims"],
+                    path="embeddings",
+                    similarity=self._relevance_score_fn,
+                    wait_until_complete=auto_index_timeout,
+                )
 
     def put(
         self,
