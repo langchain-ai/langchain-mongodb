@@ -466,6 +466,9 @@ class MongoDBStore(BaseStore):
         One uses dot notation to access embedded fields. For example,
         `value.text`, `value.address.city` and for arrays `value.titles.3`.
 
+        Note that when search will not update the `last_updated` field
+        and thus not affect TTL, unlike `get`.
+
         Args:
             namespace_prefix: Hierarchical path prefix to search within.
             query: Optional query for natural language search.
@@ -518,26 +521,6 @@ class MongoDBStore(BaseStore):
         if limit:
             pipeline.append({"$limit": limit})
 
-        """
-        if refresh_ttl is True or (
-            self.ttl_config
-            and refresh_ttl is None
-            and self.ttl_config["refresh_on_read"]
-        ):
-            pipeline.append({"$set": {"updated_at": "$$NOW"}})
-
-
-            pipeline.append(
-                {
-                    "$merge": {
-                        "into": self.collection.name,
-                        "on": "_id",  # compound key
-                        "whenMatched": "merge",  # merge with existing document
-                        "whenNotMatched": "fail",    # or "insert" if you want to add new docs
-                    }
-                }
-            )
-        """
         results = self.collection.aggregate(pipeline)
 
         return [
