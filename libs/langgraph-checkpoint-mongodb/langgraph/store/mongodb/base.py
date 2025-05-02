@@ -9,6 +9,7 @@ from bson import SON
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
 from langchain_mongodb.index import create_vector_search_index
+from langchain_mongodb.pipelines import vector_search_stage
 from pymongo import (
     DeleteOne,
     MongoClient,
@@ -33,11 +34,84 @@ from langgraph.store.base import (
     SearchOp,
     TTLConfig,
 )
+from langgraph.store.base.embed import (
+    AEmbeddingsFunc,
+    EmbeddingsFunc,
+    ensure_embeddings,
+    get_text_at_path,
+)
 
 K = TypeVar("K")
 V = TypeVar("V")
 
 logger = logging.getLogger(__name__)
+
+
+# TODO REVIEW: Use of Typed Dicts as opposed to class kwargs.
+#   - Reduces __init__ kwargs that are optional
+#   - Does not provide defaults. (Subsequently, I created a utility ...
+class VectorIndexConfig(IndexConfig, total=False):
+    """Configuration for a MongoDB Atlas Vector Index.
+
+    Vector Search can be Approximate Nearest Neighbor (ANN) or Exact (ENN).
+    For ANN, Atlas uses HNSW (Hierarchical Navigable Small World).
+    """
+
+    name: str
+    """Name of the index attached to the Collection in the Atlas Database."""
+
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct"]
+    """Similarity scoring function used to compare vectors."""
+
+    embedding_key: str
+    """This field will contain the embedding vector for the value.
+
+    MongoDB does not require a separate Vector Store.
+    It is designed to have one vector per document.
+    """
+
+    filters: list[str]
+    """List of fields to index on.
+
+    These can refer to embedded values (e.g. value.data
+    Fields must be included in the index if they are to be filtered upon.
+    The `namespace` field will always be included.
+    """
+
+
+def create_vector_index_config(
+    dims: int,
+    embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
+    fields: Optional[list[str]] = None,
+    name: str = "vector_index",
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct"] = "cosine",
+    embedding_key: str = "embedding",
+    filters: Optional[list[str]] = None,
+) -> VectorIndexConfig:
+    """Utility method to create a VectorIndexConfig instance with sensible defaults."""
+
+    if filters and "namespace_prefix" not in filters:
+        filters.append("namespace_prefix")
+
+    return VectorIndexConfig(
+        dims=dims,
+        embed=embed,
+        fields=fields,
+        name=name,
+        relevance_score_fn=relevance_score_fn,
+        embedding_key=embedding_key,
+        filters=filters,
+    )
+
+
+def _ensure_vector_index_fields(fields: Optional[list[str]]) -> str:
+    """Ensure that requested fields to be indexed result in a single vector."""
+    if fields and (len(fields) > 1 or "*" in fields[0]):
+        raise ValueError("Only one field can be indexed for queries.")
+    if isinstance(fields, list):
+        return fields[0]
+    else:
+        return fields
 
 
 class MongoDBStore(BaseStore):
@@ -48,6 +122,8 @@ class MongoDBStore(BaseStore):
 
     Supports semantic search capabilities through
     an optional `index` configuration.
+    Only a single embedding is permitted per item, although embedded fields
+    can be indexed via ["parent.child"].
     """
 
     supports_ttl: bool = True
@@ -56,11 +132,7 @@ class MongoDBStore(BaseStore):
         self,
         collection: Collection,
         ttl_config: Optional[TTLConfig] = None,
-        vector_index_config: Optional[
-            IndexConfig
-        ] = None,  # includes Embeddings, dimensions, fields
-        index_name: str = "vector_index",  # TODO Change name to vector_index_name
-        relevance_score_fn: str = "cosine",
+        index_config: Optional[VectorIndexConfig] = None,
         auto_index_timeout: int = 15,
         **kwargs: Any,
     ):
@@ -69,19 +141,23 @@ class MongoDBStore(BaseStore):
         Semantic search is supported by a Atlas vector search index
         TTL (time to live)  is supported by a TTL index of field: updated_at.
 
+
         Args:
             collection: Collection of Items backing the store.
             ttl_config: Optionally define a TTL and whether to update on reads(get/search).
-            # TODO Add remaining
+            index_config: Optionally define a VectorIndexConfig for semantic search.
+            auto_index_timeout: Optional timeout for creation of indexes.
 
         Returns:
             Instance of MongoDBStore.
         """
+
         self.collection = collection
-        self.ttl_config = ttl_config
-        self.vector_index_config = vector_index_config
-        self._index_name = index_name
-        self._relevance_score_fn = relevance_score_fn
+        self.ttl_config = {} if ttl_config is None else ttl_config
+        self.index_config = {} if index_config is None else index_config
+        self._index_name = self.index_config.get("name", "vector_index")
+        self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
+        self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
@@ -91,7 +167,7 @@ class MongoDBStore(BaseStore):
 
         # Optionally, expire values using [TTL Index](https://www.mongodb.com/docs/manual/core/index-ttl/)
         if (
-            self.ttl_config is not None
+            self.ttl_config
             and SON([("updated_at", 1)]) not in idx_keys
             and self.ttl_config["default_ttl"]
         ):
@@ -99,29 +175,52 @@ class MongoDBStore(BaseStore):
                 "updated_at", expireAfterSeconds=self.ttl_config["default_ttl"]
             )
 
-        # If details provided, create a vector index for semantic queries
-        if vector_index_config:
-            self._embedding = vector_index_config.get("embed", None)
-            if not isinstance(self._embedding, Embeddings):
-                raise ValueError(
-                    "vector_index_config[embed] must have an Embeddings instance."
-                )
+        # If details provided, prepare vector index for semantic queries
+        if self.index_config:
+            self.index_field = _ensure_vector_index_fields(self.index_config["fields"])
+            self.embeddings: Embeddings = ensure_embeddings(
+                self.index_config.get("embed"),
+            )
+            self.sep = kwargs.get("sep", "/")
+
+            # Create the vector index if it does not yet exist
             if not any(
                 [
                     ix["name"] == self._index_name
                     for ix in collection.list_search_indexes()
                 ]
             ):
+                if (
+                    index_config
+                    and index_config.get("filters")
+                    and "namespace_prefix" not in index_config["filters"]
+                ):
+                    index_config["filters"].append("namespace_prefix")
+
                 create_vector_search_index(
                     collection=collection,
                     index_name=self._index_name,
-                    dimensions=vector_index_config["dims"],
-                    path="embeddings",
+                    dimensions=self.index_config["dims"],
+                    path=self._embedding_key,
                     similarity=self._relevance_score_fn,
+                    filters=self.index_config.get("filters"),
                     wait_until_complete=auto_index_timeout,
                 )
 
-    def put(
+    def denormalize_path(self, paths: tuple[str, ...] | list[str]) -> list[str]:
+        """Create list of path parents, for use in $vectorSearch filter.
+
+        ???+ example "Example"
+        ```python
+        namespace = ('parent', 'child', 'pet')
+        prefixes=store_mdb.denormalize_path(namespace)
+        assert prefixes == ['parent', 'parent/child', 'parent/child/pet']
+        ```
+
+        """
+        return [self.sep.join(paths[:i]) for i in range(1, len(paths) + 1)]
+
+    def put_deprecated(
         self,
         namespace: tuple[str, ...],
         key: str,
@@ -252,7 +351,7 @@ class MongoDBStore(BaseStore):
         offset: int = 0,
     ) -> list[tuple[str, ...]]:
         """List and filter namespaces in the store."""
-        pipeline = []
+        pipeline: list[dict[str, Any]] = []
         expr = {}
         if prefix:
             pcond = self._match_prefix(prefix)
@@ -296,6 +395,10 @@ class MongoDBStore(BaseStore):
     def batch(self, ops: Iterable[Op]) -> list[Result]:
         """Execute multiple operations synchronously in a single batch.
 
+        Get, Search, and List operations are performed on state before batch.
+        Put and Delete change state. They are deduplicated and applied in order,
+        but only after the read operations have completed.
+
         Args:
             ops: An iterable of operations to execute.
 
@@ -304,52 +407,28 @@ class MongoDBStore(BaseStore):
             The order of results matches the order of input operations.
             The length of output may not match the input as PutOp returns None.
         """
-        results = []
-        curr_batch = []
+        results: list[Result] = []
+        dedupped_putops: dict[tuple[tuple[str, ...], str], PutOp] = {}
+        writes: list[Union[DeleteOne, UpdateOne]] = []
+
         for op in ops:
             if isinstance(op, PutOp):
-                if op.value is None:
-                    # mark the item for deletion.
-                    curr_batch.append(
-                        DeleteOne(
-                            filter={"namespace": list(op.namespace), "key": op.key}
-                        )
-                    )
-                else:
-                    # Add or Upsert the value
-                    curr_batch.append(
-                        UpdateOne(
-                            filter={"namespace": list(op.namespace), "key": op.key},
-                            update={
-                                "$set": {
-                                    "value": op.value,
-                                    "updated_at": datetime.now(tz=timezone.utc),
-                                },
-                                "$setOnInsert": {
-                                    "created_at": datetime.now(tz=timezone.utc),
-                                },
-                            },
-                            upsert=True,
-                        )
-                    )
+                dedupped_putops[(op.namespace, op.key)] = op
+                results.append(None)
+
             elif isinstance(op, GetOp):
-                if curr_batch:
-                    self.collection.bulk_write(curr_batch)
-                    curr_batch = []
                 results.append(
                     self.get(
-                        namespace=list(op.namespace),
+                        namespace=op.namespace,
                         key=op.key,
                         refresh_ttl=op.refresh_ttl,
                     )
                 )
+
             elif isinstance(op, SearchOp):
-                if curr_batch:
-                    self.collection.bulk_write(curr_batch)
-                    curr_batch = []
                 results.append(
                     self.search(
-                        list(op.namespace_prefix),
+                        op.namespace_prefix,
                         query=op.query,
                         filter=op.filter,
                         limit=op.limit,
@@ -357,11 +436,8 @@ class MongoDBStore(BaseStore):
                         refresh_ttl=op.refresh_ttl,
                     )
                 )
-            elif isinstance(op, ListNamespacesOp):
-                if curr_batch:
-                    self.collection.bulk_write(curr_batch)
-                    curr_batch = []
 
+            elif isinstance(op, ListNamespacesOp):
                 prefix = None
                 suffix = None
                 if op.match_conditions:
@@ -383,8 +459,46 @@ class MongoDBStore(BaseStore):
                         offset=op.offset,
                     )
                 )
-        if curr_batch:
-            self.collection.bulk_write(curr_batch)
+
+        # TODO - optimize this. Must be able to loop once
+        # put_ops = {idx: op_dict}
+        # Extract texts to embed for each op
+        if self.index_config:
+            texts = self._extract_texts(list(dedupped_putops.values()))
+            vectors = self.embeddings.embed_documents(texts)
+            v = 0
+        for op in dedupped_putops.values():
+            if op.value is None:
+                # mark the item for deletion.
+                writes.append(
+                    DeleteOne(filter={"namespace": list(op.namespace), "key": op.key})
+                )
+            else:
+                # Add or Upsert the value
+                to_set = {
+                    "value": op.value,
+                    "updated_at": datetime.now(tz=timezone.utc),
+                }
+                if self.index_config:
+                    to_set[self._embedding_key] = vectors[v]
+                    to_set["namespace_prefix"] = self.denormalize_path(op.namespace)
+                    v += 1
+
+                writes.append(
+                    UpdateOne(
+                        filter={"namespace": list(op.namespace), "key": op.key},
+                        update={
+                            "$set": to_set,
+                            "$setOnInsert": {
+                                "created_at": datetime.now(tz=timezone.utc),
+                            },
+                        },
+                        upsert=True,
+                    )
+                )
+
+        if writes:
+            self.collection.bulk_write(writes)
         return results
 
     async def abatch(self, ops: Iterable[Op]) -> list[Result]:
@@ -407,6 +521,7 @@ class MongoDBStore(BaseStore):
         db_name: str = "checkpointing_db",
         collection_name: str = "persistent-store",
         ttl_config: Optional[TTLConfig] = None,
+        index_config: Optional[VectorIndexConfig] = None,
         **kwargs: Any,
     ) -> Iterator["MongoDBStore"]:
         """Context manager to create a persistent MongoDB key-value store.
@@ -425,6 +540,7 @@ class MongoDBStore(BaseStore):
             db_name: Database name. It will be created if it doesn't exist.
             collection_name: Collection name backing the store. Created if it doesn't exist.
             ttl_config: Defines a TTL (in seconds) and whether to update on reads(get/search).
+            # TODO Add remaining
         Yields: A new MongoDBStore.
         """
         client: Optional[MongoClient] = None
@@ -443,6 +559,7 @@ class MongoDBStore(BaseStore):
             yield MongoDBStore(
                 collection=collection,
                 ttl_config=ttl_config,
+                index_config=index_config,
                 **kwargs,
             )
         finally:
@@ -459,6 +576,7 @@ class MongoDBStore(BaseStore):
         limit: int = 10,
         offset: int = 0,
         refresh_ttl: Optional[bool] = None,
+        **kwargs: Any,
     ) -> list[SearchItem]:
         """Search for items within a namespace prefix.
 
@@ -503,23 +621,48 @@ class MongoDBStore(BaseStore):
 
         """
 
-        if query:
-            raise NotImplementedError("Natural language search not yet implemented.")
-
+        if not isinstance(namespace_prefix, tuple):
+            raise TypeError("namespace_prefix must be a non-empty tuple of strings")
         if offset:
-            logger.warning("offset is not implemented in MongoDBStore")
+            raise NotImplementedError("offset is not implemented in MongoDBStore")
 
-        pipeline = []
-        match_cond = {}
-        if namespace_prefix:
-            match_cond = {"$expr": self._match_prefix(namespace_prefix)}
-        if filter:
-            filter_cond = [{k: v} for k, v in filter.items()]
-            match_cond = {"$and": [match_cond] + filter_cond}
-        pipeline.append({"$match": match_cond})
+        if query is None:
+            # Case 1. $match namespace and filter
+            pipeline: list[dict[str, Any]] = []
+            match_cond: dict[str, Any] = {}
+            if namespace_prefix:
+                match_cond = {"$expr": self._match_prefix(namespace_prefix)}
+            if filter:
+                filter_cond = [{k: v} for k, v in filter.items()]
+                match_cond = {"$and": [match_cond] + filter_cond}
+            pipeline.append({"$match": match_cond})
+            if limit:
+                pipeline.append({"$limit": limit})
 
-        if limit:
-            pipeline.append({"$limit": limit})
+        else:
+            # Case 2. $vectorSearch on query filtered on namespace and optional filters
+
+            # Compute embedding
+            query_vector = self.embeddings.embed_query(query)
+
+            # Form filter condition for namespace_prefix
+            filter_vec = {"namespace_prefix": self.sep.join(namespace_prefix)}
+            if filter:  # and add any specified
+                filter_vec = {
+                    "$and": [{k: v} for k, v in filter.items()] + [filter_vec]
+                }
+
+            pipeline = [
+                vector_search_stage(
+                    query_vector=query_vector,
+                    search_field=self._embedding_key,
+                    index_name=self._index_name,
+                    top_k=limit,
+                    filter=filter_vec,
+                ),
+                {"$set": {"score": {"$meta": "vectorSearchScore"}}},
+                {"$project": {self._embedding_key: 0}},
+            ]
 
         results = self.collection.aggregate(pipeline)
 
@@ -534,3 +677,39 @@ class MongoDBStore(BaseStore):
             )
             for res in results
         ]
+
+    def _extract_texts(self, put_ops: Optional[list[PutOp]]) -> list[str]:
+        """Extract text to embed according to index config."""
+        if put_ops and self.index_config and self.embeddings:
+            to_embed = []
+            for op in put_ops:
+                if op.value is not None and op.index is not False:
+                    if op.index is None:
+                        field = self.index_field
+                    else:
+                        field = _ensure_vector_index_fields(list(op.index))
+                    texts = get_text_at_path(op.value, field)
+                    if texts:
+                        if len(texts) > 1:
+                            raise ValueError("Got multiple texts. Report as bug.")
+
+                        else:
+                            to_embed.append(texts[0])
+                return to_embed
+            return []
+
+    # TODO
+    #   - (Cleanup) Decide whether we always call batch, or batch call individual functions
+    #       - For put it makes sense,ind
+    #   - Determine default behavior and API for index_config
+    #   - Add tests comparing against InMemoryStore
+    #   - Documentation!
+
+    # TODO - Design Concerns
+    #   - batches of puts with embedding?
+    #       - compute embeddings in one call
+    #       -loop over puts ( and deletes) add UpdateOne/DeleteOne. Single Call to bulk_write
+    #   - batch of gets. What options do we have available? I use find_one_and_update
+    #   - batch of vector search
+    #       - batching can benefit us by calling embedding once
+    #       - I still would have a different $vectorSearch for each thouth..

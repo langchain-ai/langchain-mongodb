@@ -3,21 +3,24 @@ from collections.abc import Generator
 from datetime import datetime
 
 import pytest
-from langchain_ollama.embeddings import OllamaEmbeddings
 from pymongo import MongoClient
 
 from langgraph.store.base import (
     GetOp,
-    IndexConfig,
     Item,
     ListNamespacesOp,
     MatchCondition,
     PutOp,
     TTLConfig,
 )
-from langgraph.store.mongodb import MongoDBStore
+from langgraph.store.mongodb import (
+    MongoDBStore,
+    create_vector_index_config,
+)
 
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.environ.get(
+    "MONGODB_URI", "mongodb://localhost:27017?directConnection=true"
+)
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "long_term_memory"
 
@@ -254,8 +257,8 @@ def test_put(store: MongoDBStore) -> None:
     store.put(namespace=("a",), key=f"id_{n}", value={"data": f"value_{n:02d}"})
     assert store.collection.count_documents({}) == n + 1
 
-    with pytest.raises(NotImplementedError):
-        store.put(("a",), "idx", {"data": "val"}, index=["idx"])
+    # Include one that includes index arg
+    store.put(("a",), "idx", {"data": "val"}, index=["data"])
 
 
 def test_delete(store: MongoDBStore) -> None:
@@ -266,8 +269,14 @@ def test_delete(store: MongoDBStore) -> None:
     assert store.collection.count_documents({}) == n_items - 1
 
 
-def test_batch(store: MongoDBStore) -> None:
-    """
+def test_batch() -> None:
+    """Simple demonstration of order of batch operations.
+
+    Read operations, regardless of their order in the list of operations,
+    act on the state of the database at the beginning of the batch.
+    These include GetOp SearchOp, and ListNamespacesOp.
+
+    Write operations are applied only *after* reads!
 
     Cases:
     PutOp
@@ -297,18 +306,30 @@ def test_batch(store: MongoDBStore) -> None:
         collection_name=COLLECTION_NAME,
         ttl_config=TTLConfig(default_ttl=3600, refresh_on_read=True),
     ) as store:
-        # 1. Add 1, read it, list namespaces, and delete one item.
+        # 1. Put 1, read it, list namespaces, and delete one item.
+        #   => not any(results)
         store.collection.delete_many({})
+        n_ops = 4
         results = store.batch([op_put, op_get, op_list, op_del])
         assert store.collection.count_documents({}) == 0
-        assert len(results) == 2
-        assert isinstance(results[0], Item)
-        assert isinstance(results[1], list) and isinstance(results[1][0], tuple)
+        assert len(results) == n_ops
+        assert not any(results)
 
-        # 2. ops only include writes
-        results = store.batch([op_put, op_del])
-        assert store.collection.count_documents({}) == 0
-        assert len(results) == 0
+        # 2. delete, put, get
+        # => not any(results)
+        n_ops = 3
+        results = store.batch([op_get, op_del, op_put])
+        assert store.collection.count_documents({}) == 1
+        assert len(results) == n_ops
+        assert not any(results)
+
+        # 3. delete, put, get
+        # => get sees item from put in previous batch
+        n_ops = 2
+        results = store.batch([op_del, op_get, op_list])
+        assert results[0] is None
+        assert isinstance(results[1], Item)
+        assert isinstance(results[2], list) and isinstance(results[2][0], tuple)
 
 
 def test_search_basic(store: MongoDBStore) -> None:
@@ -322,8 +343,8 @@ def test_search_basic(store: MongoDBStore) -> None:
     assert len(result) == 1
 
 
-def test_search_semantic(store: MongoDBStore) -> None:
-    """
+def test_search_semantic(dimensions, embedding) -> None:
+    """Small test using a vector index, searches with query and namespace_prefix
     - Test filter as well as query
     - Test embedding of value dictionary.
         - First, that it works.
@@ -331,15 +352,27 @@ def test_search_semantic(store: MongoDBStore) -> None:
         - is it always dict[str]
     """
 
-    index_config = IndexConfig(
-        dims=384, fields=["data"], embed=OllamaEmbeddings(model="all-minilm:l6-v2")
+    COLLECTION_NAME = "store_with_index"
+    INDEX_NAME = "test_store_index"
+
+    client: MongoClient = MongoClient(MONGODB_URI)
+    collection = client[DB_NAME][COLLECTION_NAME]
+    collection.delete_many({})
+    collection.drop_indexes()
+
+    srx_idxs = collection.list_search_indexes().to_list()
+    if any(idx["name"] == INDEX_NAME for idx in srx_idxs):
+        collection.drop_search_index(INDEX_NAME)
+
+    index_config = create_vector_index_config(
+        dims=dimensions, fields=["data"], embed=embedding
     )
 
     with MongoDBStore.from_conn_string(
         conn_string=MONGODB_URI,
         db_name=DB_NAME,
         collection_name="semantic_search",
-        vector_index_config=index_config,
+        index_config=index_config,
     ) as store:
         namespaces = [
             ("a", "b", "c"),
@@ -353,8 +386,20 @@ def test_search_semantic(store: MongoDBStore) -> None:
             ("admin", "users", "789"),
         ]
         # Case 1: fields is a string:
+
         for i, ns in enumerate(namespaces):
             store.put(namespace=ns, key=f"id_{i}", value={"data": f"value_{i:02d}"})
 
-        result = store.search(("a",), query="Please return values for 4")
-        assert result is not None
+        put_ops = []
+        for i, ns in enumerate(namespaces):
+            put_ops.append(
+                PutOp(
+                    namespace=ns,
+                    key=f"id_{i}",
+                    value={"data": f"value_{i}"},
+                    index=None,
+                )
+            )
+
+        result = store.search(("a", "b", "d"), query="Please return values for 4")
+        assert len(result) == 2
