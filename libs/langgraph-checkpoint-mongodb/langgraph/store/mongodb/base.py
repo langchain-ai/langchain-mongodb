@@ -19,14 +19,12 @@ from pymongo.collection import Collection, ReturnDocument
 from pymongo.driver_info import DriverInfo
 
 from langgraph.store.base import (
-    NOT_PROVIDED,
     BaseStore,
     GetOp,
     IndexConfig,
     Item,
     ListNamespacesOp,
     NamespacePath,
-    NotProvided,
     Op,
     PutOp,
     Result,
@@ -219,40 +217,6 @@ class MongoDBStore(BaseStore):
 
         """
         return [self.sep.join(paths[:i]) for i in range(1, len(paths) + 1)]
-
-    def put_deprecated(
-        self,
-        namespace: tuple[str, ...],
-        key: str,
-        value: dict[str, Any],
-        index: Optional[Union[Literal[False], list[str]]] = None,
-        *,
-        ttl: Union[Optional[float], "NotProvided"] = NOT_PROVIDED,
-    ) -> None:
-        """
-        _id may be a problem namespace+key is unique. put will insert or update, but _id will always be unique
-
-        """
-
-        if ttl:
-            logger.warning(
-                "ttl argument ignored. MongoDBStore TTL behavior is performed via a TTL Index."
-            )
-
-        if index:
-            raise NotImplementedError()  # TODO
-
-        op = UpdateOne(
-            filter={"namespace": list(namespace), "key": key},
-            update={
-                "$set": {"value": value, "updated_at": datetime.now(tz=timezone.utc)},
-                "$setOnInsert": {
-                    "created_at": datetime.now(tz=timezone.utc),
-                },
-            },
-            upsert=True,
-        )
-        self.collection.bulk_write([op])
 
     def get(
         self,
