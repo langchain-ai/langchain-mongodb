@@ -64,7 +64,7 @@ class VectorIndexConfig(IndexConfig, total=False):
     """Similarity scoring function used to compare vectors."""
 
     embedding_key: str
-    """This field will contain the embedding vector for the value.
+    """This key will contain the embedding vector for the value in fields[0].
 
     MongoDB does not require a separate Vector Store.
     It is designed to have one vector per document.
