@@ -10,6 +10,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import OperationFailure
 
+from langgraph.store.base import PutOp
 from langgraph.store.memory import InMemoryStore
 from langgraph.store.mongodb import (
     MongoDBStore,
@@ -58,23 +59,17 @@ def collection() -> Generator[Collection, None, None]:
     client.close()
 
 
-def test_index_top_level_key(
+def test_filters(
     collection: Collection, embedding: Embeddings, dimensions: int
 ) -> None:
-    """
-    - Test filter as well as query
-    - Test embedding of value dictionary.
-        - First, that it works.
-        - 2nd - what forms we can take
-        - is it always dict[str]
-    """
+    """Test permutations of namespace_prefix in filter."""
 
     index_config = create_vector_index_config(
         name=INDEX_NAME,
         dims=dimensions,
         fields=["product"],
         embed=embedding,
-        filters=["grade"],
+        filters=["value.metadata.available"],
     )
     store_mdb = MongoDBStore(
         collection, index_config=index_config, auto_index_timeout=TIMEOUT
@@ -84,19 +79,20 @@ def test_index_top_level_key(
     namespaces = [
         ("a",),
         ("a", "b", "c"),
-        ("a", "b", "d", "e"),
+        ("a", "b", "c", "d"),
     ]
 
     products = ["apples", "oranges", "pears"]
 
     # Add some indexed data
+    """
     for i, ns in enumerate(namespaces):
         store_mdb.put(
             namespace=ns,
             key=f"id_{i}",
             value={
                 "product": products[i],
-                "metadata": {"available": True, "grade": "A" * (i + 1)},
+                "metadata": {"available": i % 2, "grade": "A" * (i + 1)},
             },
         )
         store_in_mem.put(
@@ -107,6 +103,22 @@ def test_index_top_level_key(
                 "metadata": {"available": True, "grade": "A" * (i + 1)},
             },
         )
+    """
+    put_ops = []
+    for i, ns in enumerate(namespaces):
+        put_ops.append(
+            PutOp(
+                namespace=ns,
+                key=f"id_{i}",
+                value={
+                    "product": products[i],
+                    "metadata": {"available": i % 2, "grade": "A" * (i + 1)},
+                },
+            )
+        )
+
+    store_mdb.batch(put_ops)
+    store_in_mem.batch(put_ops)
 
     # Case 1: fields is a string:
     namespace_prefix = ("a",)  #  filter ("a",) catches all docs
@@ -117,6 +129,7 @@ def test_index_top_level_key(
         TIMEOUT,
         INTERVAL,
     )
+
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert result_mdb[0].value["product"] == "pears"  # test sorted by score
 
@@ -138,3 +151,13 @@ def test_index_top_level_key(
     result_mem = store_in_mem.search(namespace_prefix, query=query)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert len(result_mem) == len(result_mdb) == 0
+
+    # Case 4: With filter
+    namespace_prefix = ("a",)
+    available = {"value.metadata.available": 1}
+    result_mdb = store_mdb.search(namespace_prefix, query=query, filter=available)
+    assert result_mdb[0].value["product"] == "oranges"
+    assert len(result_mdb) == 1
+
+    result_mem = store_in_mem.search(namespace_prefix, query=query, filter=available)
+    assert len(result_mem) == 1
