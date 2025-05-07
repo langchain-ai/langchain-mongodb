@@ -3,7 +3,6 @@ from collections.abc import Generator
 from datetime import datetime
 
 import pytest
-from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
 
 from langgraph.store.base import (
@@ -16,7 +15,6 @@ from langgraph.store.base import (
 )
 from langgraph.store.mongodb import (
     MongoDBStore,
-    create_vector_index_config,
 )
 
 MONGODB_URI = os.environ.get(
@@ -342,62 +340,3 @@ def test_search_basic(store: MongoDBStore) -> None:
     store.put(namespace=namespace, key="id_foo", value={"data": "value_foo"})
     result = store.search(namespace, filter={"value.data": "value_foo"})
     assert len(result) == 1
-
-
-def test_search_semantic(dimensions: int, embedding: Embeddings) -> None:
-    """Small test using a vector index, searches with query and namespace_prefix filter."""
-
-    COLLECTION_NAME = "store_with_index"
-    INDEX_NAME = "test_store_index"
-
-    client: MongoClient = MongoClient(MONGODB_URI)
-    collection = client[DB_NAME][COLLECTION_NAME]
-    collection.delete_many({})
-    collection.drop_indexes()
-
-    srx_idxs = collection.list_search_indexes().to_list()
-    if any(idx["name"] == INDEX_NAME for idx in srx_idxs):
-        collection.drop_search_index(INDEX_NAME)
-
-    index_config = create_vector_index_config(
-        dims=dimensions,
-        fields=["data"],
-        embed=embedding,
-        name=INDEX_NAME,
-    )
-
-    with MongoDBStore.from_conn_string(
-        conn_string=MONGODB_URI,
-        db_name=DB_NAME,
-        collection_name=COLLECTION_NAME,
-        index_config=index_config,
-    ) as store:
-        namespaces = [
-            ("a", "b", "c"),
-            ("a", "b", "d", "e"),
-            ("a", "b", "d", "i"),
-            ("a", "b", "f"),
-            ("a", "c", "f"),
-            ("b", "a", "f"),
-            ("users", "123"),
-            ("users", "456", "settings"),
-            ("admin", "users", "789"),
-        ]
-        put_ops = []
-        for i, ns in enumerate(namespaces):
-            put_ops.append(
-                PutOp(
-                    namespace=ns,
-                    key=f"id_{i}",
-                    value={"data": f"value_{i}"},
-                    index=None,
-                )
-            )
-        batch_res = store.batch(put_ops)
-        assert all(res is None for res in batch_res)
-
-        result = store.search(("a", "b", "d"), query="Please return values near 2")
-        assert len(result) == 2
-        assert result[0].score is not None
-        assert result[1].score is not None
-        assert result[0].score < result[1].score

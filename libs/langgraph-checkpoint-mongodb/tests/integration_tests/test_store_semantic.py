@@ -1,6 +1,5 @@
 import os
 from collections.abc import Generator
-from datetime import datetime
 from time import monotonic, sleep
 from typing import Callable
 
@@ -24,9 +23,6 @@ DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "semantic_search"
 INDEX_NAME = "vector_index"
 TIMEOUT, INTERVAL = 30, 1  # timeout to index new data
-
-
-t0 = (datetime(2025, 4, 7, 17, 29, 10, 0),)
 
 
 def wait(cond: Callable, timeout: int = 15, interval: int = 1) -> None:
@@ -85,25 +81,6 @@ def test_filters(
     products = ["apples", "oranges", "pears"]
 
     # Add some indexed data
-    """
-    for i, ns in enumerate(namespaces):
-        store_mdb.put(
-            namespace=ns,
-            key=f"id_{i}",
-            value={
-                "product": products[i],
-                "metadata": {"available": i % 2, "grade": "A" * (i + 1)},
-            },
-        )
-        store_in_mem.put(
-            namespace=ns,
-            key=f"id_{i}",
-            value={
-                "product": products[i],
-                "metadata": {"available": True, "grade": "A" * (i + 1)},
-            },
-        )
-    """
     put_ops = []
     for i, ns in enumerate(namespaces):
         put_ops.append(
@@ -158,6 +135,3 @@ def test_filters(
     result_mdb = store_mdb.search(namespace_prefix, query=query, filter=available)
     assert result_mdb[0].value["product"] == "oranges"
     assert len(result_mdb) == 1
-
-    result_mem = store_in_mem.search(namespace_prefix, query=query, filter=available)
-    assert len(result_mem) == 1

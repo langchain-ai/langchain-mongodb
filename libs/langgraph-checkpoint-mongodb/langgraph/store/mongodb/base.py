@@ -660,6 +660,7 @@ class MongoDBStore(BaseStore):
             return fields
 
     def _ensure_index_filters(self) -> list[str]:
+        # TODO - Add value. in front of given filters
         if self.index_config.get("filters") is None:
             self.index_config["filters"] = []
         if not isinstance(self.index_config["filters"], list):
@@ -670,3 +671,7 @@ class MongoDBStore(BaseStore):
         if "namespace_prefix" not in self.index_config["filters"]:
             self.index_config["filters"].append("namespace_prefix")
         return self.index_config["filters"]
+
+
+# TODO - Add value. in front of given filters
+# TODO - Add async
