@@ -175,7 +175,9 @@ class MongoDBStore(BaseStore):
         # If details provided, prepare vector index for semantic queries
         if self.index_config:
             self.index_field = self._ensure_index_fields(self.index_config["fields"])
-            self.index_filters = self.__class__.ensure_index_filters(self.index_config["filters"])
+            self.index_filters = self.__class__.ensure_index_filters(
+                self.index_config["filters"]
+            )
             self.embeddings: Embeddings = ensure_embeddings(
                 self.index_config.get("embed"),
             )
@@ -568,7 +570,7 @@ class MongoDBStore(BaseStore):
         if offset:
             raise NotImplementedError("offset is not implemented in MongoDBStore")
         if filter:
-            if any(f.startswith('value') for f in filter):
+            if any(f.startswith("value") for f in filter):
                 raise ValueError("filters should be specified without `value`")
 
         if query is None:
@@ -668,7 +670,7 @@ class MongoDBStore(BaseStore):
             return fields
 
     @classmethod
-    def ensure_index_filters(cls, filters: list[str] = None) -> list[str]:
+    def ensure_index_filters(cls, filters: Optional[list[str]] = None) -> list[str]:
         """Prepare filters for Atlas indexing.
 
         We must ensure that `namespace_prefix` is included in the filter.
