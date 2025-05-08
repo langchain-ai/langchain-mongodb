@@ -338,5 +338,5 @@ def test_search_basic(store: MongoDBStore) -> None:
 
     namespace = ("a", "b", "c")
     store.put(namespace=namespace, key="id_foo", value={"data": "value_foo"})
-    result = store.search(namespace, filter={"value.data": "value_foo"})
+    result = store.search(namespace, filter={"data": "value_foo"})
     assert len(result) == 1

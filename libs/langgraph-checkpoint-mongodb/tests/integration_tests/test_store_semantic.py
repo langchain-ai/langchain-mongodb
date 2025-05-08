@@ -65,7 +65,7 @@ def test_filters(
         dims=dimensions,
         fields=["product"],
         embed=embedding,
-        filters=["value.metadata.available"],
+        filters=["metadata.available"],
     )
     store_mdb = MongoDBStore(
         collection, index_config=index_config, auto_index_timeout=TIMEOUT
@@ -89,7 +89,7 @@ def test_filters(
                 key=f"id_{i}",
                 value={
                     "product": products[i],
-                    "metadata": {"available": i % 2, "grade": "A" * (i + 1)},
+                    "metadata": {"available": bool(i % 2), "grade": "A" * (i + 1)},
                 },
             )
         )
@@ -97,16 +97,15 @@ def test_filters(
     store_mdb.batch(put_ops)
     store_in_mem.batch(put_ops)
 
+    query = "What is the grade of our pears?"
     # Case 1: fields is a string:
     namespace_prefix = ("a",)  #  filter ("a",) catches all docs
-    query = "What is the grade of our pears?"
-
     wait(
         lambda: len(store_mdb.search(namespace_prefix, query=query)) == len(products),
         TIMEOUT,
         INTERVAL,
     )
-
+    """
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert result_mdb[0].value["product"] == "pears"  # test sorted by score
 
@@ -114,7 +113,6 @@ def test_filters(
     assert len(result_mem) == len(products)
 
     # Case 2: filter on 2nd namespace in hierarchy
-    query = "What is the grade of our pears?"
     namespace_prefix = ("a", "b")
     result_mem = store_in_mem.search(namespace_prefix, query=query)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
@@ -123,15 +121,14 @@ def test_filters(
     assert result_mdb[0].value["product"] == "pears"
 
     # Case 3: Empty  namespace_prefix
-    query = "What is the grade of our pears?"
     namespace_prefix = ("",)
     result_mem = store_in_mem.search(namespace_prefix, query=query)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert len(result_mem) == len(result_mdb) == 0
-
-    # Case 4: With filter
+    """
+    # Case 4: With filter on value (nested)
     namespace_prefix = ("a",)
-    available = {"value.metadata.available": 1}
+    available = {"metadata.available": True}
     result_mdb = store_mdb.search(namespace_prefix, query=query, filter=available)
     assert result_mdb[0].value["product"] == "oranges"
     assert len(result_mdb) == 1

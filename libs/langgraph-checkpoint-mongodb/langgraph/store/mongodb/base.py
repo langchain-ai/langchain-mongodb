@@ -71,11 +71,17 @@ class VectorIndexConfig(IndexConfig, total=False):
     """
 
     filters: list[str]
-    """List of fields to index on.
+    """List of fields to that can filtered during search.
 
-    These can refer to embedded values (e.g. value.data
+
     Fields must be included in the index if they are to be filtered upon.
     The `namespace` field will always be included.
+    These will be added to the vector search index automatically if not present.
+
+    Fields can refer to top-level or embedded values (e.g. metadata.available)
+
+    NOTE: The `value` key at the front of every field is implicit.
+    It need not be included, although it is contained in the collection and index. 
     """
 
 
@@ -90,6 +96,7 @@ def create_vector_index_config(
 ) -> VectorIndexConfig:
     """Factory function creates a VectorIndexConfig instance with sensible defaults."""
 
+    MongoDBStore.ensure_index_filters(filters)
     if filters and "namespace_prefix" not in filters:
         filters.append("namespace_prefix")
 
@@ -168,7 +175,7 @@ class MongoDBStore(BaseStore):
         # If details provided, prepare vector index for semantic queries
         if self.index_config:
             self.index_field = self._ensure_index_fields(self.index_config["fields"])
-            self.index_filters = self._ensure_index_filters()
+            self.index_filters = self.__class__.ensure_index_filters(self.index_config["filters"])
             self.embeddings: Embeddings = ensure_embeddings(
                 self.index_config.get("embed"),
             )
@@ -560,6 +567,9 @@ class MongoDBStore(BaseStore):
             raise TypeError("namespace_prefix must be a non-empty tuple of strings")
         if offset:
             raise NotImplementedError("offset is not implemented in MongoDBStore")
+        if filter:
+            if any(f.startswith('value') for f in filter):
+                raise ValueError("filters should be specified without `value`")
 
         if query is None:
             # Case 1. $match namespace and filter
@@ -568,7 +578,7 @@ class MongoDBStore(BaseStore):
             if namespace_prefix:
                 match_cond = {"$expr": self._match_prefix(namespace_prefix)}
             if filter:
-                filter_cond = [{k: v} for k, v in filter.items()]
+                filter_cond = [{f"value.{k}": v} for k, v in filter.items()]
                 match_cond = {"$and": [match_cond] + filter_cond}
             pipeline.append({"$match": match_cond})
             if limit:
@@ -579,13 +589,11 @@ class MongoDBStore(BaseStore):
 
             # Compute embedding
             query_vector = self.embeddings.embed_query(query)
-
             # Form filter condition for namespace_prefix
             filter_vec = {"namespace_prefix": self.sep.join(namespace_prefix)}
             if filter:  # and add any specified
-                filter_vec = {
-                    "$and": [{k: v} for k, v in filter.items()] + [filter_vec]
-                }
+                filter_cond = [{f"value.{k}": v} for k, v in filter.items()]
+                filter_vec = {"$and": [filter_vec] + filter_cond}
 
             pipeline = [
                 vector_search_stage(
@@ -659,19 +667,24 @@ class MongoDBStore(BaseStore):
         else:
             return fields
 
-    def _ensure_index_filters(self) -> list[str]:
-        # TODO - Add value. in front of given filters
-        if self.index_config.get("filters") is None:
-            self.index_config["filters"] = []
-        if not isinstance(self.index_config["filters"], list):
+    @classmethod
+    def ensure_index_filters(cls, filters: list[str] = None) -> list[str]:
+        """Prepare filters for Atlas indexing.
+
+        We must ensure that `namespace_prefix` is included in the filter.
+        We also must ensure that the implicit `value` field is added.
+        """
+        filters = [] if filters is None else filters
+        if not isinstance(filters, list):
             raise ValueError(
                 "Index filters must be a list. Found: ",
-                type(self.index_config["filters"]),
+                type(filters),
             )
-        if "namespace_prefix" not in self.index_config["filters"]:
-            self.index_config["filters"].append("namespace_prefix")
-        return self.index_config["filters"]
-
-
-# TODO - Add value. in front of given filters
-# TODO - Add async
+        filters = [
+            f"value.{field}"
+            for field in filters
+            if not field.startswith("values") and field != "namespace_prefix"
+        ]
+        if "namespace_prefix" not in filters:
+            filters.append("namespace_prefix")
+        return filters
