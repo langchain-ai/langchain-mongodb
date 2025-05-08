@@ -1,4 +1,4 @@
-from langgraph.store.mongodb.base import (
+from .base import (
     MongoDBStore,
     VectorIndexConfig,
     create_vector_index_config,

@@ -492,7 +492,7 @@ class MongoDBStore(BaseStore):
             client = MongoClient(
                 conn_string,
                 driver=DriverInfo(
-                    name="Langgraph", version=version("langgraph-checkpoint-mongodb")
+                    name="Langgraph", version=version("langgraph-store-mongodb")
                 ),
             )
             db = client[db_name]

@@ -24,6 +24,8 @@ COLLECTION_NAME = "semantic_search"
 INDEX_NAME = "vector_index"
 TIMEOUT, INTERVAL = 30, 1  # timeout to index new data
 
+DIMENSIONS = 5  # Dimensions of embedding model
+
 
 def wait(cond: Callable, timeout: int = 15, interval: int = 1) -> None:
     start = monotonic()
@@ -33,6 +35,16 @@ def wait(cond: Callable, timeout: int = 15, interval: int = 1) -> None:
         else:
             sleep(interval)
     raise TimeoutError("timeout waiting for: ", cond)
+
+
+class StaticEmbeddings(Embeddings):
+    """ANN Search is not tested here. That is done in langchain-mongodb."""
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [[1.0] * DIMENSIONS] * len(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return [1.0] * DIMENSIONS
 
 
 @pytest.fixture
@@ -55,16 +67,14 @@ def collection() -> Generator[Collection, None, None]:
     client.close()
 
 
-def test_filters(
-    collection: Collection, embedding: Embeddings, dimensions: int
-) -> None:
+def test_filters(collection: Collection) -> None:
     """Test permutations of namespace_prefix in filter."""
 
     index_config = create_vector_index_config(
         name=INDEX_NAME,
-        dims=dimensions,
+        dims=DIMENSIONS,
         fields=["product"],
-        embed=embedding,
+        embed=StaticEmbeddings(),  # embedding
         filters=["metadata.available"],
     )
     store_mdb = MongoDBStore(
