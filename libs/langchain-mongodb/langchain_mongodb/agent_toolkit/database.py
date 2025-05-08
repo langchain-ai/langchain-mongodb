@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime
 from importlib.metadata import version
 from typing import Any, Dict, Iterable, List, Optional, Union
@@ -207,7 +208,7 @@ class MongoDBDatabase:
 
     def _parse_command(self, command: str) -> Any:
         # Convert a JavaScript command to a python object.
-        command = command.strip().replace("\n", "").replace(" ", "")
+        command = re.sub(r"\s+", " ", command.strip())
         # Handle missing closing parens.
         if command.endswith("]"):
             command += ")"
