@@ -37,8 +37,8 @@ It contains the following packages.
 ### LangGraph
 
 - Checkpointing (BaseCheckpointSaver)
-    - [MongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/checkpoint/langgraph.checkpoint.mongodb.saver.MongoDBSaver.html#langgraph.checkpoint.mongodb.saver.MongoDBSaver)
-    - [AsyncMongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/checkpoint/langgraph.checkpoint.mongodb.aio.AsyncMongoDBSaver.html)
+    - [MongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/aio/langgraph.checkpoint.mongodb.aio.AsyncMongoDBSaver.html#asyncmongodbsaver)
+    - [AsyncMongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/saver/langgraph.checkpoint.mongodb.saver.MongoDBSaver.html#mongodbsaver)
 
 ## Installation
 
