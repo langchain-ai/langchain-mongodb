@@ -105,7 +105,7 @@ def test_filters(
         TIMEOUT,
         INTERVAL,
     )
-    """
+
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert result_mdb[0].value["product"] == "pears"  # test sorted by score
 
@@ -125,7 +125,7 @@ def test_filters(
     result_mem = store_in_mem.search(namespace_prefix, query=query)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert len(result_mem) == len(result_mdb) == 0
-    """
+
     # Case 4: With filter on value (nested)
     namespace_prefix = ("a",)
     available = {"metadata.available": True}
