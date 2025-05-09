@@ -81,7 +81,7 @@ class VectorIndexConfig(IndexConfig, total=False):
     Fields can refer to top-level or embedded values (e.g. metadata.available)
 
     NOTE: The `value` key at the front of every field is implicit.
-    It need not be included, although it is contained in the collection and index. 
+    It need not be included, although it is contained in the collection and index.
     """
 
 
@@ -623,7 +623,7 @@ class MongoDBStore(BaseStore):
             for res in results
         ]
 
-    def _denormalize_path(self, paths: tuple[str, ...] | list[str]) -> list[str]:
+    def _denormalize_path(self, paths: Union[tuple[str, ...], list[str]]) -> list[str]:
         """Create list of path parents, for use in $vectorSearch filter.
 
         ???+ example "Example"
