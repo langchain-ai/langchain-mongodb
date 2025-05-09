@@ -15,6 +15,7 @@ on:
         options:
           - libs/langchain-mongodb
           - libs/langgraph-checkpoint-mongodb
+          - libs/langgraph-store-mongodb
         default: libs/langchain-mongodb
         description: "From which folder this pipeline executes"
 
@@ -140,8 +141,8 @@ jobs:
 
           # For langchain-mongodb, replace dashes in the package name with underscores.
           IMPORT_NAME="${PKG_NAME//-/_}"
-          # If "langgraph-checkpoint-mongodb", it's a namespace package =>  /-/.
-          [[ "$PKG_NAME" == "langgraph-checkpoint-mongodb" ]] && IMPORT_NAME="${PKG_NAME//-/.}"
+          # If langgraph*, it's a namespace package =>  /-/.
+          [[ "$PKG_NAME" == langgraph* ]] && IMPORT_NAME="${PKG_NAME//-/.}"
 
           uv run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
