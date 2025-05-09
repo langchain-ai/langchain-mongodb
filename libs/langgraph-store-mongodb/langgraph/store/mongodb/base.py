@@ -94,7 +94,19 @@ def create_vector_index_config(
     embedding_key: str = "embedding",
     filters: Optional[list[str]] = None,
 ) -> VectorIndexConfig:
-    """Factory function creates a VectorIndexConfig instance with sensible defaults."""
+    """Factory function creates a VectorIndexConfig instance with sensible defaults.
+
+    Args:
+        dims: Dimensions of the embedding vectors.
+        embed: Embedding model.
+        fields: Field to extract text from for embedding generation (list of length 1).
+        name: Arbitrary name to give to the index in Atlas.
+        relevance_score_fn: Function used to establish similarity of vectors.
+        embedding_key: Name of the field used in the collection to store vectors.
+        filters: List of (possibly nested) fields to index allowing filtering.
+
+    Returns: VectorIndexConfig to be passed to MongoDBStore constructor.
+    """
 
     MongoDBStore.ensure_index_filters(filters)
     if filters and "namespace_prefix" not in filters:
@@ -135,9 +147,8 @@ class MongoDBStore(BaseStore):
     ):
         """Construct store and its indexes.
 
-        Semantic search is supported by a Atlas vector search index
+        Semantic search is supported by an Atlas vector search index
         TTL (time to live)  is supported by a TTL index of field: updated_at.
-
 
         Args:
             collection: Collection of Items backing the store.
@@ -199,6 +210,61 @@ class MongoDBStore(BaseStore):
                     filters=self.index_filters,
                     wait_until_complete=auto_index_timeout,
                 )
+
+    @classmethod
+    @contextmanager
+    def from_conn_string(
+        cls,
+        conn_string: Optional[str] = None,
+        db_name: str = "checkpointing_db",
+        collection_name: str = "persistent-store",
+        ttl_config: Optional[TTLConfig] = None,
+        index_config: Optional[VectorIndexConfig] = None,
+        **kwargs: Any,
+    ) -> Iterator["MongoDBStore"]:
+        """Context manager to create a persistent MongoDB key-value store.
+
+        A unique compound index as shown below will be added to the collections
+        backing the store (namespace, key). If the collection exists,
+        and have indexes already, nothing will be done during initialization.
+
+        If the `ttl` argument is provided, TTL functionality will be employed.
+        This is done automatically via MongoDB's TTL Indexes, based on the
+        `updated_at` field of the collection. The index will be created if it
+        does not already exist.
+
+        Args:
+            conn_string: MongoDB connection string. See [class:~pymongo.MongoClient].
+            db_name: Database name. It will be created if it doesn't exist.
+            collection_name: Collection name backing the store. Created if it doesn't exist.
+            ttl_config: Defines a TTL (in seconds) and whether to update on reads(get/search).
+            index_config: Defines a VectorIndexConfig for semantic search queries.
+
+        Yields: A new MongoDBStore.
+        """
+
+        client: Optional[MongoClient] = None
+        try:
+            client = MongoClient(
+                conn_string,
+                driver=DriverInfo(
+                    name="Langgraph", version=version("langgraph-store-mongodb")
+                ),
+            )
+            db = client[db_name]
+            if collection_name not in db.list_collection_names():
+                db.create_collection(collection_name)
+            collection = client[db_name][collection_name]
+
+            yield MongoDBStore(
+                collection=collection,
+                ttl_config=ttl_config,
+                index_config=index_config,
+                **kwargs,
+            )
+        finally:
+            if client:
+                client.close()
 
     def get(
         self,
@@ -296,7 +362,17 @@ class MongoDBStore(BaseStore):
         limit: int = 100,
         offset: int = 0,
     ) -> list[tuple[str, ...]]:
-        """List and filter namespaces in the store."""
+        """List and filter namespaces in the store.
+
+        Args:
+            prefix: Filter namespaces that start with this path.
+            suffix: Filter namespaces that end with this path.
+            max_depth: Return namespaces up to this depth in the hierarchy.
+            limit: Maximum number of namespaces to return (default 100).
+            offset: Number of namespaces to skip for pagination. [Not implemented.]
+
+        Returns: A list of namespace tuples that match the criteria.
+        """
         pipeline: list[dict[str, Any]] = []
         expr = {}
         if prefix:
@@ -456,59 +532,6 @@ class MongoDBStore(BaseStore):
             The order of results matches the order of input operations.
         """
         return await run_in_executor(None, self.batch, ops)
-
-    @classmethod
-    @contextmanager
-    def from_conn_string(
-        cls,
-        conn_string: Optional[str] = None,
-        db_name: str = "checkpointing_db",
-        collection_name: str = "persistent-store",
-        ttl_config: Optional[TTLConfig] = None,
-        index_config: Optional[VectorIndexConfig] = None,
-        **kwargs: Any,
-    ) -> Iterator["MongoDBStore"]:
-        """Context manager to create a persistent MongoDB key-value store.
-
-        A unique compound index as shown below will be added to the collections
-        backing the store (namespace, key). If the collection exists,
-        and have indexes already, nothing will be done during initialization.
-
-        If the `ttl` argument is provided, TTL functionality will be employed.
-        This is done automatically via MongoDB's TTL Indexes, based on the
-        `updated_at` field of the collection. The index will be created if it
-        does not already exist.
-
-        Args:
-            conn_string: MongoDB connection string. See [class:~pymongo.MongoClient].
-            db_name: Database name. It will be created if it doesn't exist.
-            collection_name: Collection name backing the store. Created if it doesn't exist.
-            ttl_config: Defines a TTL (in seconds) and whether to update on reads(get/search).
-            index_config: Defines a VectorIndexConfig for semantic search queries.
-        Yields: A new MongoDBStore.
-        """
-        client: Optional[MongoClient] = None
-        try:
-            client = MongoClient(
-                conn_string,
-                driver=DriverInfo(
-                    name="Langgraph", version=version("langgraph-store-mongodb")
-                ),
-            )
-            db = client[db_name]
-            if collection_name not in db.list_collection_names():
-                db.create_collection(collection_name)
-            collection = client[db_name][collection_name]
-
-            yield MongoDBStore(
-                collection=collection,
-                ttl_config=ttl_config,
-                index_config=index_config,
-                **kwargs,
-            )
-        finally:
-            if client:
-                client.close()
 
     def search(
         self,
