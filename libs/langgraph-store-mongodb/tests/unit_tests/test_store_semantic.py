@@ -41,10 +41,16 @@ class StaticEmbeddings(Embeddings):
     """ANN Search is not tested here. That is done in langchain-mongodb."""
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [[1.0] * DIMENSIONS] * len(texts)
+        vectors = []
+        for txt in texts:
+            vectors.append(self.embed_query(txt))
+        return vectors
 
     def embed_query(self, text: str) -> list[float]:
-        return [1.0] * DIMENSIONS
+        if "pears" in text:
+            return [1.0] + [0.5] * (DIMENSIONS - 1)
+        else:
+            return [0.5] * DIMENSIONS
 
 
 @pytest.fixture
