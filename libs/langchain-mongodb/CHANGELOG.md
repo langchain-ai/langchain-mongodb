@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.6.1 (2025/05/12)
+
+- Improve robustness of `MongoDBDatabase.run`.
+
 ## Changes in version 0.6.1 (2025/04/16)
 
 - Fixed a syntax error in a docstring.
