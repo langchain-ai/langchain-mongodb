@@ -1,7 +1,6 @@
-from datetime import datetime
-
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from datetime import datetime
 from importlib.metadata import version
 from typing import (
     Any,
@@ -9,7 +8,7 @@ from typing import (
 )
 
 from langchain_core.runnables import RunnableConfig
-from pymongo import MongoClient, UpdateOne, ASCENDING
+from pymongo import ASCENDING, MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
 from pymongo.driver_info import DriverInfo
 
