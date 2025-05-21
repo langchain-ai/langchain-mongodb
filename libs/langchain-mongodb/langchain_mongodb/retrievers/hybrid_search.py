@@ -137,7 +137,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         return docs
 
 
-class AsyncMongoDBAtlasHybridSearchRetriever(BaseRetriever):
+class AsyncMongoDBAtlasHybridSearchRetriever(MongoDBAtlasHybridSearchRetriever):
     """Async Hybrid Search Retriever combines vector and full-text searches
     weighting them the via Reciprocal Rank Fusion (RRF) algorithm.
 
@@ -173,10 +173,6 @@ class AsyncMongoDBAtlasHybridSearchRetriever(BaseRetriever):
     @property
     def collection(self) -> AsyncCollection:
         return self.vectorstore._collection
-
-    def close(self) -> None:
-        """Close the resources used by the MongoDBAtlasHybridSearchRetriever."""
-        self.vectorstore.close()
 
     async def _aget_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs: Any

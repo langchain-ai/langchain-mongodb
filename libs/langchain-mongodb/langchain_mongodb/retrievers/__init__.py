@@ -8,7 +8,10 @@ from langchain_mongodb.retrievers.full_text_search import (
     MongoDBAtlasFullTextSearchRetriever,
 )
 from langchain_mongodb.retrievers.graphrag import MongoDBGraphRAGRetriever
-from langchain_mongodb.retrievers.hybrid_search import MongoDBAtlasHybridSearchRetriever
+from langchain_mongodb.retrievers.hybrid_search import (
+    AsyncMongoDBAtlasHybridSearchRetriever,
+    MongoDBAtlasHybridSearchRetriever,
+)
 from langchain_mongodb.retrievers.parent_document import (
     MongoDBAtlasParentDocumentRetriever,
 )
@@ -20,4 +23,5 @@ __all__ = [
     "MongoDBAtlasParentDocumentRetriever",
     "MongoDBGraphRAGRetriever",
     "MongoDBAtlasSelfQueryRetriever",
+    "AsyncMongoDBAtlasHybridSearchRetriever",
 ]
