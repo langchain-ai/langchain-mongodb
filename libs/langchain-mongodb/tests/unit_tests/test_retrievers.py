@@ -3,6 +3,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.retrievers import (
+    AsyncMongoDBAtlasHybridSearchRetriever,
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
     MongoDBAtlasParentDocumentRetriever,
@@ -33,6 +34,15 @@ def test_full_text_search(collection):
 def test_hybrid_search(collection, embeddings):
     vs = MongoDBAtlasVectorSearch(collection, embeddings)
     search = MongoDBAtlasHybridSearchRetriever(vectorstore=vs, search_index_name="foo")
+    search.close()
+    assert collection.database.client.is_closed
+
+
+def test_async_hybrid_search(collection, embeddings):
+    vs = MongoDBAtlasVectorSearch(collection, embeddings)
+    search = AsyncMongoDBAtlasHybridSearchRetriever(
+        vectorstore=vs, search_index_name="foo"
+    )
     search.close()
     assert collection.database.client.is_closed
 
