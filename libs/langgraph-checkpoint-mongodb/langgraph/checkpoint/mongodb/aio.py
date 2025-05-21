@@ -92,6 +92,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.writes_collection = self.db[writes_collection_name]
         self._setup_future: asyncio.Future | None = None
         self.loop = asyncio.get_running_loop()
+        self.ttl = ttl
 
     async def _setup(self) -> None:
         """Create indexes if not present."""
