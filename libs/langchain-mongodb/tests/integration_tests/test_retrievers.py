@@ -32,7 +32,7 @@ TIMEOUT = 60.0
 INTERVAL = 0.5
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def example_documents() -> List[Document]:
     return [
         Document(page_content="In 2023, I visited Paris"),
@@ -42,7 +42,7 @@ def example_documents() -> List[Document]:
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
@@ -73,7 +73,7 @@ def collection(client: MongoClient, dimensions: int) -> Collection:
     return clxn
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection_nested(client: MongoClient, dimensions: int) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME_NESTED not in client[DB_NAME].list_collection_names():
@@ -106,7 +106,7 @@ def collection_nested(client: MongoClient, dimensions: int) -> Collection:
     return clxn
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def indexed_vectorstore(
     collection: Collection,
     example_documents: List[Document],
@@ -126,10 +126,9 @@ def indexed_vectorstore(
     yield vectorstore
 
     vectorstore.collection.delete_many({})
-    vectorstore.close()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def indexed_nested_vectorstore(
     collection_nested: Collection,
     example_documents: List[Document],
@@ -149,7 +148,6 @@ def indexed_nested_vectorstore(
     yield vectorstore
 
     vectorstore.collection.delete_many({})
-    vectorstore.close()
 
 
 def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:

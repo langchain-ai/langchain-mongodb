@@ -425,7 +425,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         # Compute embedding vectors
         embeddings = self._embedding.embed_documents(list(texts))
         if not ids:
-            ids = [ObjectId() for _ in range(len(texts))]
+            ids = [str(ObjectId()) for _ in range(len(list(texts)))]
         docs = [
             {
                 "_id": str_to_oid(i),
@@ -438,6 +438,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas
         result = self._collection.bulk_write(operations)
+        assert result.upserted_ids is not None
         return [oid_to_str(_id) for _id in result.upserted_ids.values()]
 
     def add_documents(

@@ -2,6 +2,17 @@
 
 ---
 
+## Changes in version 0.6.1 (2025/05/12)
+
+- Improve robustness of `MongoDBDatabase.run`.
+
+## Changes in version 0.6.1 (2025/04/16)
+
+- Fixed a syntax error in a docstring.
+- Fixed some incorrect typings.
+- Added detail to README
+- Added MongoDBDocStore to README.
+
 ## Changes in version 0.6 (2025/03/26)
 
 - Added Natural language to MQL Database tool.

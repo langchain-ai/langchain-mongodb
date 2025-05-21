@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 from typing import Generator
 
 import pytest
-from flaky import flaky
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -19,13 +21,14 @@ from ..utils import CONNECTION_STRING, DB_NAME
 COLLECTION_NAME = "langchain_test_graphrag"
 
 
-@pytest.fixture
-def collection() -> Collection:
+@pytest.fixture(scope="module")
+def collection() -> Generator[Collection]:
     client = MongoClient(CONNECTION_STRING)
     db = client[DB_NAME]
     db[COLLECTION_NAME].drop()
     collection = db.create_collection(COLLECTION_NAME)
-    return collection
+    yield collection
+    client.close()
 
 
 if "OPENAI_API_KEY" not in os.environ:
@@ -34,16 +37,17 @@ if "OPENAI_API_KEY" not in os.environ:
     )
 
 
-@pytest.fixture
-def entity_extraction_model() -> BaseChatModel:
+@pytest.fixture(scope="module")
+def entity_extraction_model() -> BaseChatModel | None:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
         return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
     except Exception:
         pass
+    return None
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def documents():
     return [
         Document(
@@ -77,7 +81,7 @@ The project is set to expand across multiple regions, marking a milestone in the
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def entity_example():
     return """
 Input:
@@ -116,10 +120,8 @@ Output:
 """
 
 
-@pytest.fixture
-def graph_store(
-    collection, entity_extraction_model, documents
-) -> Generator[None, None, MongoDBGraphStore]:
+@pytest.fixture(scope="module")
+def graph_store(collection, entity_extraction_model, documents) -> MongoDBGraphStore:
     store = MongoDBGraphStore(
         collection=collection,
         entity_extraction_model=entity_extraction_model,
@@ -129,8 +131,7 @@ def graph_store(
     bulkwrite_results = store.add_documents(documents)
     assert len(bulkwrite_results) == len(documents)
     assert isinstance(bulkwrite_results[0], BulkWriteResult)
-    yield store
-    store.close()
+    return store
 
 
 @pytest.fixture

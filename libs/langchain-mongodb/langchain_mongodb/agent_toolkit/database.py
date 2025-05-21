@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime
 from importlib.metadata import version
 from typing import Any, Dict, Iterable, List, Optional, Union
@@ -69,7 +70,7 @@ class MongoDBDatabase:
         **kwargs: Any,
     ) -> MongoDBDatabase:
         """Construct a MongoDBDatabase from URI."""
-        client = MongoClient(
+        client: MongoClient[dict[str, Any]] = MongoClient(
             connection_string,
             driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
         )
@@ -134,12 +135,12 @@ class MongoDBDatabase:
         final_str = "\n\n".join(colls)
         return final_str
 
-    def _get_collection_schema(self, collection: str):
+    def _get_collection_schema(self, collection: str) -> str:
         coll = self._db[collection]
-        doc = coll.find_one({})
+        doc = coll.find_one({}) or dict()
         return "\n".join(self._parse_doc(doc, ""))
 
-    def _parse_doc(self, doc, prefix):
+    def _parse_doc(self, doc: dict[str, Any], prefix: str) -> list[str]:
         sub_schema = []
         for key, value in doc.items():
             if prefix:
@@ -171,7 +172,6 @@ class MongoDBDatabase:
         indexes = list(coll.list_indexes())
         if not indexes:
             return ""
-        indexes = self._inspector.get_indexes(collection.name)
         return f"Collection Indexes:\n{json.dumps(indexes, indent=2)}"
 
     def _get_sample_docs(self, collection: str) -> str:
@@ -184,7 +184,7 @@ class MongoDBDatabase:
             f"{dumps(docs, indent=2)}"
         )
 
-    def _elide_doc(self, doc):
+    def _elide_doc(self, doc: dict[str, Any]) -> None:
         for key, value in doc.items():
             if isinstance(value, dict):
                 self._elide_doc(value)
@@ -208,7 +208,7 @@ class MongoDBDatabase:
 
     def _parse_command(self, command: str) -> Any:
         # Convert a JavaScript command to a python object.
-        command = command.strip().replace("\n", "").replace(" ", "")
+        command = re.sub(r"\s+", " ", command.strip())
         # Handle missing closing parens.
         if command.endswith("]"):
             command += ")"

@@ -1,7 +1,7 @@
 """Tests MongoDBAtlasSelfQueryRetriever and MongoDBStructuredQueryTranslator."""
 
 import os
-from typing import Sequence, Union
+from typing import Generator, Sequence, Union
 
 import pytest
 from langchain.chains.query_constructor.schema import AttributeInfo
@@ -122,7 +122,7 @@ def vectorstore(
     fictitious_movies,
     dimensions,
     field_info,
-) -> MongoDBAtlasVectorSearch:
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
     """Fully configured vector store.
 
     Includes
@@ -136,7 +136,7 @@ def vectorstore(
     )
     # Delete search indexes
     [
-        index.drop_vector_search_index(
+        index.drop_vector_search_index(  # type:ignore[func-returns-value]
             vs.collection, ix["name"], wait_until_complete=TIMEOUT
         )
         for ix in vs.collection.list_search_indexes()

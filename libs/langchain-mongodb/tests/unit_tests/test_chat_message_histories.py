@@ -22,6 +22,8 @@ class PatchedMongoDBChatMessageHistory(MongoDBChatMessageHistory):
         self.session_id_key = "SessionId"
         self.history_key = "History"
         self.history_size = None
+        self.db = self.collection.database
+        self.client = self.db.client
 
 
 def test_memory_with_message_store() -> None:
@@ -48,6 +50,9 @@ def test_memory_with_message_store() -> None:
 
     assert memory.chat_memory.messages == []
 
+    message_history.close()
+    assert message_history.client.is_closed
+
 
 def test_init_with_connection_string(mocker: MockerFixture) -> None:
     mock_mongo_client = mocker.patch(
@@ -68,6 +73,7 @@ def test_init_with_connection_string(mocker: MockerFixture) -> None:
     assert history.session_id == "test-session"
     assert history.database_name == "test-database"
     assert history.collection_name == "test-collection"
+    history.close()
 
 
 def test_init_with_existing_client() -> None:
@@ -87,6 +93,8 @@ def test_init_with_existing_client() -> None:
     # Verify that the collection is correctly created within the specified database
     assert "test-database" in client.list_database_names()
     assert "test-collection" in client["test-database"].list_collection_names()
+
+    history.close()
 
 
 def test_init_raises_error_without_connection_or_client() -> None:

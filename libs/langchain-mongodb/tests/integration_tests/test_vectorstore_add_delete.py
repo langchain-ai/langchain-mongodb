@@ -23,10 +23,12 @@ DIMENSIONS = 5
 
 @pytest.fixture
 def collection(client: MongoClient) -> Collection:
-    return client[DB_NAME][COLLECTION_NAME]
+    clx = client[DB_NAME][COLLECTION_NAME]
+    clx.delete_many({})
+    return clx
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def texts() -> List[str]:
     return [
         "Dogs are tough.",
@@ -50,7 +52,6 @@ def test_delete(
         index_name="MATCHES_NOTHING",
     )
     clxn: Collection = vectorstore.collection
-    clxn.delete_many({})
     assert clxn.count_documents({}) == 0
     ids = vectorstore.add_texts(texts)
     assert clxn.count_documents({}) == len(texts)
@@ -65,7 +66,6 @@ def test_delete(
     assert all(isinstance(i, str) for i in new_ids)
     assert len(new_ids) == 2
     assert clxn.count_documents({}) == 4
-    vectorstore.close()
 
 
 def test_add_texts(
@@ -122,7 +122,7 @@ def test_add_texts(
     assert set(out_ids) == set(str_ids)
     assert collection.count_documents({}) == 8
     res = vectorstore.similarity_search("sandwich", k=8)
-    assert any(str_ids[0] in doc.id for doc in res)
+    assert any(str_ids[0] in doc.id for doc in res)  # type:ignore[operator]
 
     # Case 5: Test adding in multiple batches
     batch_size = 2
@@ -158,7 +158,6 @@ def test_add_texts(
         i += 1
     returned_ids = vectorstore.add_texts(texts=texts, metadatas=metadatas)
     assert len(set(returned_ids).intersection(set(_ids))) == 0
-    vectorstore.close()
 
 
 def test_add_documents(
@@ -207,4 +206,3 @@ def test_add_documents(
     result_ids = vectorstore.add_documents(docs, ids, batch_size=batch_size)
     assert len(result_ids) == n_docs
     assert set(ids) == set(collection.distinct("_id"))
-    vectorstore.close()

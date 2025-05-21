@@ -33,7 +33,7 @@ lint:
 
 [group('lint')]
 typing:
-	uv run mypy .
+	uv run mypy --install-types --non-interactive .
 
 [group('lint')]
 codespell:

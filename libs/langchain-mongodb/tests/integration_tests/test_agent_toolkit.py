@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 import requests
-from flaky import flaky
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from pymongo import MongoClient

@@ -36,13 +36,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v5
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
           cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
-      - uses: extractions/setup-just@v3
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}
@@ -61,3 +61,7 @@ jobs:
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}
         run: just lint
+
+      - name: Checking the types
+        working-directory: ${{ inputs.working-directory }}
+        run: just typing

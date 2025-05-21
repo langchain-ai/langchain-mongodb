@@ -24,7 +24,7 @@ def collection() -> MockCollection:
     return get_collection()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def embedding_openai() -> Embeddings:
     return ConsistentFakeEmbeddings()
 
@@ -101,6 +101,8 @@ class TestMongoDBAtlasVectorSearch:
         self._validate_search(
             vectorstore, collection, metadata=documents[2].metadata["c"]
         )
+        vectorstore.close()
+        assert collection.database.client.is_closed
 
     def test_from_texts(
         self, embedding_openai: Embeddings, collection: MockCollection

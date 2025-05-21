@@ -1,18 +1,19 @@
-# flake8: noqa
 """Tools for interacting with a MongoDB database."""
 
-from typing import Any, Dict, Optional, Sequence, Type, Union
+from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Any, Dict, Optional, Type
 
-from langchain_core.language_models import BaseLanguageModel
 from langchain_core.callbacks import (
-    AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
+from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import PromptTemplate
-from .database import MongoDBDatabase
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pymongo.cursor import Cursor
+
+from .database import MongoDBDatabase
 from .prompt import MONGODB_QUERY_CHECKER
 
 
@@ -41,7 +42,7 @@ class QueryMongoDBDatabaseTool(BaseMongoDBDatabaseTool, BaseTool):  # type: igno
     """
     args_schema: Type[BaseModel] = _QueryMongoDBDatabaseToolInput
 
-    def _run(self, query: str, **kwargs: Any) -> Union[str, Sequence[Dict[str, Any]]]:
+    def _run(self, query: str, **kwargs: Any) -> str | Cursor:
         """Execute the query, return the results or an error message."""
         return self.db.run_no_throw(query)
 
@@ -137,4 +138,4 @@ class QueryMongoDBCheckerTool(BaseMongoDBDatabaseTool, BaseTool):  # type: ignor
         """Use the LLM to check the query."""
         # TODO: check the query using pymongo first.
         chain = self.prompt | self.llm
-        return chain.invoke(query)
+        return chain.invoke(query)  # type:ignore[arg-type]

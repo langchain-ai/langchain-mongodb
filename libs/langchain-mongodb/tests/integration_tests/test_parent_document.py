@@ -75,4 +75,3 @@ def test_1clxn_retriever(
     assert len(responses) == 3
     assert all("GPT-4" in doc.page_content for doc in responses)
     assert {4, 5, 29} == set(doc.metadata["page"] for doc in responses)
-    retriever.close()

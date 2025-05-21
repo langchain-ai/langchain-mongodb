@@ -18,3 +18,7 @@ updates:
     directory: "libs/langgraph-checkpoint-mongodb"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "libs/langgraph-store-mongodb"
+    schedule:
+      interval: "weekly"

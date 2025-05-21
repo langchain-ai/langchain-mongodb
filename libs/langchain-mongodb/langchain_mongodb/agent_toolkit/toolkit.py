@@ -56,7 +56,7 @@ class MongoDBDatabaseToolkit(BaseToolkit):
 
             from langchain import hub
             from langgraph.prebuilt import create_react_agent
-            from mongodb_agent_toolkit.prompt import MONGODB_AGENT_SYSTEM_PROMPT
+            from langchain_mongodb.agent_toolkit import MONGODB_AGENT_SYSTEM_PROMPT
 
             # Pull prompt (or define your own)
             system_message = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)

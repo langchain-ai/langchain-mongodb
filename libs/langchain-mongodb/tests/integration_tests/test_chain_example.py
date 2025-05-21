@@ -25,7 +25,7 @@ TIMEOUT = 60.0
 INTERVAL = 0.5
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def collection(client: MongoClient) -> Collection:
     """A Collection with both a Vector and a Full-text Search Index"""
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
@@ -132,5 +132,3 @@ def test_chain(
     answer = chain.invoke("What city did I visit last?")
 
     assert "Paris" in answer
-
-    vectorstore.close()

@@ -19,6 +19,7 @@ dev = [
     "sphinxcontrib-googleanalytics>=0.4",
     "langchain-mongodb",
     "langgraph-checkpoint-mongodb",
+    "langgraph-store-mongodb",
     "langchain-community>=0.3.14",
     "myst-parser>=3.0.1",
     "ipython>=8.18.1",
@@ -27,3 +28,4 @@ dev = [
 [tool.uv.sources]
 langchain-mongodb = { path = "libs/langchain-mongodb", editable = true }
 langgraph-checkpoint-mongodb = { path = "libs/langgraph-checkpoint-mongodb", editable = true }
+langgraph-store-mongodb = { path = "libs/langgraph-store-mongodb", editable = true }
