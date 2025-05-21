@@ -40,6 +40,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         db_name (Optional[str]): Database name
         checkpoint_collection_name (Optional[str]): Name of Collection of Checkpoints
         writes_collection_name (Optional[str]): Name of Collection of intermediate writes.
+        ttl (Optional[int]): Time to live in seconds.
 
     Examples:
 
@@ -117,6 +118,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints",
         writes_collection_name: str = "checkpoint_writes",
+        ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> Iterator["MongoDBSaver"]:
         """Context manager to create a MongoDB checkpoint saver.
@@ -133,6 +135,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             db_name: Database name. It will be created if it doesn't exist.
             checkpoint_collection_name: Checkpoint Collection name. Created if it doesn't exist.
             writes_collection_name: Collection name of intermediate writes. Created if it doesn't exist.
+            ttl (Optional[int]): Time to live in seconds.
         Yields: A new MongoDBSaver.
         """
         client: Optional[MongoClient] = None
@@ -148,6 +151,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                 db_name,
                 checkpoint_collection_name,
                 writes_collection_name,
+                ttl,
                 **kwargs,
             )
         finally:

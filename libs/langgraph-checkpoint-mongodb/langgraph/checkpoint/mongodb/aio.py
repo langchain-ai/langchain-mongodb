@@ -147,6 +147,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
+        ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> AsyncIterator[AsyncMongoDBSaver]:
         """Create asynchronous checkpointer
@@ -166,6 +167,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 db_name,
                 checkpoint_collection_name,
                 writes_collection_name,
+                ttl,
                 **kwargs,
             )
             await saver._setup()
