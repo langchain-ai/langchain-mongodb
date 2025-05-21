@@ -40,7 +40,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         db_name (Optional[str]): Database name
         checkpoint_collection_name (Optional[str]): Name of Collection of Checkpoints
         writes_collection_name (Optional[str]): Name of Collection of intermediate writes.
-        ttl (Optional[int]): Time to live in seconds.
+        ttl (Optional[int]): Time to live in seconds. See https://www.mongodb.com/docs/manual/core/index-ttl/.
 
     Examples:
 
@@ -87,12 +87,12 @@ class MongoDBSaver(BaseCheckpointSaver):
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
-
             if self.ttl:
                 self.checkpoint_collection.create_index(
                     keys=[("created_at", ASCENDING)],
                     expireAfterSeconds=self.ttl,
                 )
+
         if len(self.writes_collection.list_indexes().to_list()) < 2:
             self.writes_collection.create_index(
                 keys=[
