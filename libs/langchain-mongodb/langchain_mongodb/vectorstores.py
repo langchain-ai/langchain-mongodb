@@ -219,7 +219,6 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key: MongoDB field that will contain the text for each document
             index_name: Existing Atlas Vector Search Index
             embedding_key: Field that will contain the embedding for each document
-            vector_index_name: Name of the Atlas Vector Search index
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
             dimensions: Number of dimensions in embedding.  If the value is set and
