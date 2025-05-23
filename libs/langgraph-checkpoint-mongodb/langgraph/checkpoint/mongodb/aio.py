@@ -5,6 +5,7 @@ import builtins
 import sys
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
+from datetime import datetime
 from importlib.metadata import version
 from typing import Any, Optional
 
@@ -81,6 +82,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
+        ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -90,6 +92,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.writes_collection = self.db[writes_collection_name]
         self._setup_future: asyncio.Future | None = None
         self.loop = asyncio.get_running_loop()
+        self.ttl = ttl
 
     async def _setup(self) -> None:
         """Create indexes if not present."""
@@ -107,6 +110,11 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
                 unique=True,
             )
+            if self.ttl:
+                await self.checkpoint_collection.create_index(
+                    keys=[("created_at", 1)],
+                    expireAfterSeconds=self.ttl,
+                )
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
                 await (await self.writes_collection.list_indexes()).to_list()  # type:ignore[misc]
@@ -124,6 +132,11 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 ],
                 unique=True,
             )
+            if self.ttl:
+                await self.writes_collection.create_index(
+                    keys=[("created_at", 1)],
+                    expireAfterSeconds=self.ttl,
+                )
         self._setup_future.set_result(None)
 
     @classmethod
@@ -134,6 +147,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
+        ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> AsyncIterator[AsyncMongoDBSaver]:
         """Create asynchronous checkpointer
@@ -153,6 +167,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 db_name,
                 checkpoint_collection_name,
                 writes_collection_name,
+                ttl,
                 **kwargs,
             )
             await saver._setup()
@@ -343,6 +358,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             "checkpoint_ns": checkpoint_ns,
             "checkpoint_id": checkpoint_id,
         }
+        if self.ttl:
+            doc["created_at"] = datetime.now()
         # Perform your operations here
         await self.checkpoint_collection.update_one(
             upsert_query, {"$set": doc}, upsert=True
@@ -389,6 +406,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 "task_path": task_path,
                 "idx": WRITES_IDX_MAP.get(channel, idx),
             }
+            if self.ttl:
+                upsert_query["created_at"] = datetime.now()
             type_, serialized_value = self.serde.dumps_typed(value)
             operations.append(
                 UpdateOne(

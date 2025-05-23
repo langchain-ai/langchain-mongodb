@@ -1,4 +1,5 @@
 import os
+from time import sleep
 from typing import Any
 
 import pytest
@@ -165,3 +166,39 @@ def test_nested_filter() -> None:
         # Drop collections
         saver.checkpoint_collection.drop()
         saver.writes_collection.drop()
+
+
+def test_ttl(input_data: dict[str, Any]) -> None:
+    collection_name = "ttl_test"
+    ttl = 1
+
+    # Set period between background task runs
+    monitor_period = 2
+    client: MongoClient = MongoClient(MONGODB_URI)
+    client.admin.command("setParameter", 1, ttlMonitorSleepSecs=monitor_period)
+
+    with MongoDBSaver.from_conn_string(
+        MONGODB_URI, DB_NAME, collection_name, ttl=ttl
+    ) as saver:
+        try:
+            # save a checkpoint
+            saver.put(
+                input_data["config_2"],
+                input_data["chkpnt_2"],
+                input_data["metadata_2"],
+                {},
+            )
+
+            query: dict[str, Any] = {}  # search by no keys, return all checkpoints
+            search_results_2 = list(saver.list(None, filter=query))
+            assert len(search_results_2) == 1
+            assert search_results_2[0].metadata == input_data["metadata_2"]
+
+            sleep(ttl + monitor_period)
+            assert len(list(saver.list(None, filter=query))) == 0
+
+        finally:
+            saver.checkpoint_collection.delete_many({})
+            saver.checkpoint_collection.drop_indexes()
+            saver.writes_collection.delete_many({})
+            saver.writes_collection.drop_indexes()
