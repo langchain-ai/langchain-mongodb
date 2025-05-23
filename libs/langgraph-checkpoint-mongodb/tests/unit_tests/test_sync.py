@@ -171,7 +171,11 @@ def test_nested_filter() -> None:
 def test_ttl(input_data: dict[str, Any]) -> None:
     collection_name = "ttl_test"
     ttl = 1
-    background_period = 60  # period between background task runs
+
+    # Set period between background task runs
+    monitor_period = 2
+    client: MongoClient = MongoClient(MONGODB_URI)
+    client.admin.command("setParameter", 1, ttlMonitorSleepSecs=monitor_period)
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, collection_name, ttl=ttl
@@ -190,7 +194,7 @@ def test_ttl(input_data: dict[str, Any]) -> None:
             assert len(search_results_2) == 1
             assert search_results_2[0].metadata == input_data["metadata_2"]
 
-            sleep(ttl + background_period)
+            sleep(ttl + monitor_period)
             assert len(list(saver.list(None, filter=query))) == 0
 
         finally:
