@@ -1,7 +1,7 @@
 """Follows https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/time-travel"""
 
 import os
-from typing import TypedDict
+from typing import Generator, TypedDict
 
 import pytest
 
@@ -10,6 +10,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
+from langchain_core.runnables import RunnableConfig
 
 # --- Configuration ---
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
@@ -19,12 +20,12 @@ WRITES_CLXN_NAME = "interrupts_writes"
 
 
 @pytest.fixture(scope="function")
-def checkpointer_memory():
+def checkpointer_memory() -> Generator[InMemorySaver, None, None]:
     yield InMemorySaver()
 
 
 @pytest.fixture(scope="function")
-def checkpointer_mongodb():
+def checkpointer_mongodb() -> Generator[MongoDBSaver, None, None]:
     with MongoDBSaver.from_conn_string(
         MONGODB_URI,
         db_name=DB_NAME,
@@ -45,7 +46,7 @@ ALL_CHECKPOINTERS_SYNC = [
 
 
 @pytest.mark.parametrize("checkpointer_name", ALL_CHECKPOINTERS_SYNC)
-def test(request: pytest.FixtureRequest, checkpointer_name: str):
+def test(request: pytest.FixtureRequest, checkpointer_name: str) -> None:
     checkpointer: BaseCheckpointSaver = request.getfixturevalue(checkpointer_name)
     assert isinstance(checkpointer, BaseCheckpointSaver)
 
@@ -80,7 +81,7 @@ def test(request: pytest.FixtureRequest, checkpointer_name: str):
     )
 
     # --- Configure  ---
-    config = {"configurable": {"thread_id": "thread_#1"}}
+    config: RunnableConfig = {"configurable": {"thread_id": "thread_#1"}}
     initial_input = {"value": 10, "step": 0}
 
     # --- 1st invoke, with Interruption
