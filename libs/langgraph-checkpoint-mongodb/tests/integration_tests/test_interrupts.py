@@ -1,16 +1,17 @@
 """Follows https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/time-travel"""
 
 import os
-from typing import Generator, TypedDict
+from collections.abc import Generator
+from typing import TypedDict
 
 import pytest
+from langchain_core.runnables import RunnableConfig
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
-from langchain_core.runnables import RunnableConfig
 
 # --- Configuration ---
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
