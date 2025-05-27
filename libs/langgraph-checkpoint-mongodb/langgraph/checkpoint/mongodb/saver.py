@@ -442,3 +442,18 @@ class MongoDBSaver(BaseCheckpointSaver):
                 )
             )
         self.writes_collection.bulk_write(operations)
+
+    def delete_thread(
+        self,
+        thread_id: str,
+    ) -> None:
+        """Delete all checkpoints and writes associated with a specific thread ID.
+
+        Args:
+            thread_id (str): The thread ID whose checkpoints should be deleted.
+        """
+        # Delete all checkpoints associated with the thread ID
+        self.checkpoint_collection.delete_many({"thread_id": thread_id})
+
+        # Delete all writes associated with the thread ID
+        self.writes_collection.delete_many({"thread_id": thread_id})
