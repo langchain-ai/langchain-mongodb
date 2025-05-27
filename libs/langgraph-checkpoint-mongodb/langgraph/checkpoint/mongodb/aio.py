@@ -424,6 +424,34 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             )
         await self.writes_collection.bulk_write(operations)
 
+    async def adelete_thread(
+        self,
+        thread_id: str,
+    ) -> None:
+        """Delete all checkpoints and writes associated with a specific thread ID asynchronously.
+
+        Args:
+            thread_id (str): The thread ID whose checkpoints should be deleted.
+        """
+        # Delete all checkpoints associated with the thread ID
+        await self.checkpoint_collection.delete_many({"thread_id": thread_id})
+
+        # Delete all writes associated with the thread ID
+        await self.writes_collection.delete_many({"thread_id": thread_id})
+
+    def delete_thread(
+        self,
+        thread_id: str,
+    ) -> None:
+        """Delete all checkpoints and writes associated with a specific thread ID.
+
+        Args:
+            thread_id (str): The thread ID whose checkpoints should be deleted.
+        """
+        return asyncio.run_coroutine_threadsafe(
+            self.adelete_thread(thread_id), self.loop
+        ).result()
+
     def list(
         self,
         config: Optional[RunnableConfig],
