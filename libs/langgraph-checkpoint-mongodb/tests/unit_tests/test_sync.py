@@ -7,6 +7,7 @@ from bson.errors import InvalidDocument
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from pymongo import MongoClient
+from pymongo.errors import OperationFailure
 
 from langgraph.checkpoint.base import (
     CheckpointMetadata,
@@ -172,10 +173,15 @@ def test_ttl(input_data: dict[str, Any]) -> None:
     collection_name = "ttl_test"
     ttl = 1
 
-    # Set period between background task runs
+    # Set period between background task runs.
     monitor_period = 2
     client: MongoClient = MongoClient(MONGODB_URI)
-    client.admin.command("setParameter", 1, ttlMonitorSleepSecs=monitor_period)
+    try:
+        # This works for local Atlas CLI.
+        client.admin.command("setParameter", 1, ttlMonitorSleepSecs=monitor_period)
+    except OperationFailure:
+        # For remote, we've adjusted manually via Atlas Administration API.
+        pass
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, collection_name, ttl=ttl
