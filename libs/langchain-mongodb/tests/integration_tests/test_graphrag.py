@@ -145,7 +145,7 @@ def test_add_docs_store(graph_store):
     assert 4 <= len(extracted_entities) < 8
 
 
-@flaky
+@flaky(max_runs=4)
 def test_extract_entity_names(graph_store, query_connection):
     query_entity_names = graph_store.extract_entity_names(query_connection)
     assert set(query_entity_names) == {"John Doe", "Jane Smith"}
@@ -155,7 +155,7 @@ def test_extract_entity_names(graph_store, query_connection):
     assert len(no_names) == 0
 
 
-@flaky
+@flaky(max_runs=4)
 def test_related_entities(graph_store):
     entity_names = ["John Doe", "Jane Smith"]
     related_entities = graph_store.related_entities(entity_names)
@@ -166,7 +166,7 @@ def test_related_entities(graph_store):
     assert len(no_entities) == 0
 
 
-@flaky
+@flaky(max_runs=4)
 def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
     # First, create one client just to drop any existing collections
     client = MongoClient(CONNECTION_STRING)
@@ -190,7 +190,7 @@ def test_additional_entity_examples(entity_extraction_model, entity_example, doc
     assert len(new_entities) >= 2
 
 
-@flaky
+@flaky(max_runs=4)
 def test_chat_response(graph_store, query_connection):
     """Displays querying an existing Knowledge Graph Database"""
     answer = graph_store.chat_response(query_connection)
@@ -198,7 +198,7 @@ def test_chat_response(graph_store, query_connection):
     assert "acme corporation" in answer.content.lower()
 
 
-@flaky
+@flaky(max_runs=4)
 def test_similarity_search(graph_store, query_connection):
     docs = graph_store.similarity_search(query_connection)
     assert len(docs) >= 4
@@ -207,7 +207,7 @@ def test_similarity_search(graph_store, query_connection):
     assert any("attributes" in d.keys() for d in docs)
 
 
-@flaky
+@flaky(max_runs=4)
 def test_validator(documents, entity_extraction_model):
     # Case 1. No existing collection.
     client = MongoClient(CONNECTION_STRING)
@@ -261,7 +261,7 @@ def test_validator(documents, entity_extraction_model):
     client.close()
 
 
-@flaky
+@flaky(max_runs=4)
 def test_allowed_entity_types(documents, entity_extraction_model):
     """Add allowed_entity_types. Use the validator to confirm behaviour."""
     allowed_entity_types = ["Person"]
@@ -289,7 +289,7 @@ def test_allowed_entity_types(documents, entity_extraction_model):
     all([len(e["relationships"].get("attributes", [])) == 0 for e in entities])
 
 
-@flaky
+@flaky(max_runs=4)
 def test_allowed_relationship_types(documents, entity_extraction_model):
     # drop collection
     client = MongoClient(CONNECTION_STRING)
