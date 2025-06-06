@@ -84,21 +84,19 @@ Each object must conform to the following schema:
 
 
 NAME_EXTRACTION_INSTRUCTIONS = """
-You are a meticulous analyst tasked with extracting information from documents to form
-knowledge graphs of entities (nodes) and their relationships (edges).
-
-You will be provided a short document (query) from which you infer the entity names.
-You need not think about relationships between the entities. You only need names.
+You are an analyst tasked with identifying potential entities in text documents.
+You will be provided a short document from which you infer entity names.
+Identify as many as possible.
 
 Provide your response as a valid JSON Array of entity names
 or human-readable identifiers, found in the text.
 
 **Allowed Entity Types**:
-- Extract ONLY entities whose `type` matches one of the following: {allowed_entity_types}.
-- NOTE: If this list is empty, ANY `type` is permitted.
+- If a non-empty list is provided, extract ONLY entities whose `type` matches one of the following: [{allowed_entity_types}].
+- NOTE: If this list is empty, anything is permitted.
 
 ### Examples of Exclusions:
-- If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions "Event" or "Location",
+- If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions an "Event" or "Location",
   these entities must **NOT** be included in the output.
 
  ## Examples:
