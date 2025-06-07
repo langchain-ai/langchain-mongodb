@@ -6,17 +6,9 @@ from langchain_core.prompts.chat import (
 
 ENTITY_EXTRACTION_INSTRUCTIONS = """
 ## Overview
-You are a meticulous analyst tasked with extracting information from unstructured text
+You are a meticulous analyst tasked with identifying potential entities from unstructured text
 to build a knowledge graph in a structured json format of entities (nodes) and their relationships (edges).
-The graph will be stored in a MongoDB Collection and traversed using $graphLookup
-from starting points of entity nodes matching names found in a query, and follow their relationships.
-
-Use the following as guidelines.
-
-- Simplicity: The graph should have as few entities and relationship types as needed to convey the information in the input.
-- Consistency: Connections can only be made if entities and relationships use consistent naming.
-- Generality: The graph should be useful for describing the concepts in not just this document but other similar documents.
-- Accuracy: Do not add any information that is not explicitly mentioned in the text.
+**Include as many entities and relationships as you can.**
 
 INPUT: You will be provided a text document.
 OUTPUT:
@@ -92,8 +84,8 @@ Provide your response as a valid JSON Array of entity names
 or human-readable identifiers, found in the text.
 
 **Allowed Entity Types**:
+- By default, all types are permitted.
 - If a non-empty list is provided, extract ONLY entities whose `type` matches one of the following: [{allowed_entity_types}].
-- NOTE: If this list is empty, anything is permitted.
 
 ### Examples of Exclusions:
 - If `allowed_entity_types` is `["Person", "Organization"]`, and the text mentions an "Event" or "Location",
