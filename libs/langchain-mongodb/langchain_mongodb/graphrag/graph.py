@@ -235,7 +235,7 @@ class MongoDBGraphStore:
         entity_extraction_model: BaseChatModel,
         entity_prompt: ChatPromptTemplate = prompts.entity_prompt,
         query_prompt: ChatPromptTemplate = prompts.query_prompt,
-        max_depth: int = 2,
+        max_depth: int = 3,
         allowed_entity_types: Optional[List[str]] = None,
         allowed_relationship_types: Optional[List[str]] = None,
         entity_examples: Optional[str] = None,
