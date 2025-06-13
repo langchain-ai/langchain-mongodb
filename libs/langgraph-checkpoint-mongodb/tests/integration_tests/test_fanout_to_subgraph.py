@@ -7,12 +7,12 @@ https://github.com/langchain-ai/langgraph/blob/main/libs/langgraph/bench/fanout_
 
 import operator
 import os
-import random
 import time
 from collections.abc import Generator
 from typing import Annotated, TypedDict
 from uuid import uuid4
 
+import langchain_core
 import pytest
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import dict_row
@@ -34,6 +34,8 @@ CHECKPOINT_CLXN_NAME = "fanout_checkpoints"
 WRITES_CLXN_NAME = "fanout_writes"
 
 DEFAULT_POSTGRES_URI = "postgres://postgres:postgres@localhost:5441/"
+
+N_SUBJECTS = 1000
 
 
 @pytest.fixture(scope="function")
@@ -130,11 +132,8 @@ def disable_langsmith():
 
 @pytest.fixture
 def input():
-    return {
-        "subjects": [
-            random.choices("abcdefghijklmnopqrstuvwxyz", k=1000) for _ in range(1000)
-        ]
-    }
+    years = [str(2025 - 10 * i) for i in range(N_SUBJECTS)]
+    return {"subjects": years}
 
 
 class OverallState(TypedDict):
@@ -154,30 +153,27 @@ class JokeState(JokeInput, JokeOutput): ...
 
 
 def test_sync(
-    input, checkpointer_memory, checkpointer_mongodb, checkpointer_postgres
+    input, checkpointer_mongodb, checkpointer_memory, checkpointer_postgres
 ) -> None:
     checkpointers = {
-        "in_memory": checkpointer_memory,
         "mongodb": checkpointer_mongodb,
         "postgres": checkpointer_postgres,
+        "in_memory": checkpointer_memory,
     }
 
     def fanout_to_subgraph() -> StateGraph:
-        def generate(state: JokeInput):
-            return {"jokes": [f"Joke about {state['subject']}"]}
-
+        # Subgraph nodes create a joke
         def edit(state: JokeInput):
-            subject = state["subject"]
-            return {"subject": f"{subject} - hohoho"}
+            return {"subject": f"{state["subject"]}, and cats"}
+
+        def generate(state: JokeInput):
+            return {"jokes": [f"Joke about the year {state['subject']}"]}
 
         def bump(state: JokeOutput):
-            return {"jokes": [state["jokes"][0] + " a"]}
+            return {"jokes": [state["jokes"][0] + " and more"]}
 
         def bump_loop(state: JokeOutput):
-            return END if state["jokes"][0].endswith(" a" * 10) else "bump"
-
-        def continue_to_jokes(state: OverallState):
-            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+            return END if state["jokes"][0].endswith(" and more" * 10) else "bump"
 
         subgraph = StateGraph(JokeState, input=JokeInput, output=JokeOutput)
         subgraph.add_node("edit", edit)
@@ -186,58 +182,70 @@ def test_sync(
         subgraph.set_entry_point("edit")
         subgraph.add_edge("edit", "generate")
         subgraph.add_edge("generate", "bump")
+        subgraph.add_node("bump_loop", bump_loop)
         subgraph.add_conditional_edges("bump", bump_loop)
         subgraph.set_finish_point("generate")
         subgraphc = subgraph.compile()
 
-        # parent graph
-        builder = StateGraph(OverallState)
-        builder.add_node("generate_joke", subgraphc)
-        builder.add_conditional_edges(START, continue_to_jokes)
-        builder.add_edge("generate_joke", END)
-        return builder
+        # parent graph maps the joke-generating subgraph
+        def fanout(state: OverallState):
+            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+
+        parentgraph = StateGraph(OverallState)
+        parentgraph.add_node("generate_joke", subgraphc)
+        parentgraph.add_conditional_edges(START, fanout)
+        parentgraph.add_edge("generate_joke", END)
+        return parentgraph
 
     print("\n\nBegin test_sync")
     for cname, checkpointer in checkpointers.items():
         assert isinstance(checkpointer, BaseCheckpointSaver)
 
-        graph = fanout_to_subgraph().compile(checkpointer=checkpointer)
+        graphc = fanout_to_subgraph().compile(checkpointer=checkpointer)
+        assert isinstance(graphc.get_graph(), langchain_core.runnables.graph.Graph)
         config = {"configurable": {"thread_id": cname}}
-        start = time.time()
-        len([c for c in graph.stream(input, config=config)])
-        end = time.time()
+        start = time.monotonic()
+        # len([c for c in graphc.stream(input, config=config)])
+        out = [c for c in graphc.stream(input, config=config)]
+        assert len(out) == N_SUBJECTS
+        assert isinstance(out[0], dict)
+        assert out[0].keys() == {"generate_joke"}
+        assert set(out[0]["generate_joke"].keys()) == {"jokes"}
+        end = time.monotonic()
         print(f"{cname}: {end - start:.4f} seconds")
 
 
 async def test_async(
-    input, checkpointer_memory, checkpointer_mongodb_async, checkpointer_postgres_async
+    input, checkpointer_mongodb_async, checkpointer_memory, checkpointer_postgres_async
 ) -> None:
-    import bson
-
-    print(f"{bson.has_c()=}")
-
     checkpointers = {
+        "mongodb_async": checkpointer_mongodb_async,
         "postgres_async": checkpointer_postgres_async,
         "in_memory_async": checkpointer_memory,
-        "mongodb_async": checkpointer_mongodb_async,
     }
 
     async def fanout_to_subgraph() -> StateGraph:
-        async def continue_to_jokes(state: OverallState):
-            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+        """The fanout here is performed by the list comprehension of [class:~langgraph.types.Send] calls.
+        The effect of this is a map (fanout) workflow where the graph invokes
+        the same node multiple times in parallel (with different states???).
+        The node here is a subgraph.
+        The subgraph is linear, with a conditional edge 'bump_loop' that repeatably calls
+        the node 'bump' until a condition is met.
+        """
 
-        async def bump(state: JokeOutput):
-            return {"jokes": [state["jokes"][0] + " a"]}
-
-        async def generate(state: JokeInput):
-            return {"jokes": [f"Joke about {state['subject']}"]}
-
+        # Subgraph nodes create a joke
         async def edit(state: JokeInput):
             subject = state["subject"]
-            return {"subject": f"{subject} - hohoho"}
+            return {"subject": f"{subject}, and cats"}
+
+        async def generate(state: JokeInput):
+            return {"jokes": [f"Joke about the year {state['subject']}"]}
+
+        async def bump(state: JokeOutput):
+            return {"jokes": [state["jokes"][0] + " and more"]}
 
         async def bump_loop(state: JokeOutput):
-            return END if state["jokes"][0].endswith(" a" * 10) else "bump"
+            return END if state["jokes"][0].endswith(" and more" * 10) else "bump"
 
         subgraph = StateGraph(JokeState, input=JokeInput, output=JokeOutput)
         subgraph.add_node("edit", edit)
@@ -250,20 +258,28 @@ async def test_async(
         subgraph.set_finish_point("generate")
         subgraphc = subgraph.compile()
 
-        # parent graph
-        supergraph = StateGraph(OverallState)
-        supergraph.add_node("generate_joke", subgraphc)
-        supergraph.add_conditional_edges(START, continue_to_jokes)
-        supergraph.add_edge("generate_joke", END)
-        return supergraph
+        # parent graph maps the joke-generating subgraph
+        async def fanout(state: OverallState):
+            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+
+        parentgraph = StateGraph(OverallState)
+        parentgraph.add_node("generate_joke", subgraphc)
+        parentgraph.add_conditional_edges(START, fanout)
+        parentgraph.add_edge("generate_joke", END)
+        return parentgraph
 
     print("\n\nBegin test_async")
     for cname, checkpointer in checkpointers.items():
         assert isinstance(checkpointer, BaseCheckpointSaver)
 
-        graph = (await fanout_to_subgraph()).compile(checkpointer=checkpointer)
+        graphc = (await fanout_to_subgraph()).compile(checkpointer=checkpointer)
         config = {"configurable": {"thread_id": cname}}
-        start = time.time()
-        len([c async for c in graph.astream(input, config=config)])
-        end = time.time()
+        start = time.monotonic()
+        # len([c async for c in graphc.astream(input, config=config)])
+        out = [c async for c in graphc.astream(input, config=config)]
+        assert len(out) == N_SUBJECTS
+        assert isinstance(out[0], dict)
+        assert out[0].keys() == {"generate_joke"}
+        assert set(out[0]["generate_joke"].keys()) == {"jokes"}
+        end = time.monotonic()
         print(f"{cname}: {end - start:.4f} seconds")
