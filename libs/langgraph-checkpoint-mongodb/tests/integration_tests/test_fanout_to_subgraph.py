@@ -1,8 +1,16 @@
 """
-
 Based on LangGraph's Benchmarking script,
-https://github.com/langchain-ai/langgraph/blob/main/libs/langgraph/bench/fanout_to_subgraph.py
+https://github.com/langchain-ai/langgraph/blob/main/libs/langgraph/bench/fanout_to_subgraph.py,
+this pattern of joke generation is used often in the examples.
 
+The fanout here is performed by the list comprehension of [class:~langgraph.types.Send] calls.
+The effect of this is a map (fanout) workflow where the graph invokes
+the same node multiple times in parallel.
+The node here is a subgraph.
+The subgraph is linear, with a conditional edge 'bump_loop' that repeatably calls
+the node 'bump' until a condition is met.
+
+We use this test for benchmarking. It also demonstrates subgraphs, add_conditional_edges, and Send.
 """
 
 import operator
@@ -33,6 +41,8 @@ DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 CHECKPOINT_CLXN_NAME = "fanout_checkpoints"
 WRITES_CLXN_NAME = "fanout_writes"
 
+# PostgreSQL configuration follows that in langgraph repo.
+# It requires a user "postgres" with password "postgres" running on port 5441.
 DEFAULT_POSTGRES_URI = "postgres://postgres:postgres@localhost:5441/"
 
 N_SUBJECTS = 1000
@@ -205,7 +215,6 @@ def test_sync(
         assert isinstance(graphc.get_graph(), langchain_core.runnables.graph.Graph)
         config = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
-        # len([c for c in graphc.stream(input, config=config)])
         out = [c for c in graphc.stream(input, config=config)]
         assert len(out) == N_SUBJECTS
         assert isinstance(out[0], dict)
@@ -225,14 +234,6 @@ async def test_async(
     }
 
     async def fanout_to_subgraph() -> StateGraph:
-        """The fanout here is performed by the list comprehension of [class:~langgraph.types.Send] calls.
-        The effect of this is a map (fanout) workflow where the graph invokes
-        the same node multiple times in parallel (with different states???).
-        The node here is a subgraph.
-        The subgraph is linear, with a conditional edge 'bump_loop' that repeatably calls
-        the node 'bump' until a condition is met.
-        """
-
         # Subgraph nodes create a joke
         async def edit(state: JokeInput):
             subject = state["subject"]
@@ -275,7 +276,6 @@ async def test_async(
         graphc = (await fanout_to_subgraph()).compile(checkpointer=checkpointer)
         config = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
-        # len([c async for c in graphc.astream(input, config=config)])
         out = [c async for c in graphc.astream(input, config=config)]
         assert len(out) == N_SUBJECTS
         assert isinstance(out[0], dict)
