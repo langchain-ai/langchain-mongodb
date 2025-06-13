@@ -31,6 +31,8 @@ dev = [
     "syrupy>=4.0.2",
     "pre-commit>=4.0",
     "mypy>=1.10.0",
+    "langgraph-checkpoint-postgres>=2.0.21",
+    "psycopg[binary]>=3.2.9",
 ]
 
 [tool.hatch.build.targets.wheel]
