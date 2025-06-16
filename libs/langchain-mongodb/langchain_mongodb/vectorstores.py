@@ -816,6 +816,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         filters: Optional[List[str]] = None,
         update: bool = False,
         wait_until_complete: Optional[float] = None,
+        **kwargs: Any,
     ) -> None:
         """Creates a MongoDB Atlas vectorSearch index for the VectorStore
 
@@ -834,6 +835,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
             wait_until_complete (Optional[float]): If given, a TimeoutError is raised
                 if search index is not ready after this number of seconds.
                 If not given, the default, operation will not wait.
+            kwargs: (Optional): Keyword arguments supplying any additional options
+                to SearchIndexModel.
         """
         try:
             self._collection.database.create_collection(self._collection.name)
@@ -852,4 +855,5 @@ class MongoDBAtlasVectorSearch(VectorStore):
             similarity=self._relevance_score_fn,
             filters=filters or [],
             wait_until_complete=wait_until_complete,
+            **kwargs,
         )  # type: ignore [operator]
