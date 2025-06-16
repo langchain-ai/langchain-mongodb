@@ -60,6 +60,17 @@ class MongoDBSaver(BaseCheckpointSaver):
         >>> result = graph.invoke(3, config)
         >>> graph.get_state(config)
         StateSnapshot(values=4, next=(), config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef8b22d-df71-6ddc-8001-7c821b5c45fd'}}, metadata={'source': 'loop', 'writes': {'add_one': 4}, 'step': 1, 'parents': {}}, created_at='2024-10-15T18:25:34.088329+00:00', parent_config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef8b22d-df6f-6eec-8000-20f621dcf3b7'}}, tasks=())
+
+        Adding sharding support:
+
+        >>> from langgraph.checkpoint.mongodb import MongoDBSaver
+        >>> from pymongo import MongoClient
+        >>> memory = MongoDBSaver(client)
+        >>> client = MongoClient("mongodb://localhost:27017")
+        >>> client.admin.command('enableSharding', memory.db_name)
+        >>> shard_key = {'your_shard_key': 1}  # Specify your shard key
+        >>> client.admin.command('shardCollection', f'{memory.db_name}.{memory.checkpoint_collection_name}', key=shard_key)
+        >>> client.admin.command('shardCollection', f'{memory.db_name}.{memory.writes_collection_name}', key=shard_key)
     """
 
     client: MongoClient
