@@ -19,7 +19,7 @@ from langchain_core.messages import (
 )
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pydantic import model_validator
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -46,6 +46,8 @@ def create_database() -> MongoDBDatabase:
 
 
 def create_llm() -> BaseChatModel:
+    if os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        return AzureChatOpenAI(model="o4-mini", timeout=60, cache=False)
     if os.environ.get("OPENAI_API_KEY"):
         return ChatOpenAI(model="gpt-4o-mini", timeout=60, cache=False)
     return ChatOllama(model="llama3:8b", cache=False)

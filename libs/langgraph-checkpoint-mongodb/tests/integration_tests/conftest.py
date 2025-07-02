@@ -3,11 +3,13 @@ import os
 import pytest
 from langchain_core.embeddings import Embeddings
 from langchain_ollama.embeddings import OllamaEmbeddings
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
 
 @pytest.fixture(scope="session")
 def embedding() -> Embeddings:
+    if os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        return AzureOpenAIEmbeddings(model="o4-mini")
     if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
@@ -19,6 +21,6 @@ def embedding() -> Embeddings:
 
 @pytest.fixture(scope="session")
 def dimensions() -> int:
-    if os.environ.get("OPENAI_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return 1536
     return 384
