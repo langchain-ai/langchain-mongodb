@@ -164,7 +164,7 @@ def vectorstore(
 def llm() -> ChatOpenAI:
     """Model used for interpreting query."""
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
-        return AzureChatOpenAI(model="o4-mini", temperature=0.0, cache=False)
+        return AzureChatOpenAI(model="o4-mini", cache=False)
     return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
 
 
