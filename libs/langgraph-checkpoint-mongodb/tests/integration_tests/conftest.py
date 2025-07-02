@@ -9,6 +9,7 @@ from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 @pytest.fixture(scope="session")
 def embedding() -> Embeddings:
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        raise ValueError("ALSO REMOVE BEFORE MERGING")
         return AzureOpenAIEmbeddings(model="text-embedding-3-small")
     if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
