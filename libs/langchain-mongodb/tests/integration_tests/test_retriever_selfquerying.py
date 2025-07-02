@@ -8,6 +8,7 @@ from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from langchain_openai.chat_models.base import BaseChatOpenAI
 
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
@@ -161,7 +162,7 @@ def vectorstore(
 
 
 @pytest.fixture
-def llm() -> ChatOpenAI:
+def llm() -> BaseChatOpenAI:
     """Model used for interpreting query."""
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
         return AzureChatOpenAI(model="o4-mini", cache=False)
