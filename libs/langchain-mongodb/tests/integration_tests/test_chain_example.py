@@ -11,6 +11,7 @@ from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from langchain_openai.chat_models.base import BaseChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
@@ -121,7 +122,7 @@ def test_chain(
     prompt = ChatPromptTemplate.from_template(template)
 
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
-        model = AzureChatOpenAI(model="o4-mini")
+        model: BaseChatOpenAI = AzureChatOpenAI(model="o4-mini")
     else:
         model = ChatOpenAI()
 
