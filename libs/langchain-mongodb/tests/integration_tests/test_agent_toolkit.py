@@ -61,10 +61,10 @@ def test_toolkit_response(db):
 
     toolkit = MongoDBDatabaseToolkit(db=db_wrapper, llm=llm)
 
-    system_message = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
+    prompt = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
 
     test_query = "Which country's customers spent the most?"
-    agent = create_react_agent(llm, toolkit.get_tools(), state_modifier=system_message)
+    agent = create_react_agent(llm, toolkit.get_tools(), prompt=prompt)
     agent.step_timeout = 60
     events = agent.stream(
         {"messages": [("user", test_query)]},
