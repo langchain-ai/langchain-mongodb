@@ -55,7 +55,7 @@ def test_toolkit_response(db):
         CONNECTION_STRING, database=DB_NAME
     )
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
-        llm = AzureChatOpenAI(model="o4-mini", timeout=60)
+        llm = AzureChatOpenAI(model="gpt-o4-mini", timeout=60)
     else:
         llm = ChatOpenAI(model="gpt-4o-mini", timeout=60)
 
