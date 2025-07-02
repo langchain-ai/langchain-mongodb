@@ -4,7 +4,7 @@ import sqlite3
 import pytest
 import requests
 from flaky import flaky  # type:ignore[import-untyped]
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from pymongo import MongoClient
 
@@ -47,20 +47,24 @@ def db(client: MongoClient) -> MongoDBDatabase:
 
 @flaky(max_runs=5, min_passes=4)
 @pytest.mark.skipif(
-    "OPENAI_API_KEY" not in os.environ, reason="test requires OpenAI for chat responses"
+    "OPENAI_API_KEY" not in os.environ and "AZURE_OPENAI_ENDPOINT" not in os.environ,
+    reason="test requires OpenAI for chat responses",
 )
 def test_toolkit_response(db):
     db_wrapper = MongoDBDatabase.from_connection_string(
         CONNECTION_STRING, database=DB_NAME
     )
-    llm = ChatOpenAI(model="gpt-4o-mini", timeout=60)
+    if "AZURE_OPENAI_ENDPOINT" in os.environ:
+        llm = AzureChatOpenAI(model="gpt-4o-mini", timeout=60)
+    else:
+        llm = ChatOpenAI(model="gpt-4o-mini", timeout=60)
 
     toolkit = MongoDBDatabaseToolkit(db=db_wrapper, llm=llm)
 
-    system_message = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
+    prompt = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
 
     test_query = "Which country's customers spent the most?"
-    agent = create_react_agent(llm, toolkit.get_tools(), state_modifier=system_message)
+    agent = create_react_agent(llm, toolkit.get_tools(), prompt=prompt)
     agent.step_timeout = 60
     events = agent.stream(
         {"messages": [("user", test_query)]},

@@ -6,7 +6,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_ollama.embeddings import OllamaEmbeddings
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from pymongo import MongoClient
 
 from ..utils import CONNECTION_STRING
@@ -34,12 +34,14 @@ def embedding() -> Embeddings:
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
             model="text-embedding-3-small",
         )
+    if os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        return AzureOpenAIEmbeddings(model="text-embedding-3-small")
 
     return OllamaEmbeddings(model="all-minilm:l6-v2")
 
 
 @pytest.fixture(scope="session")
 def dimensions() -> int:
-    if os.environ.get("OPENAI_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return 1536
     return 384
