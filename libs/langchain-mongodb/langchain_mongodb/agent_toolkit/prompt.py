@@ -41,7 +41,7 @@ Double check the MongoDB query above for common mistakes, including:
 - Missing content in the aggegregation pipeline
 - Improperly quoting identifiers
 - Improperly quoting operators
-The query must be using pymongo syntax, so make sure the syntax is correct.
+- The query must be using pymongo syntax, so make sure the syntax is correct.
 Example: 
 ```python
 db.CollectionName.aggregate([
