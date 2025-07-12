@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from importlib.metadata import version
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -228,14 +228,51 @@ class MongoDBDatabase:
         """
         if not command.startswith("db."):
             raise ValueError(f"Cannot run command {command}")
-        col_name = command.split(".")[1]
+
+        try:
+            col_name = command.split(".")[1]
+        except IndexError:
+            raise ValueError(
+                "Invalid command format. Could not extract collection name."
+            )
+
         if col_name not in self.get_usable_collection_names():
             raise ValueError(f"Collection {col_name} does not exist!")
-        coll = self._db[col_name]
+
         if ".aggregate(" not in command:
-            raise ValueError(f"Cannot execute command {command}")
-        agg = self._parse_command(command)
-        return dumps(list(coll.aggregate(agg)), indent=2)
+            raise ValueError("Only aggregate(...) queries are currently supported.")
+
+        # Extract and clean aggregation string
+        try:
+            agg_str = command.split(".aggregate(", 1)[1].rsplit(")", 1)[0]
+        except Exception as e:
+            raise ValueError(f"Could not extract aggregation pipeline: {e}")
+
+        # Convert JS-style MongoDB syntax to Python
+        agg_str = self._convert_mongo_js_to_python(agg_str)
+
+        print("🧾 Parsed aggregation string:\n", agg_str)
+
+        # Safely evaluate the aggregation string
+        try:
+            eval_globals = {
+                "ObjectId": ObjectId,
+                "datetime": datetime,
+                "timezone": timezone,
+            }
+            agg_pipeline = eval(agg_str, eval_globals)
+            if not isinstance(agg_pipeline, list):
+                raise ValueError("Aggregation pipeline must be a list.")
+        except Exception as e:
+            raise ValueError(f"Failed to parse aggregation pipeline: {e}")
+
+        # Run the aggregation
+        try:
+            coll = self._db[col_name]
+            result = coll.aggregate(agg_pipeline)
+            return dumps(list(result), indent=2)
+        except Exception as e:
+            raise ValueError(f"Error executing aggregation: {e}")
 
     def get_collection_info_no_throw(
         self, collection_names: Optional[List[str]] = None
@@ -278,3 +315,39 @@ class MongoDBDatabase:
             "collection_info": collection_info,
             "collection_names": ", ".join(collection_names),
         }
+
+    def _convert_mongo_js_to_python(code: str) -> str:
+        """Convert JS-style MongoDB functions into Python-safe syntax."""
+
+        def _handle_iso_date(match):
+            date_str = match.group(1)
+            if not date_str:
+                raise ValueError("ISODate must contain a date string.")
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
+
+        def _handle_new_date(match):
+            date_str = match.group(1)
+            if not date_str:
+                raise ValueError(
+                    "new Date() without arguments is not allowed. Please pass an explicit date string."
+                )
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
+
+        def _handle_object_id(match):
+            id_str = match.group(1)
+            if not id_str:
+                raise ValueError("ObjectId must contain a valid hex string.")
+            return f"ObjectId('{id_str}')"
+
+        patterns = [
+            (r'ISODate\(\s*["\']([^"\']*)["\']\s*\)', _handle_iso_date),
+            (r'new\s+Date\(\s*["\']([^"\']*)["\']\s*\)', _handle_new_date),
+            (r'ObjectId\(\s*["\']([^"\']*)["\']\s*\)', _handle_object_id),
+        ]
+
+        for pattern, repl in patterns:
+            code = re.sub(pattern, repl, code)
+
+        return code
