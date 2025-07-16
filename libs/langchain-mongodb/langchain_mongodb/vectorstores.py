@@ -204,7 +204,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         collection: Collection[Dict[str, Any]],
         embedding: Embeddings,
         index_name: str = "vector_index",
-        text_key: str = "text",
+        text_key: str | list[str] = "text",
         embedding_key: str = "embedding",
         relevance_score_fn: str = "cosine",
         dimensions: int = -1,
@@ -216,7 +216,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Args:
             collection: MongoDB collection to add the texts to
             embedding: Text embedding model to use
-            text_key: MongoDB field that will contain the text for each document
+            text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
+            The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
             embedding_key: Field that will contain the embedding for each document
             relevance_score_fn: The similarity score used for the index
@@ -229,7 +230,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._collection = collection
         self._embedding = embedding
         self._index_name = index_name
-        self._text_key = text_key
+        self._text_key = text_key if isinstance(text_key, str) else text_key[0]
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
 

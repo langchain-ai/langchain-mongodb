@@ -17,7 +17,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     """MongoDB Collection on an Atlas cluster"""
     search_index_name: str
     """Atlas Search Index name"""
-    search_field: str
+    search_field: str | list[str]
     """Collection field that contains the text to be searched. It must be indexed"""
     k: Optional[int] = None
     """Number of documents to return. Default is no limit"""
@@ -61,7 +61,11 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
         # Formatting
         docs = []
         for res in cursor:
-            text = res.pop(self.search_field)
+            text = (
+                res.pop(self.search_field)
+                if isinstance(self.search_field, str)
+                else res.pop(self.search_field[0])
+            )
             make_serializable(res)
             docs.append(Document(page_content=text, metadata=res))
         return docs

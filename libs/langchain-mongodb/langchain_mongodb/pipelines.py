@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 def text_search_stage(
     query: str,
-    search_field: str,
+    search_field: str | list[str],
     index_name: str,
     limit: Optional[int] = None,
     filter: Optional[Dict[str, Any]] = None,
