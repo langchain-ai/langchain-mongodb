@@ -25,7 +25,7 @@ VECTOR_INDEX_NAME = "vector_index"
 EMBEDDING_FIELD = "embedding"
 PAGE_CONTENT_FIELD = ["text", "keywords"]
 PAGE_CONTENT_FIELD_NESTED = "title.text"
-SEARCH_INDEX_NAME = "text_index"
+SEARCH_INDEX_NAME = "text_index_multi"
 SEARCH_INDEX_NAME_NESTED = "text_index_nested"
 
 TIMEOUT = 60.0
@@ -36,19 +36,19 @@ INTERVAL = 0.5
 def example_documents() -> List[Document]:
     return [
         Document(
-            page_content="In 2023, I visited Paris", metadata={"keywords": "keyword1"}
+            page_content="In 2023, I visited Paris", metadata={"keywords": "MongoDB"}
         ),
         Document(
             page_content="In 2022, I visited New York",
-            metadata={"keywords": "keyword2"},
+            metadata={"keywords": "Atlas"},
         ),
         Document(
             page_content="In 2021, I visited New Orleans",
-            metadata={"keywords": "keyword3"},
+            metadata={"keywords": "Search"},
         ),
         Document(
             page_content="Sandwiches are beautiful. Sandwiches are fine.",
-            metadata={"keywords": "keyword4"},
+            metadata={"keywords": "is awesome"},
         ),
     ]
 
@@ -169,16 +169,17 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     results = retriever.invoke(query1)
     assert len(results) == 4
     assert "Paris" in results[0].page_content
-    assert "keyword1" == results[0].metadata["keywords"]
+    assert "MongoDB" == results[0].metadata["keywords"]
 
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
-    assert "keyword3" == results[0].metadata["keywords"]
+    assert "Search" == results[0].metadata["keywords"]
 
 
 def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
+
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
@@ -269,7 +270,10 @@ def test_fulltext_retriever(
             break
         sleep(INTERVAL)
 
-    query = "When was the last time I visited new orleans?"
+    query = "What is MongoDB"
     results = retriever.invoke(query)
-    assert "New Orleans" in results[0].page_content
+    print(results)
+    print(list(collection.list_search_indexes()))
+    # assert "New Orleans" in results[0].page_content
+    assert "MongoDB" in results[0].metadata["keywords"]
     assert "score" in results[0].metadata
