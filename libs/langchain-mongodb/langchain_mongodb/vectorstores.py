@@ -204,7 +204,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         collection: Collection[Dict[str, Any]],
         embedding: Embeddings,
         index_name: str = "vector_index",
-        text_key: str | list[str] = "text",
+        text_key: Union[str, List[str]] = "text",
         embedding_key: str = "embedding",
         relevance_score_fn: str = "cosine",
         dimensions: int = -1,

@@ -7,12 +7,12 @@ See the following for more:
     - `Filter Example <https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#atlas-vector-search-pre-filter>`_
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 def text_search_stage(
     query: str,
-    search_field: str | list[str],
+    search_field: Union[str, List[str]],
     index_name: str,
     limit: Optional[int] = None,
     filter: Optional[Dict[str, Any]] = None,

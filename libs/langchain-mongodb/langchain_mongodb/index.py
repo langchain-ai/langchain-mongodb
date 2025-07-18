@@ -2,7 +2,7 @@
 
 import logging
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
@@ -202,7 +202,7 @@ def _wait_for_predicate(
 def create_fulltext_search_index(
     collection: Collection,
     index_name: str,
-    field: str | List[str],
+    field: Union[str, List[str]],
     *,
     wait_until_complete: Optional[float] = None,
     **kwargs: Any,

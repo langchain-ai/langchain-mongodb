@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
@@ -17,7 +17,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     """MongoDB Collection on an Atlas cluster"""
     search_index_name: str
     """Atlas Search Index name"""
-    search_field: str | list[str]
+    search_field: Union[str, List[str]]
     """Collection field that contains the text to be searched. It must be indexed"""
     k: Optional[int] = None
     """Number of documents to return. Default is no limit"""
