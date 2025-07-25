@@ -43,5 +43,5 @@ def embedding() -> Embeddings:
 @pytest.fixture(scope="session")
 def dimensions() -> int:
     if os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_ENDPOINT"):
-        return 1536
+        return 3072
     return 384
