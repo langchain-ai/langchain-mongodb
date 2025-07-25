@@ -3,7 +3,7 @@ name = "langchain-mongodb-monorepo"
 version = "0.1.0"
 description = "LangChain MongoDB mono-repo"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 dependencies = []
 
