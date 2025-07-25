@@ -895,7 +895,7 @@ dev = [
     { name = "flaky", specifier = ">=3.8.1" },
     { name = "freezegun", specifier = ">=1.2.2" },
     { name = "langchain", specifier = ">=0.3.14" },
-    { name = "langchain-community", specifier = ">=0.3.14" },
+    { name = "langchain-community", specifier = ">=0.3.27" },
     { name = "langchain-core", specifier = ">=0.3.29" },
     { name = "langchain-ollama", specifier = ">=0.2.2" },
     { name = "langchain-openai", specifier = ">=0.2.14" },
