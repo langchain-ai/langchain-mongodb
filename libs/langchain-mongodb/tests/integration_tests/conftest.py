@@ -32,10 +32,10 @@ def embedding() -> Embeddings:
     if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-            model="text-embedding-3-large",
+            model="text-embedding-3-small",
         )
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
-        return AzureOpenAIEmbeddings(model="text-embedding-3-large")
+        return AzureOpenAIEmbeddings(model="text-embedding-3-small")
 
     return OllamaEmbeddings(model="all-minilm:l6-v2")
 
@@ -43,5 +43,5 @@ def embedding() -> Embeddings:
 @pytest.fixture(scope="session")
 def dimensions() -> int:
     if os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_ENDPOINT"):
-        return 3072
+        return 1536
     return 384

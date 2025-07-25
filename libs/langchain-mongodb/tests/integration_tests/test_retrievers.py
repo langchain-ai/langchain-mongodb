@@ -2,6 +2,7 @@ from time import sleep, time
 from typing import Generator, List
 
 import pytest
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
@@ -202,6 +203,7 @@ def test_hybrid_retriever_deprecated_top_k(
     assert "New Orleans" in results[0].page_content
 
 
+@flaky(max_runs=5, min_passes=4)
 def test_hybrid_retriever_nested(
     indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
