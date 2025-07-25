@@ -32,10 +32,10 @@ def embedding() -> Embeddings:
     if os.environ.get("OPENAI_API_KEY"):
         return OpenAIEmbeddings(
             openai_api_key=os.environ["OPENAI_API_KEY"],  # type: ignore # noqa
-            model="text-embedding-3-small",
+            model="text-embedding-3-large",
         )
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
-        return AzureOpenAIEmbeddings(model="text-embedding-3-small")
+        return AzureOpenAIEmbeddings(model="text-embedding-3-large")
 
     return OllamaEmbeddings(model="all-minilm:l6-v2")
 
