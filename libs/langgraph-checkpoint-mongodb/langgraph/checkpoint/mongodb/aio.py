@@ -10,7 +10,6 @@ from importlib.metadata import version
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import UpdateOne
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.asynchronous.mongo_client import AsyncMongoClient
@@ -73,12 +72,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         input=3, output=4
     """
 
-    client: AsyncIOMotorClient | AsyncMongoClient
-    db: AsyncIOMotorDatabase | AsyncDatabase
+    client: AsyncMongoClient
+    db: AsyncDatabase
 
     def __init__(
         self,
-        client: AsyncIOMotorClient | AsyncMongoClient,
+        client: AsyncMongoClient,
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
@@ -154,9 +153,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         This includes creation of collections and indexes if they don't exist
         """
-        client: Optional[AsyncIOMotorClient] = None
+        client: Optional[AsyncMongoClient] = None
         try:
-            client = AsyncIOMotorClient(
+            client = AsyncMongoClient(
                 conn_string,
                 driver=DriverInfo(
                     name="Langgraph", version=version("langgraph-checkpoint-mongodb")
