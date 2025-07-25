@@ -407,7 +407,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             _id = doc.pop("_id")
             text = doc.pop("text")
             del doc["embedding"]
-            docs.append(Document(page_content=text, id=_id, metadata=doc))
+            docs.append(Document(page_content=text, id=oid_to_str(_id), metadata=doc))
         return docs
 
     def bulk_embed_and_insert_texts(
