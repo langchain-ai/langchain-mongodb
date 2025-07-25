@@ -478,7 +478,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         while True:
             try:
                 yield asyncio.run_coroutine_threadsafe(
-                    anext(aiter_),
+                    anext(aiter_),  # type:ignore[arg-type]
                     self.loop,
                 ).result()
             except StopAsyncIteration:
