@@ -174,7 +174,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         finally:
             if client:
-                client.close()
+                await client.close()
 
     async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database asynchronously.
@@ -478,7 +478,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         while True:
             try:
                 yield asyncio.run_coroutine_threadsafe(
-                    anext(aiter_),
+                    anext(aiter_),  # type:ignore[arg-type]
                     self.loop,
                 ).result()
             except StopAsyncIteration:
