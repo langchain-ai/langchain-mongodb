@@ -1,7 +1,6 @@
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from time import monotonic, sleep
-from typing import Callable
 
 import pytest
 from langchain_core.embeddings import Embeddings

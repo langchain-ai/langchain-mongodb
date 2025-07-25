@@ -215,7 +215,7 @@ def test_mongodb_atlas_cache_matrix(
         for prompt_i_generations in generations
     ]
 
-    for prompt_i, llm_generations_i in zip(prompts, llm_generations):
+    for prompt_i, llm_generations_i in zip(prompts, llm_generations, strict=False):
         _execute_test(prompt_i, llm_string, llm_generations_i)
 
     get_llm_cache()._collection._simulate_cache_aggregation_query = True  # type: ignore
