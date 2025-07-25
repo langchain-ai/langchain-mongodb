@@ -100,10 +100,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self._setup_future = asyncio.Future()
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.checkpoint_collection.list_indexes()).to_list()  # type:ignore[misc]
+                await (await self.checkpoint_collection.list_indexes()).to_list()
             )
         else:
-            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())  # type:ignore[union-attr]
+            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())
         if num_indexes < 2:
             await self.checkpoint_collection.create_index(
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
@@ -116,10 +116,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 )
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.writes_collection.list_indexes()).to_list()  # type:ignore[misc]
+                await (await self.writes_collection.list_indexes()).to_list()
             )
         else:
-            num_indexes = len(await self.writes_collection.list_indexes().to_list())  # type:ignore[union-attr]
+            num_indexes = len(await self.writes_collection.list_indexes().to_list())
         if num_indexes < 2:
             await self.writes_collection.create_index(
                 keys=[
@@ -174,7 +174,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         finally:
             if client:
-                client.close()
+                await client.close()
 
     async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database asynchronously.
