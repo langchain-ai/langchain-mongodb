@@ -911,7 +911,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.21.1" },
     { name = "pytest-mock", specifier = ">=3.10.0" },
     { name = "pytest-watcher", specifier = ">=0.3.4" },
-    { name = "simsimd", specifier = ">=5.0.0" },
+    { name = "simsimd", specifier = ">=6.5.0" },
     { name = "syrupy", specifier = ">=4.0.2" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
