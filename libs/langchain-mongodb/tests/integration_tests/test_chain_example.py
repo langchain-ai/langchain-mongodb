@@ -122,9 +122,9 @@ def test_chain(
     prompt = ChatPromptTemplate.from_template(template)
 
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
-        model: BaseChatOpenAI = AzureChatOpenAI(model="o4-mini")
+        model: BaseChatOpenAI = AzureChatOpenAI(model="o4-mini", seed=12345)
     else:
-        model = ChatOpenAI()
+        model = ChatOpenAI(seed=12345)
 
     chain = (
         {"context": retriever, "question": RunnablePassthrough()}  # type: ignore
