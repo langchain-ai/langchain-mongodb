@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
 from importlib.metadata import version
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from langchain_core.runnables import RunnableConfig
 from pymongo import UpdateOne
@@ -478,7 +478,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         while True:
             try:
                 yield asyncio.run_coroutine_threadsafe(
-                    anext(aiter_),
+                    cast(Any, anext(aiter_)),
                     self.loop,
                 ).result()
             except StopAsyncIteration:
