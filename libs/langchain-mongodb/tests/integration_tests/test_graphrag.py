@@ -7,7 +7,7 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.results import BulkWriteResult
@@ -40,7 +40,11 @@ if "OPENAI_API_KEY" not in os.environ:
 def entity_extraction_model() -> BaseChatModel | None:
     """LLM for converting documents into Graph of Entities and Relationships"""
     try:
-        return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False)
+        if "AZURE_OPENAI_ENDPOINT" in os.environ:
+            return AzureChatOpenAI(
+                model="gpt-4o", temperature=0.0, cache=False, seed=12345
+            )
+        return ChatOpenAI(model="gpt-4o", temperature=0.0, cache=False, seed=12345)
     except Exception:
         pass
     return None
