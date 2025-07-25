@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import builtins
-import sys
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -26,20 +24,6 @@ from langgraph.checkpoint.base import (
 )
 
 from .utils import dumps_metadata, loads_metadata
-
-if sys.version_info >= (3, 10):
-    anext = builtins.anext
-    aiter = builtins.aiter
-else:
-
-    async def anext(cls: Any) -> Any:
-        """Compatibility function until we drop 3.9 support: https://docs.python.org/3/library/functions.html#anext."""
-        return await cls.__anext__()
-
-    def aiter(cls: Any) -> Any:
-        """Compatibility function until we drop 3.9 support: https://docs.python.org/3/library/functions.html#anext."""
-        return cls.__aiter__()
-
 
 __all__ = ["AsyncMongoDBSaver"]
 
