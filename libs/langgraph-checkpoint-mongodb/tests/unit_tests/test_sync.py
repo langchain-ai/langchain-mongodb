@@ -97,7 +97,7 @@ def test_null_chars(input_data: dict[str, Any]) -> None:
         )
         assert saver.get_tuple(null_value_cfg).metadata["my_key"] == null_str  # type: ignore
         assert (
-            list(saver.list(None, filter={"my_key": null_str}))[0].metadata["my_key"]  # type: ignore
+            list(saver.list(None, filter={"my_key": null_str}))[0].metadata["my_key"]
             == null_str
         )
 

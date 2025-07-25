@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 from bson.errors import InvalidDocument
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 
 from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
 
@@ -14,7 +14,7 @@ COLLECTION_NAME = "sync_checkpoints_aio"
 
 async def test_asearch(input_data: dict[str, Any]) -> None:
     # Clear collections if they exist
-    client: AsyncIOMotorClient = AsyncIOMotorClient(MONGODB_URI)
+    client: AsyncMongoClient = AsyncMongoClient(MONGODB_URI)
     db = client[DB_NAME]
 
     for clxn in await db.list_collection_names():

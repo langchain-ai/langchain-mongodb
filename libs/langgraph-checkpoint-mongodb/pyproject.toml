@@ -11,8 +11,7 @@ requires-python = ">=3.9"
 dependencies = [
     "langgraph-checkpoint>=2.0.23,<3.0.0",
     "langchain-mongodb>=0.6.1",
-    "pymongo>=4.10,<4.14",
-    "motor>3.6.0",
+    "pymongo>=4.12,<4.14",
 ]
 
 [dependency-groups]

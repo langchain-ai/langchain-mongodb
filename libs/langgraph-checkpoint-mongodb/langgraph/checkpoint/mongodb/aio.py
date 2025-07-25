@@ -7,10 +7,9 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
 from importlib.metadata import version
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from langchain_core.runnables import RunnableConfig
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import UpdateOne
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.asynchronous.mongo_client import AsyncMongoClient
@@ -73,12 +72,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         input=3, output=4
     """
 
-    client: AsyncIOMotorClient | AsyncMongoClient
-    db: AsyncIOMotorDatabase | AsyncDatabase
+    client: AsyncMongoClient
+    db: AsyncDatabase
 
     def __init__(
         self,
-        client: AsyncIOMotorClient | AsyncMongoClient,
+        client: AsyncMongoClient,
         db_name: str = "checkpointing_db",
         checkpoint_collection_name: str = "checkpoints_aio",
         writes_collection_name: str = "checkpoint_writes_aio",
@@ -101,10 +100,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self._setup_future = asyncio.Future()
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.checkpoint_collection.list_indexes()).to_list()  # type:ignore[misc]
+                await (await self.checkpoint_collection.list_indexes()).to_list()
             )
         else:
-            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())  # type:ignore[union-attr]
+            num_indexes = len(await self.checkpoint_collection.list_indexes().to_list())
         if num_indexes < 2:
             await self.checkpoint_collection.create_index(
                 keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
@@ -117,10 +116,10 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 )
         if isinstance(self.client, AsyncMongoClient):
             num_indexes = len(
-                await (await self.writes_collection.list_indexes()).to_list()  # type:ignore[misc]
+                await (await self.writes_collection.list_indexes()).to_list()
             )
         else:
-            num_indexes = len(await self.writes_collection.list_indexes().to_list())  # type:ignore[union-attr]
+            num_indexes = len(await self.writes_collection.list_indexes().to_list())
         if num_indexes < 2:
             await self.writes_collection.create_index(
                 keys=[
@@ -154,9 +153,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         This includes creation of collections and indexes if they don't exist
         """
-        client: Optional[AsyncIOMotorClient] = None
+        client: Optional[AsyncMongoClient] = None
         try:
-            client = AsyncIOMotorClient(
+            client = AsyncMongoClient(
                 conn_string,
                 driver=DriverInfo(
                     name="Langgraph", version=version("langgraph-checkpoint-mongodb")
@@ -175,7 +174,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
         finally:
             if client:
-                client.close()
+                await client.close()
 
     async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Get a checkpoint tuple from the database asynchronously.
@@ -479,7 +478,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         while True:
             try:
                 yield asyncio.run_coroutine_threadsafe(
-                    anext(aiter_),
+                    cast(Any, anext(aiter_)),
                     self.loop,
                 ).result()
             except StopAsyncIteration:

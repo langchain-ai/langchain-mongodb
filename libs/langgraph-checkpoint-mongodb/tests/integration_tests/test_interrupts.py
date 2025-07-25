@@ -11,7 +11,6 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from langgraph.graph import END, StateGraph
-from langgraph.graph.graph import CompiledGraph
 
 # --- Configuration ---
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
@@ -77,16 +76,14 @@ def test(request: pytest.FixtureRequest, checkpointer_name: str) -> None:
 
     # --- Compile Graph (with Interruption) ---
     # Using sync for simplicity in this demo
-    graph: CompiledGraph = builder.compile(
-        checkpointer=checkpointer, interrupt_after=["increment"]
-    )
+    graph = builder.compile(checkpointer=checkpointer, interrupt_after=["increment"])
 
     # --- Configure  ---
     config: RunnableConfig = {"configurable": {"thread_id": "thread_#1"}}
     initial_input = {"value": 10, "step": 0}
 
     # --- 1st invoke, with Interruption
-    interrupted_state = graph.invoke(initial_input, config=config)
+    interrupted_state = graph.invoke(initial_input, config=config)  # type:ignore[arg-type]
     assert interrupted_state == {"value": 10 + 1, "step": 1}
     state_history = list(graph.get_state_history(config))
     assert len(state_history) == 3
@@ -103,7 +100,7 @@ def test(request: pytest.FixtureRequest, checkpointer_name: str) -> None:
 
     # --- 3rd invoke, but with an input ===> the CompiledGraph is restarted.
     new_input = {"value": 100, "step": -100}
-    third_state = graph.invoke(new_input, config=config)
+    third_state = graph.invoke(new_input, config=config)  # type:ignore[arg-type]
     assert third_state == {"value": 101, "step": -99}
 
     # The entire state history is preserved however
