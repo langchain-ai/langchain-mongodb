@@ -102,30 +102,34 @@ def combine_pipelines(
 
 
 def reciprocal_rank_stage(
-    score_field: str, penalty: float = 0, **kwargs: Any
+    score_field: str, penalty: float = 0, weight: float = 1, **kwargs: Any
 ) -> List[Dict[str, Any]]:
-    """Stage adds Reciprocal Rank Fusion weighting.
+    """
+    Stage adds Weighted Reciprocal Rank Fusion (WRRF) scoring.
 
-        First, it pushes documents retrieved from previous stage
-        into a temporary sub-document. It then unwinds to establish
-        the rank to each and applies the penalty.
+    First, it groups documents into an array, assigns rank by array index,
+    and then computes a weighted RRF score.
 
     Args:
-        score_field: A unique string to identify the search being ranked
-        penalty: A non-negative float.
-        extra_fields: Any fields other than text_field that one wishes to keep.
+        score_field: A unique string to identify the search being ranked.
+        penalty: A non-negative float (e.g., 60 for RRF-60). Controls the denominator.
+        weight: A float multiplier for this source's importance.
+        **kwargs: Ignored; allows future extensions or passthrough args.
 
     Returns:
-        RRF score
+        Aggregation pipeline stage for weighted RRF scoring.
     """
 
-    rrf_pipeline = [
+    return [
         {"$group": {"_id": None, "docs": {"$push": "$$ROOT"}}},
         {"$unwind": {"path": "$docs", "includeArrayIndex": "rank"}},
         {
             "$addFields": {
                 f"docs.{score_field}": {
-                    "$divide": [1.0, {"$add": ["$rank", penalty, 1]}]
+                    "$multiply": [
+                        weight,
+                        {"$divide": [1.0, {"$add": ["$rank", penalty, 1]}]},
+                    ]
                 },
                 "docs.rank": "$rank",
                 "_id": "$docs._id",
@@ -133,8 +137,6 @@ def reciprocal_rank_stage(
         },
         {"$replaceRoot": {"newRoot": "$docs"}},
     ]
-
-    return rrf_pipeline  # type: ignore
 
 
 def final_hybrid_stage(
