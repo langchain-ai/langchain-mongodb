@@ -99,7 +99,11 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
                 oversampling_factor=self.oversampling_factor,
             )
         ]
-        vector_pipeline += reciprocal_rank_stage(score_field="vector_score", penalty=self.vector_penalty, weight=self.vector_weight)
+        vector_pipeline += reciprocal_rank_stage(
+            score_field="vector_score",
+            penalty=self.vector_penalty,
+            weight=self.vector_weight,
+        )
 
         combine_pipelines(pipeline, vector_pipeline, self.collection.name)
 
@@ -113,7 +117,11 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         )
 
         text_pipeline.extend(
-            reciprocal_rank_stage(score_field="fulltext_score", penalty=self.fulltext_penalty, weight=self.fulltext_weight)
+            reciprocal_rank_stage(
+                score_field="fulltext_score",
+                penalty=self.fulltext_penalty,
+                weight=self.fulltext_weight,
+            )
         )
 
         combine_pipelines(pipeline, text_pipeline, self.collection.name)

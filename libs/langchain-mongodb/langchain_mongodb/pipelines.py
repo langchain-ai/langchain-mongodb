@@ -102,10 +102,7 @@ def combine_pipelines(
 
 
 def reciprocal_rank_stage(
-        score_field: str,
-        penalty: float = 0,
-        weight: float = 1,
-        **kwargs: Any
+    score_field: str, penalty: float = 0, weight: float = 1, **kwargs: Any
 ) -> List[Dict[str, Any]]:
     """
     Stage adds Weighted Reciprocal Rank Fusion (WRRF) scoring.
