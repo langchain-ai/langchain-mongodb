@@ -15,9 +15,9 @@ from langgraph.checkpoint.base import (
 )
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
-# Setup:
-# docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-server
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.environ.get(
+    "MONGODB_URI", "mongodb://localhost:27017/?directConnection=true"
+)
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "sync_checkpoints"
 
