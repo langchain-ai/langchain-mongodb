@@ -27,14 +27,16 @@ TIMEOUT, INTERVAL = 30, 1  # timeout to index new data
 DIMENSIONS = 5  # Dimensions of embedding model
 
 
-def wait(cond: Callable, timeout: int = 15, interval: int = 1) -> None:
+def wait_until(
+    predicate: Callable, timeout: int = TIMEOUT, interval: int = INTERVAL
+) -> None:
     start = monotonic()
     while monotonic() - start < timeout:
-        if cond():
+        if predicate():
             return
         else:
             sleep(interval)
-    raise TimeoutError("timeout waiting for: ", cond)
+    raise TimeoutError("timeout waiting for predicate: ", predicate)
 
 
 class StaticEmbeddings(Embeddings):
@@ -59,12 +61,12 @@ def collection() -> Generator[Collection, None, None]:
     db = client[DB_NAME]
     db.drop_collection(COLLECTION_NAME)
     collection = db.create_collection(COLLECTION_NAME)
-    wait(lambda: collection.count_documents({}) == 0, TIMEOUT, INTERVAL)
+    wait_until(lambda: collection.count_documents({}) == 0, TIMEOUT, INTERVAL)
     try:
         collection.drop_search_index(INDEX_NAME)
     except OperationFailure:
         pass
-    wait(
+    wait_until(
         lambda: len(collection.list_search_indexes().to_list()) == 0, TIMEOUT, INTERVAL
     )
 
@@ -116,7 +118,7 @@ def test_filters(collection: Collection) -> None:
     query = "What is the grade of our pears?"
     # Case 1: fields is a string:
     namespace_prefix = ("a",)  #  filter ("a",) catches all docs
-    wait(
+    wait_until(
         lambda: len(store_mdb.search(namespace_prefix, query=query)) == len(products),
         TIMEOUT,
         INTERVAL,
