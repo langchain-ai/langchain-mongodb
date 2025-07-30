@@ -86,7 +86,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         **kwargs: Any,
     ) -> None:
         warnings.warn(
-            f"{self.__class__.__name__} is deprecated and will be removed in a future release. "
+            f"{self.__class__.__name__} is deprecated and will be removed in 0.3.0 release. "
             "Please use the async methods of MongoDBSaver instead.",
             DeprecationWarning,
             stacklevel=2,
