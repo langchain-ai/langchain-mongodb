@@ -40,6 +40,7 @@ addopts = "--strict-markers --strict-config --durations=5 -vv"
 markers = [
     "requires: mark tests as requiring a specific library",
     "compile: mark placeholder test used to compile integration tests without running them",
+    "asyncio: mark a test as asyncio",
 ]
 asyncio_mode = "auto"
 
