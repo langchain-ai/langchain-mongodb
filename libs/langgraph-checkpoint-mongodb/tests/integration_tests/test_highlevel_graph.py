@@ -54,6 +54,43 @@ class JokeOutput(TypedDict):
 class JokeState(JokeInput, JokeOutput): ...
 
 
+def fanout_to_subgraph() -> StateGraph:
+    # Subgraph nodes create a joke.
+    def edit(state: JokeInput):
+        return {"subject": f"{state["subject"]}, and cats"}
+
+    def generate(state: JokeInput):
+        return {"jokes": [f"Joke about the year {state['subject']}"]}
+
+    def bump(state: JokeOutput):
+        return {"jokes": [state["jokes"][0] + " and another"]}
+
+    def bump_loop(state: JokeOutput):
+        return END if state["jokes"][0].endswith(" and another" * 10) else "bump"
+
+    subgraph = StateGraph(JokeState, joke_subjects=JokeInput, output=JokeOutput)
+    subgraph.add_node("edit", edit)
+    subgraph.add_node("generate", generate)
+    subgraph.add_node("bump", bump)
+    subgraph.set_entry_point("edit")
+    subgraph.add_edge("edit", "generate")
+    subgraph.add_edge("generate", "bump")
+    subgraph.add_node("bump_loop", bump_loop)
+    subgraph.add_conditional_edges("bump", bump_loop)
+    subgraph.set_finish_point("generate")
+    subgraphc = subgraph.compile()
+
+    # Parent graph maps the joke-generating subgraph.
+    def fanout(state: OverallState):
+        return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+
+    parentgraph = StateGraph(OverallState)
+    parentgraph.add_node("generate_joke", subgraphc)
+    parentgraph.add_conditional_edges(START, fanout)
+    parentgraph.add_edge("generate_joke", END)
+    return parentgraph
+
+
 @pytest.fixture
 def joke_subjects():
     years = [str(2025 - 10 * i) for i in range(N_SUBJECTS)]
@@ -112,42 +149,6 @@ def test_sync(
         "in_memory": checkpointer_memory,
     }
 
-    def fanout_to_subgraph() -> StateGraph:
-        # Subgraph nodes create a joke
-        def edit(state: JokeInput):
-            return {"subject": f"{state["subject"]}, and cats"}
-
-        def generate(state: JokeInput):
-            return {"jokes": [f"Joke about the year {state['subject']}"]}
-
-        def bump(state: JokeOutput):
-            return {"jokes": [state["jokes"][0] + " and another"]}
-
-        def bump_loop(state: JokeOutput):
-            return END if state["jokes"][0].endswith(" and another" * 10) else "bump"
-
-        subgraph = StateGraph(JokeState, joke_subjects=JokeInput, output=JokeOutput)
-        subgraph.add_node("edit", edit)
-        subgraph.add_node("generate", generate)
-        subgraph.add_node("bump", bump)
-        subgraph.set_entry_point("edit")
-        subgraph.add_edge("edit", "generate")
-        subgraph.add_edge("generate", "bump")
-        subgraph.add_node("bump_loop", bump_loop)
-        subgraph.add_conditional_edges("bump", bump_loop)
-        subgraph.set_finish_point("generate")
-        subgraphc = subgraph.compile()
-
-        # parent graph maps the joke-generating subgraph
-        def fanout(state: OverallState):
-            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
-
-        parentgraph = StateGraph(OverallState)
-        parentgraph.add_node("generate_joke", subgraphc)
-        parentgraph.add_conditional_edges(START, fanout)
-        parentgraph.add_edge("generate_joke", END)
-        return parentgraph
-
     print("\n\nBegin test_sync")
     for cname, checkpointer in checkpointers.items():
         assert isinstance(checkpointer, BaseCheckpointSaver)
@@ -173,47 +174,11 @@ async def test_async(
         "in_memory_async": checkpointer_memory,
     }
 
-    async def fanout_to_subgraph() -> StateGraph:
-        # Subgraph nodes create a joke
-        async def edit(state: JokeInput):
-            subject = state["subject"]
-            return {"subject": f"{subject}, and cats"}
-
-        async def generate(state: JokeInput):
-            return {"jokes": [f"Joke about the year {state['subject']}"]}
-
-        async def bump(state: JokeOutput):
-            return {"jokes": [state["jokes"][0] + " and another"]}
-
-        async def bump_loop(state: JokeOutput):
-            return END if state["jokes"][0].endswith(" and another" * 10) else "bump"
-
-        subgraph = StateGraph(JokeState, joke_subjects=JokeInput, output=JokeOutput)
-        subgraph.add_node("edit", edit)
-        subgraph.add_node("generate", generate)
-        subgraph.add_node("bump", bump)
-        subgraph.set_entry_point("edit")
-        subgraph.add_edge("edit", "generate")
-        subgraph.add_edge("generate", "bump")
-        subgraph.add_conditional_edges("bump", bump_loop)
-        subgraph.set_finish_point("generate")
-        subgraphc = subgraph.compile()
-
-        # parent graph maps the joke-generating subgraph
-        async def fanout(state: OverallState):
-            return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
-
-        parentgraph = StateGraph(OverallState)
-        parentgraph.add_node("generate_joke", subgraphc)
-        parentgraph.add_conditional_edges(START, fanout)
-        parentgraph.add_edge("generate_joke", END)
-        return parentgraph
-
     print("\n\nBegin test_async")
     for cname, checkpointer in checkpointers.items():
         assert isinstance(checkpointer, BaseCheckpointSaver)
 
-        graphc = (await fanout_to_subgraph()).compile(checkpointer=checkpointer)
+        graphc = (fanout_to_subgraph()).compile(checkpointer=checkpointer)
         config = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
         out = [c async for c in graphc.astream(joke_subjects, config=config)]
