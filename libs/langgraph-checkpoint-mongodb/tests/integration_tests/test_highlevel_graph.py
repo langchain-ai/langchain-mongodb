@@ -18,7 +18,6 @@ import time
 from collections.abc import Generator
 from typing import Annotated, TypedDict
 
-import langchain_core
 import pytest
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -63,10 +62,12 @@ def fanout_to_subgraph() -> StateGraph:
         return {"jokes": [f"Joke about the year {state['subject']}"]}
 
     def bump(state: JokeOutput):
-        return {"jokes": [state["jokes"][0] + " and another"]}
+        return {"jokes": [state["jokes"][0] + " and the year before"]}
 
     def bump_loop(state: JokeOutput):
-        return END if state["jokes"][0].endswith(" and another" * 10) else "bump"
+        return (
+            END if state["jokes"][0].endswith(" and the year before" * 10) else "bump"
+        )
 
     subgraph = StateGraph(JokeState, joke_subjects=JokeInput, output=JokeOutput)
     subgraph.add_node("edit", edit)
@@ -139,49 +140,26 @@ def disable_langsmith():
     os.environ["LANGCHAIN_API_KEY"] = ""
 
 
-def test_sync(
-    joke_subjects,
-    checkpointer_mongodb,
-    checkpointer_memory,
+async def test_fanout(
+    joke_subjects, checkpointer_mongodb, checkpointer_mongodb_async, checkpointer_memory
 ) -> None:
     checkpointers = {
         "mongodb": checkpointer_mongodb,
-        "in_memory": checkpointer_memory,
-    }
-
-    print("\n\nBegin test_sync")
-    for cname, checkpointer in checkpointers.items():
-        assert isinstance(checkpointer, BaseCheckpointSaver)
-
-        graphc = fanout_to_subgraph().compile(checkpointer=checkpointer)
-        assert isinstance(graphc.get_graph(), langchain_core.runnables.graph.Graph)
-        config = {"configurable": {"thread_id": cname}}
-        start = time.monotonic()
-        out = [c for c in graphc.stream(joke_subjects, config=config)]
-        assert len(out) == N_SUBJECTS
-        assert isinstance(out[0], dict)
-        assert out[0].keys() == {"generate_joke"}
-        assert set(out[0]["generate_joke"].keys()) == {"jokes"}
-        end = time.monotonic()
-        print(f"{cname}: {end - start:.4f} seconds")
-
-
-async def test_async(
-    joke_subjects, checkpointer_mongodb_async, checkpointer_memory
-) -> None:
-    checkpointers = {
         "mongodb_async": checkpointer_mongodb_async,
+        "in_memory": checkpointer_memory,
         "in_memory_async": checkpointer_memory,
     }
 
-    print("\n\nBegin test_async")
     for cname, checkpointer in checkpointers.items():
         assert isinstance(checkpointer, BaseCheckpointSaver)
-
+        print(f"\n\nBegin test of {cname}")
         graphc = (fanout_to_subgraph()).compile(checkpointer=checkpointer)
         config = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
-        out = [c async for c in graphc.astream(joke_subjects, config=config)]
+        if "async" in cname:
+            out = [c async for c in graphc.astream(joke_subjects, config=config)]
+        else:
+            out = [c for c in graphc.stream(joke_subjects, config=config)]
         assert len(out) == N_SUBJECTS
         assert isinstance(out[0], dict)
         assert out[0].keys() == {"generate_joke"}
