@@ -5,7 +5,7 @@
 ## Changes in version 0.2.0 (TBD)
 
 - Implements async methods of MongoDBSaver.
-- Deprecates ASyncMongoDBSaver, to be removed in 0.3.0 
+- Deprecates ASyncMongoDBSaver, to be removed in 0.3.0
 
 ## Changes in version 0.1.4 (2025/06/13)
 
