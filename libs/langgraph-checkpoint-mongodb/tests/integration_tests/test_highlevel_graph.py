@@ -57,10 +57,10 @@ class JokeState(JokeInput, JokeOutput): ...
 
 def fanout_to_subgraph() -> StateGraph:
     # Subgraph nodes create a joke.
-    def edit(state: JokeInput) -> dict[str, str]:
-        return {"subject": f"{state['subject']}, and cats"}
+    def edit(state: JokeOutput) -> JokeOutput:
+        return {"jokes": [f"{state['jokes'][0]}.a.. and cats!"]}
 
-    def generate(state: JokeInput) -> dict[str, list[str]]:
+    def generate(state: JokeInput) -> JokeOutput:
         return {"jokes": [f"Joke about the year {state['subject']}"]}
 
     def bump(state: JokeOutput) -> dict[str, list[str]]:
@@ -68,19 +68,18 @@ def fanout_to_subgraph() -> StateGraph:
 
     def bump_loop(state: JokeOutput) -> JokeOutput:
         return (
-            END if state["jokes"][0].endswith(" and the year before" * 10) else "bump"
+            "edit" if state["jokes"][0].endswith(" and the year before" * 3) else "bump"
         )
 
     subgraph = StateGraph(JokeState)
     subgraph.add_node("edit", edit)
     subgraph.add_node("generate", generate)
     subgraph.add_node("bump", bump)
-    subgraph.set_entry_point("edit")
-    subgraph.add_edge("edit", "generate")
+    subgraph.set_entry_point("generate")
     subgraph.add_edge("generate", "bump")
     subgraph.add_node("bump_loop", bump_loop)
     subgraph.add_conditional_edges("bump", bump_loop)
-    subgraph.set_finish_point("generate")
+    subgraph.set_finish_point("edit")
     subgraphc = subgraph.compile()
 
     # Parent graph maps the joke-generating subgraph.
