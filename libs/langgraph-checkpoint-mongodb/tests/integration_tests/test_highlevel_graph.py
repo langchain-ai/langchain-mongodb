@@ -58,7 +58,7 @@ class JokeState(JokeInput, JokeOutput): ...
 def fanout_to_subgraph() -> StateGraph:
     # Subgraph nodes create a joke.
     def edit(state: JokeInput) -> dict[str, str]:
-        return {"subject": f"{state["subject"]}, and cats"}
+        return {"subject": f"{state['subject']}, and cats"}
 
     def generate(state: JokeInput) -> dict[str, list[str]]:
         return {"jokes": [f"Joke about the year {state['subject']}"]}
