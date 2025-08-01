@@ -15,10 +15,12 @@ It also demonstrates the high-level API of subgraphs, add_conditional_edges, and
 import operator
 import os
 import time
-from collections.abc import Generator
-from typing import Annotated, TypedDict
+from collections.abc import AsyncGenerator, Generator
+from typing import Annotated
 
 import pytest
+from langchain_core.runnables import RunnableConfig
+from typing_extensions import TypedDict
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -55,21 +57,21 @@ class JokeState(JokeInput, JokeOutput): ...
 
 def fanout_to_subgraph() -> StateGraph:
     # Subgraph nodes create a joke.
-    def edit(state: JokeInput):
+    def edit(state: JokeInput) -> dict[str, str]:
         return {"subject": f"{state["subject"]}, and cats"}
 
-    def generate(state: JokeInput):
+    def generate(state: JokeInput) -> dict[str, list[str]]:
         return {"jokes": [f"Joke about the year {state['subject']}"]}
 
-    def bump(state: JokeOutput):
+    def bump(state: JokeOutput) -> dict[str, list[str]]:
         return {"jokes": [state["jokes"][0] + " and the year before"]}
 
-    def bump_loop(state: JokeOutput):
+    def bump_loop(state: JokeOutput) -> JokeOutput:
         return (
             END if state["jokes"][0].endswith(" and the year before" * 10) else "bump"
         )
 
-    subgraph = StateGraph(JokeState, joke_subjects=JokeInput, output=JokeOutput)
+    subgraph = StateGraph(JokeState)
     subgraph.add_node("edit", edit)
     subgraph.add_node("generate", generate)
     subgraph.add_node("bump", bump)
@@ -82,18 +84,18 @@ def fanout_to_subgraph() -> StateGraph:
     subgraphc = subgraph.compile()
 
     # Parent graph maps the joke-generating subgraph.
-    def fanout(state: OverallState):
+    def fanout(state: OverallState) -> list:
         return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
 
     parentgraph = StateGraph(OverallState)
-    parentgraph.add_node("generate_joke", subgraphc)
+    parentgraph.add_node("generate_joke", subgraphc)  # type: ignore[arg-type]
     parentgraph.add_conditional_edges(START, fanout)
     parentgraph.add_edge("generate_joke", END)
     return parentgraph
 
 
 @pytest.fixture
-def joke_subjects():
+def joke_subjects() -> OverallState:
     years = [str(2025 - 10 * i) for i in range(N_SUBJECTS)]
     return {"subjects": years}
 
@@ -119,29 +121,32 @@ def checkpointer_mongodb() -> Generator[MongoDBSaver, None, None]:
 
 
 @pytest.fixture(scope="function")
-async def checkpointer_mongodb_async() -> Generator[AsyncMongoDBSaver, None, None]:
+async def checkpointer_mongodb_async() -> AsyncGenerator[AsyncMongoDBSaver, None]:
     async with AsyncMongoDBSaver.from_conn_string(
         MONGODB_URI,
         db_name=DB_NAME,
         checkpoint_collection_name=CHECKPOINT_CLXN_NAME + "_async",
         writes_collection_name=WRITES_CLXN_NAME + "_async",
     ) as checkpointer:
-        checkpointer.checkpoint_collection.delete_many({})
-        checkpointer.writes_collection.delete_many({})
+        await checkpointer.checkpoint_collection.delete_many({})
+        await checkpointer.writes_collection.delete_many({})
         yield checkpointer
-        checkpointer.checkpoint_collection.drop()
-        checkpointer.writes_collection.drop()
+        await checkpointer.checkpoint_collection.drop()
+        await checkpointer.writes_collection.drop()
 
 
 @pytest.fixture(autouse=True)
-def disable_langsmith():
+def disable_langsmith() -> None:
     """Disable LangSmith tracing for all tests"""
     os.environ["LANGCHAIN_TRACING_V2"] = "false"
     os.environ["LANGCHAIN_API_KEY"] = ""
 
 
 async def test_fanout(
-    joke_subjects, checkpointer_mongodb, checkpointer_mongodb_async, checkpointer_memory
+    joke_subjects: OverallState,
+    checkpointer_mongodb: MongoDBSaver,
+    checkpointer_mongodb_async: AsyncMongoDBSaver,
+    checkpointer_memory: InMemorySaver,
 ) -> None:
     checkpointers = {
         "mongodb": checkpointer_mongodb,
@@ -154,12 +159,12 @@ async def test_fanout(
         assert isinstance(checkpointer, BaseCheckpointSaver)
         print(f"\n\nBegin test of {cname}")
         graphc = (fanout_to_subgraph()).compile(checkpointer=checkpointer)
-        config = {"configurable": {"thread_id": cname}}
+        config: RunnableConfig = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
         if "async" in cname:
-            out = [c async for c in graphc.astream(joke_subjects, config=config)]
+            out = [c async for c in graphc.astream(joke_subjects, config=config)]  # type: ignore[arg-type]
         else:
-            out = [c for c in graphc.stream(joke_subjects, config=config)]
+            out = [c for c in graphc.stream(joke_subjects, config=config)]  # type: ignore[arg-type]
         assert len(out) == N_SUBJECTS
         assert isinstance(out[0], dict)
         assert out[0].keys() == {"generate_joke"}

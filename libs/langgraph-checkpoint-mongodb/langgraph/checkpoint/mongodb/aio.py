@@ -55,7 +55,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         >>> from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
         >>> from langgraph.graph import StateGraph
 
-        >>> async def main():
+        >>> async def main() -> None:
         >>>     builder = StateGraph(int)
         >>>     builder.add_node("add_one", lambda x: x + 1)
         >>>     builder.set_entry_point("add_one")
