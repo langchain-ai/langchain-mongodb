@@ -208,7 +208,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         embedding_key: str = "embedding",
         relevance_score_fn: str = "cosine",
         dimensions: int = -1,
-        auto_create_index: bool = True,
+        auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
         **kwargs: Any,
     ):
@@ -222,8 +222,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
             embedding_key: Field that will contain the embedding for each document
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
-            dimensions: Number of dimensions in embedding.  If the value is set and
-                the index does not exist, an index will be created.
+            auto_create_index: Whether to automatically create an index if it does not exist.
+            dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
+                is `true`, the value will be inferred.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
                to be ready.
         """
@@ -234,18 +235,21 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
 
-        if not auto_create_index or dimensions == -1:
+        if auto_create_index is False:
             return
+        if auto_create_index is None and dimensions == -1:
+            return
+        if dimensions == -1:
+            dimensions = len(embedding.embed_query("foo"))
+
         coll = self._collection
-        if not any(
-            [ix["name"] == self._index_name for ix in coll.list_search_indexes()]
-        ):
+        if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             create_vector_search_index(
                 collection=coll,
-                index_name=self._index_name,
+                index_name=index_name,
                 dimensions=dimensions,
-                path=self._embedding_key,
-                similarity=self._relevance_score_fn,
+                path=embedding_key,
+                similarity=relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
             )
 
