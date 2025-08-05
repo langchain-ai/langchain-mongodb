@@ -23,6 +23,7 @@ from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pydantic import model_validator
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.operations import SearchIndexModel
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -250,9 +251,11 @@ class MockCollection(Collection):
 
     def __init__(self, database: MockDatabase | None = None) -> None:
         self._data = []
+        self._name = "test"
         self.is_closed = False
         self._aggregate_result = []
         self._insert_result = None
+        self._search_indexes = []
         self._simulate_cache_aggregation_query = False
         self._database = database or MockDatabase()  # type:ignore[assignment]
 
@@ -262,6 +265,17 @@ class MockCollection(Collection):
 
     def close(self):
         self.is_closed = True
+
+    def list_search_indexes(self, name=None, session=None, comment=None, **kwargs):
+        return [
+            dict(name=idx.document["name"], status="READY")
+            for idx in self._search_indexes
+        ]
+
+    def create_search_index(self, model, session=None, comment=None, **kwargs):
+        if not isinstance(model, SearchIndexModel):
+            model = SearchIndexModel(model, name=f"test{len(self._search_indexes)}")
+        self._search_indexes.append(model)
 
     def delete_many(self, *args, **kwargs) -> DeleteResult:  # type: ignore
         old_len = len(self._data)

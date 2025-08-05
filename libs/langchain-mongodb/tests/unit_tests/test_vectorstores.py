@@ -98,6 +98,7 @@ class TestMongoDBAtlasVectorSearch:
             collection=collection,
             index_name=INDEX_NAME,
         )
+        # TODO: test how DIMS is handled here.
         self._validate_search(
             vectorstore, collection, metadata=documents[2].metadata["c"]
         )
@@ -191,3 +192,35 @@ class TestMongoDBAtlasVectorSearch:
         assert len(output) == len(texts)
         assert output[0].page_content == "foo"
         assert output[1].page_content != "foo"
+
+    def test_auto_create_index(
+        self, embedding_openai: Embeddings, collection: MockCollection
+    ) -> None:
+        # Explicit auto_create_index
+        assert len(collection._search_indexes) == 0
+        _ = MongoDBAtlasVectorSearch(
+            embedding=embedding_openai,
+            collection=collection,
+            index_name=INDEX_NAME,
+            auto_create_index=True,
+        )
+        assert len(collection._search_indexes) == 1
+
+        # Explicit dimensions
+        collection._search_indexes = []
+        _ = MongoDBAtlasVectorSearch(
+            embedding=embedding_openai,
+            collection=collection,
+            index_name=INDEX_NAME,
+            dimensions=10,
+        )
+        assert len(collection._search_indexes) == 1
+
+        # Does not auto-create
+        collection._search_indexes = []
+        _ = MongoDBAtlasVectorSearch(
+            embedding=embedding_openai,
+            collection=collection,
+            index_name=INDEX_NAME,
+        )
+        assert len(collection._search_indexes) == 0
