@@ -16,6 +16,7 @@ dependencies = [
     "langchain-text-splitters>=0.3",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
+    "cffi>=2.0.0b1;python_version=='3.14'"
 ]
 
 [dependency-groups]

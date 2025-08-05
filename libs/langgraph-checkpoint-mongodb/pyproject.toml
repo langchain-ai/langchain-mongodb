@@ -12,6 +12,7 @@ dependencies = [
     "langgraph-checkpoint>=2.0.23,<3.0.0",
     "langchain-mongodb>=0.6.1",
     "pymongo>=4.12,<4.14",
+    "cffi>=2.0.0b1;python_version=='3.14'"
 ]
 
 [dependency-groups]
