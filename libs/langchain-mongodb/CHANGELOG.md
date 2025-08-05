@@ -2,6 +2,11 @@
 
 ---
 
+## Changes in version 0.7.0 (2025/08/05)
+
+- Support multi-field text searches.
+
+
 ## Changes in version 0.6.1 (2025/05/12)
 
 - Improve robustness of `MongoDBDatabase.run`.
