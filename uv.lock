@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -921,7 +921,7 @@ dev = [
     { name = "langchain-core", specifier = ">=0.3.29" },
     { name = "langchain-ollama", specifier = ">=0.2.2" },
     { name = "langchain-openai", specifier = ">=0.2.14" },
-    { name = "langchain-tests", specifier = "==0.3.14" },
+    { name = "langchain-tests", specifier = "==0.3.20" },
     { name = "langchain-text-splitters", specifier = ">=0.3.5" },
     { name = "langgraph", specifier = ">=0.2.72" },
     { name = "mongomock", specifier = ">=4.2.0.post1" },
