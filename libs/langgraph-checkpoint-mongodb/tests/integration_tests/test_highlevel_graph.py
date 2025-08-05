@@ -58,7 +58,7 @@ class JokeState(JokeInput, JokeOutput): ...
 def fanout_to_subgraph() -> StateGraph:
     # Subgraph nodes create a joke.
     def edit(state: JokeOutput) -> JokeOutput:
-        return {"jokes": [f"{state['jokes'][0]}.a.. and cats!"]}
+        return {"jokes": [f"{state['jokes'][0]}... and cats!"]}
 
     def generate(state: JokeInput) -> JokeOutput:
         return {"jokes": [f"Joke about the year {state['subject']}"]}
@@ -168,5 +168,11 @@ async def test_fanout(
         assert isinstance(out[0], dict)
         assert out[0].keys() == {"generate_joke"}
         assert set(out[0]["generate_joke"].keys()) == {"jokes"}
+        assert all(
+            res["generate_joke"]["jokes"][0].endswith(
+                f'{" and the year before" * 3}... and cats!'
+            )
+            for res in out
+        )
         end = time.monotonic()
         print(f"{cname}: {end - start:.4f} seconds")
