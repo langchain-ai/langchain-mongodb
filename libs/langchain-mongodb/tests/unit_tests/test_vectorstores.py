@@ -223,4 +223,4 @@ class TestMongoDBAtlasVectorSearch:
             collection=collection,
             index_name=INDEX_NAME,
         )
-        assert len(collection._search_indexes)
+        assert len(collection._search_indexes) == 0
