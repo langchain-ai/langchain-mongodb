@@ -20,13 +20,17 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
+from importlib.metadata import version
 from typing import Any, Dict, List, Union
 
 import numpy as np
+from pymongo.driver_info import DriverInfo
 
 logger = logging.getLogger(__name__)
 
 Matrix = Union[List[List[float]], List[np.ndarray], np.ndarray]
+
+DRIVER_METADATA = DriverInfo(name="Langchain", version=version("langchain-mongodb"))
 
 
 def cosine_similarity(X: Matrix, Y: Matrix) -> np.ndarray:

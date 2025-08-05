@@ -41,6 +41,10 @@ from langgraph.store.base.embed import (
 
 logger = logging.getLogger(__name__)
 
+_DRIVER_METADATA = DriverInfo(
+                    name="Langgraph", version=version("langgraph-store-mongodb")
+                )
+
 
 class VectorIndexConfig(IndexConfig, total=False):
     """Configuration for a MongoDB Atlas Vector Index providing semantic search.
@@ -167,6 +171,9 @@ class MongoDBStore(BaseStore):
         self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
         self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
+        if version("pymongo") >= "4.14.0":
+            self.collection.database.client.append_metadata(_DRIVER_METADATA)
+
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
@@ -247,9 +254,7 @@ class MongoDBStore(BaseStore):
         try:
             client = MongoClient(
                 conn_string,
-                driver=DriverInfo(
-                    name="Langgraph", version=version("langgraph-store-mongodb")
-                ),
+                driver=_DRIVER_METADATA,
             )
             db = client[db_name]
             if collection_name not in db.list_collection_names():

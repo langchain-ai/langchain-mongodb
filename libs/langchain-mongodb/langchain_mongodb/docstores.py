@@ -7,9 +7,9 @@ from langchain_core.documents import Document
 from langchain_core.stores import BaseStore
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 
 from langchain_mongodb.utils import (
+    DRIVER_METADATA,
     make_serializable,
 )
 
@@ -37,6 +37,9 @@ class MongoDBDocStore(BaseStore):
         self.collection = collection
         self._text_key = text_key
 
+        if version("pymongo") >= "4.14.0":
+            self.collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+
     @classmethod
     def from_connection_string(
         cls,
@@ -55,7 +58,7 @@ class MongoDBDocStore(BaseStore):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]

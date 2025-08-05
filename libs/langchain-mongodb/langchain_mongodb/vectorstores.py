@@ -24,7 +24,6 @@ from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
 from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 from pymongo.errors import CollectionInvalid
 
 from langchain_mongodb.index import (
@@ -33,6 +32,7 @@ from langchain_mongodb.index import (
 )
 from langchain_mongodb.pipelines import vector_search_stage
 from langchain_mongodb.utils import (
+    DRIVER_METADATA,
     make_serializable,
     maximal_marginal_relevance,
     oid_to_str,
@@ -234,6 +234,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
 
+        if version("pymongo") >= "4.14.0":
+            self._collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+
         if not auto_create_index or dimensions == -1:
             return
         coll = self._collection
@@ -287,7 +290,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]

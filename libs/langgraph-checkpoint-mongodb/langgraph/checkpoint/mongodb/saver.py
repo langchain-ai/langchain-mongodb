@@ -10,7 +10,6 @@ from typing import (
 from langchain_core.runnables import RunnableConfig
 from pymongo import ASCENDING, MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
-from pymongo.driver_info import DriverInfo
 
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
@@ -22,7 +21,7 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
-from .utils import dumps_metadata, loads_metadata
+from .utils import dumps_metadata, loads_metadata, DRIVER_METADATA
 
 
 class MongoDBSaver(BaseCheckpointSaver):
@@ -153,9 +152,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         try:
             client = MongoClient(
                 conn_string,
-                driver=DriverInfo(
-                    name="Langgraph", version=version("langgraph-checkpoint-mongodb")
-                ),
+                driver=DRIVER_METADATA,
             )
             yield MongoDBSaver(
                 client,

@@ -12,12 +12,12 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 from pymongo.errors import OperationFailure
 from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
 
+from ..utils import DRIVER_METADATA
 from .prompts import rag_prompt
 from .schema import entity_schema
 
@@ -140,9 +140,7 @@ class MongoDBGraphStore:
             assert database_name is not None
             client: MongoClient = MongoClient(
                 connection_string,
-                driver=DriverInfo(
-                    name="Langchain", version=version("langchain-mongodb")
-                ),
+                driver=DRIVER_METADATA,
             )
             db = client[database_name]
             if collection_name not in db.list_collection_names():
@@ -185,6 +183,8 @@ class MongoDBGraphStore:
                         "db.create_collection.(coll_name, validator={'$jsonSchema': schema.entity_schema})"
                     )
         self.collection = collection
+        if version("pymongo") >= "4.14.0":
+            collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
 
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = (
@@ -268,7 +268,7 @@ class MongoDBGraphStore:
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         collection = client[database_name].create_collection(collection_name)
         return cls(

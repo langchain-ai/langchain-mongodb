@@ -10,7 +10,8 @@ from langchain_core.documents import Document
 from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
+
+from langchain_mongodb.utils import DRIVER_METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,9 @@ class MongoDBLoader(BaseLoader):
         self.metadata_names = metadata_names or []
         self.include_db_collection_in_metadata = include_db_collection_in_metadata
 
+        if version("pymongo") >= "4.14.0":
+            self.db.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+
     @classmethod
     def from_connection_string(
         cls,
@@ -84,7 +88,7 @@ class MongoDBLoader(BaseLoader):
         """
         client: MongoClient[dict[str, Any]] = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         collection = client[db_name][collection_name]
         return MongoDBLoader(

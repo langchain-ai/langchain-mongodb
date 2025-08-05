@@ -1,14 +1,13 @@
 import json
-from importlib.metadata import version
 
 import mongomock
 import pytest
 from langchain.memory import ConversationBufferMemory  # type: ignore[import-not-found]
 from langchain_core.messages import message_to_dict
-from pymongo.driver_info import DriverInfo
 from pytest_mock import MockerFixture
 
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
+from langchain_mongodb.utils import DRIVER_METADATA
 
 from ..utils import MockCollection
 
@@ -68,7 +67,7 @@ def test_init_with_connection_string(mocker: MockerFixture) -> None:
 
     mock_mongo_client.assert_called_once_with(
         "mongodb://localhost:27017/",
-        driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        driver=DRIVER_METADATA,
     )
     assert history.session_id == "test-session"
     assert history.database_name == "test-database"

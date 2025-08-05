@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from importlib.metadata import version
 from typing import Any, List, Optional
 
 import pymongo
@@ -14,12 +13,11 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
 from langchain_text_splitters import TextSplitter
 from pymongo import MongoClient
-from pymongo.driver_info import DriverInfo
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.pipelines import vector_search_stage
-from langchain_mongodb.utils import make_serializable
+from langchain_mongodb.utils import DRIVER_METADATA, make_serializable
 
 
 class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
@@ -168,7 +166,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         collection = client[database_name][collection_name]
         vectorstore = MongoDBAtlasVectorSearch(
