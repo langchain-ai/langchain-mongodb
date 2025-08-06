@@ -23,6 +23,7 @@ from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pydantic import model_validator
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.driver_info import DriverInfo
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -225,6 +226,9 @@ class MockClient:
 
     def close(self):
         self.is_closed = True
+
+    def append_metadata(self, data: DriverInfo) -> None:
+        pass
 
 
 class MockDatabase:
