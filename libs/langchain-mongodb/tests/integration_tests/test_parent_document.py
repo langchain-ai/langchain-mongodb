@@ -1,17 +1,16 @@
-from importlib.metadata import version
 from typing import List
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
-from pymongo.driver_info import DriverInfo
 
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.index import create_vector_search_index
 from langchain_mongodb.retrievers import (
     MongoDBAtlasParentDocumentRetriever,
 )
+from langchain_mongodb.utils import DRIVER_METADATA
 
 from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
@@ -31,7 +30,7 @@ def test_1clxn_retriever(
     # Setup
     client: MongoClient = MongoClient(
         CONNECTION_STRING,
-        driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        driver=DRIVER_METADATA,
     )
     db = client[DB_NAME]
     combined_clxn = db[COLLECTION_NAME]

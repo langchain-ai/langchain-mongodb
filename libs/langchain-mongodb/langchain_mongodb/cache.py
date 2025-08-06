@@ -3,7 +3,6 @@
 import json
 import logging
 import time
-from importlib.metadata import version
 from typing import Any, Callable, Dict, Optional, Union
 
 from langchain_core.caches import RETURN_VAL_TYPE, BaseCache
@@ -14,8 +13,8 @@ from langchain_core.outputs import Generation
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
-from pymongo.driver_info import DriverInfo
 
+from langchain_mongodb.utils import DRIVER_METADATA
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
 logger = logging.getLogger(__file__)
@@ -211,7 +210,7 @@ class MongoDBAtlasSemanticCache(BaseCache, MongoDBAtlasVectorSearch):
 def _generate_mongo_client(connection_string: str) -> MongoClient:
     return MongoClient(
         connection_string,
-        driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+        driver=DRIVER_METADATA,
     )
 
 
