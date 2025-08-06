@@ -1,6 +1,5 @@
 import json
 import logging
-from importlib.metadata import version
 from typing import Dict, List, Optional
 
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -11,7 +10,7 @@ from langchain_core.messages import (
 )
 from pymongo import MongoClient, errors
 
-from langchain_mongodb.utils import DRIVER_METADATA
+from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +112,7 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
             if connection_string:
                 raise ValueError("Must provide connection_string or client, not both")
             self.client = client
-            if version("pymongo") >= "4.14.0":
-                self.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+            append_client_metadata(self.client)
         elif connection_string:
             try:
                 self.client = MongoClient(

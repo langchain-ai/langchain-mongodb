@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from importlib.metadata import version
 from typing import (
     Any,
     Callable,
@@ -33,6 +32,7 @@ from langchain_mongodb.index import (
 from langchain_mongodb.pipelines import vector_search_stage
 from langchain_mongodb.utils import (
     DRIVER_METADATA,
+    append_client_metadata,
     make_serializable,
     maximal_marginal_relevance,
     oid_to_str,
@@ -234,8 +234,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
 
-        if version("pymongo") >= "4.14.0":
-            self._collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+        append_client_metadata(self._collection.database.client)
 
         if not auto_create_index or dimensions == -1:
             return

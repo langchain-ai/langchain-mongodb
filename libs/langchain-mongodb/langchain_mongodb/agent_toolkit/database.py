@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime
-from importlib.metadata import version
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from bson import ObjectId
@@ -16,7 +15,7 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 from pymongo.errors import PyMongoError
 
-from langchain_mongodb.utils import DRIVER_METADATA
+from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
 
 NUM_DOCUMENTS_TO_SAMPLE = 4
 MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE = 20
@@ -63,8 +62,7 @@ class MongoDBDatabase:
         self._sample_docs_in_coll_info = sample_docs_in_collection_info
         self._indexes_in_coll_info = indexes_in_collection_info
 
-        if version("pymongo") >= "4.14.0":
-            self._client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+        append_client_metadata(self._client)
 
     @classmethod
     def from_connection_string(

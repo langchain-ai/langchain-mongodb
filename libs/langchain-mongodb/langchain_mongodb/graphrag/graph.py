@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from langchain_core.documents import Document
@@ -17,7 +16,7 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
 
-from ..utils import DRIVER_METADATA
+from ..utils import DRIVER_METADATA, append_client_metadata
 from .prompts import rag_prompt
 from .schema import entity_schema
 
@@ -183,8 +182,9 @@ class MongoDBGraphStore:
                         "db.create_collection.(coll_name, validator={'$jsonSchema': schema.entity_schema})"
                     )
         self.collection = collection
-        if version("pymongo") >= "4.14.0":
-            collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+
+        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+        append_client_metadata(collection.database.client)
 
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = (

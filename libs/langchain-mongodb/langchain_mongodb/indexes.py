@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import functools
 import warnings
-from importlib.metadata import version
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.indexing.base import RecordManager
@@ -12,7 +11,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import OperationFailure
 
-from langchain_mongodb.utils import DRIVER_METADATA
+from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
 
 
 class MongoDBRecordManager(RecordManager):
@@ -37,8 +36,7 @@ class MongoDBRecordManager(RecordManager):
         super().__init__(namespace=namespace)
         self._collection = collection
 
-        if version("pymongo") >= "4.14.0":
-            self._collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+        append_client_metadata(self._collection.database.client)
 
     @classmethod
     def from_connection_string(

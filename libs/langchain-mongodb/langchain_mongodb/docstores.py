@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from importlib.metadata import version
 from typing import Any, Generator, Iterable, Iterator, List, Optional, Sequence, Union
 
 from langchain_core.documents import Document
@@ -10,6 +9,7 @@ from pymongo.collection import Collection
 
 from langchain_mongodb.utils import (
     DRIVER_METADATA,
+    append_client_metadata,
     make_serializable,
 )
 
@@ -37,8 +37,7 @@ class MongoDBDocStore(BaseStore):
         self.collection = collection
         self._text_key = text_key
 
-        if version("pymongo") >= "4.14.0":
-            self.collection.database.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+        append_client_metadata(self.collection.database.client)
 
     @classmethod
     def from_connection_string(

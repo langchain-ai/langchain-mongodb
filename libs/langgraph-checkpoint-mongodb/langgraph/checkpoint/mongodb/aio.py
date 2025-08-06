@@ -6,7 +6,6 @@ import sys
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
-from importlib.metadata import version
 from typing import Any, Optional, cast
 
 from langchain_core.runnables import RunnableConfig
@@ -24,7 +23,12 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
-from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
+from .utils import (
+    DRIVER_METADATA,
+    append_client_metadata,
+    dumps_metadata,
+    loads_metadata,
+)
 
 if sys.version_info >= (3, 10):
     anext = builtins.anext
@@ -92,8 +96,8 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.loop = asyncio.get_running_loop()
         self.ttl = ttl
 
-        if version("pymongo") >= "4.14.0":
-            self.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
+        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+        append_client_metadata(self.client)
 
     async def _setup(self) -> None:
         """Create indexes if not present."""

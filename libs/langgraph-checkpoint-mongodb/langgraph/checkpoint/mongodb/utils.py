@@ -6,6 +6,7 @@ Utilities for langchain-checkpoint-mongod.
 from importlib.metadata import version
 from typing import Any, Union
 
+from pymongo import AsyncMongoClient
 from pymongo.driver_info import DriverInfo
 
 from langgraph.checkpoint.base import CheckpointMetadata
@@ -17,6 +18,12 @@ serde: SerializerProtocol = JsonPlusSerializer()
 DRIVER_METADATA = DriverInfo(
     name="Langgraph", version=version("langgraph-checkpoint-mongodb")
 )
+
+
+def append_client_metadata(client: AsyncMongoClient) -> None:
+    # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+    if callable(client.append_metadata):
+        client.append_metadata(DRIVER_METADATA)
 
 
 def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
