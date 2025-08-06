@@ -24,7 +24,7 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
-from .utils import dumps_metadata, loads_metadata, DRIVER_METADATA
+from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
 
 if sys.version_info >= (3, 10):
     anext = builtins.anext
@@ -93,7 +93,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         self.ttl = ttl
 
         if version("pymongo") >= "4.14.0":
-            self.client.append_metadata(DRIVER_METADATA) # type: ignore[operator]
+            self.client.append_metadata(DRIVER_METADATA)  # type: ignore[operator]
 
     async def _setup(self) -> None:
         """Create indexes if not present."""

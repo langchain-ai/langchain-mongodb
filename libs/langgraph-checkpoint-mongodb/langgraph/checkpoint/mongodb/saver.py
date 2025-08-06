@@ -1,7 +1,6 @@
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import datetime
-from importlib.metadata import version
 from typing import (
     Any,
     Optional,
@@ -21,7 +20,7 @@ from langgraph.checkpoint.base import (
     get_checkpoint_id,
 )
 
-from .utils import dumps_metadata, loads_metadata, DRIVER_METADATA
+from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
 
 
 class MongoDBSaver(BaseCheckpointSaver):

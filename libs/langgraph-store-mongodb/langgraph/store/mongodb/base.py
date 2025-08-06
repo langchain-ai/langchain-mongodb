@@ -42,8 +42,8 @@ from langgraph.store.base.embed import (
 logger = logging.getLogger(__name__)
 
 _DRIVER_METADATA = DriverInfo(
-                    name="Langgraph", version=version("langgraph-store-mongodb")
-                )
+    name="Langgraph", version=version("langgraph-store-mongodb")
+)
 
 
 class VectorIndexConfig(IndexConfig, total=False):
