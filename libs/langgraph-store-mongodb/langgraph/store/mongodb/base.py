@@ -172,7 +172,7 @@ class MongoDBStore(BaseStore):
         self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
         if version("pymongo") >= "4.14.0":
-            self.collection.database.client.append_metadata(_DRIVER_METADATA)
+            self.collection.database.client.append_metadata(_DRIVER_METADATA)  # type: ignore[operator]
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
