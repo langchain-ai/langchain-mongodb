@@ -7,7 +7,7 @@ from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb.pipelines import text_search_stage
-from langchain_mongodb.utils import append_client_metadata, make_serializable
+from langchain_mongodb.utils import _append_client_metadata, make_serializable
 
 
 class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
@@ -57,7 +57,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
         )
 
         if not self._added_metadata:
-            append_client_metadata(self.collection.database.client)
+            _append_client_metadata(self.collection.database.client)
             self._added_metadata = True
 
         # Execution

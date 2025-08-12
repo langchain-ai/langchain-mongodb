@@ -15,7 +15,7 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 from pymongo.errors import PyMongoError
 
-from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 NUM_DOCUMENTS_TO_SAMPLE = 4
 MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE = 20
@@ -62,7 +62,7 @@ class MongoDBDatabase:
         self._sample_docs_in_coll_info = sample_docs_in_collection_info
         self._indexes_in_coll_info = indexes_in_collection_info
 
-        append_client_metadata(self._client)
+        _append_client_metadata(self._client)
 
     @classmethod
     def from_connection_string(

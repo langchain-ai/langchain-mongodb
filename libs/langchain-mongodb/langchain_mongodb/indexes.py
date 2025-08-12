@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import OperationFailure
 
-from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 
 class MongoDBRecordManager(RecordManager):
@@ -36,7 +36,7 @@ class MongoDBRecordManager(RecordManager):
         super().__init__(namespace=namespace)
         self._collection = collection
 
-        append_client_metadata(self._collection.database.client)
+        _append_client_metadata(self._collection.database.client)
 
     @classmethod
     def from_connection_string(

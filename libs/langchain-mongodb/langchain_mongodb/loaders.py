@@ -10,7 +10,7 @@ from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class MongoDBLoader(BaseLoader):
         self.include_db_collection_in_metadata = include_db_collection_in_metadata
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        append_client_metadata(self.db.client)
+        _append_client_metadata(self.db.client)
 
     @classmethod
     def from_connection_string(

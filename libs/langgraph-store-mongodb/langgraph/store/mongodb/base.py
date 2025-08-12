@@ -36,7 +36,7 @@ from langgraph.store.base.embed import (
     ensure_embeddings,
     get_text_at_path,
 )
-from langgraph.store.mongodb.utils import DRIVER_METADATA, append_client_metadata
+from langgraph.store.mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class MongoDBStore(BaseStore):
         self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
         self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
-        append_client_metadata(self.collection.database.client)
+        _append_client_metadata(self.collection.database.client)
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key

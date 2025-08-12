@@ -10,7 +10,7 @@ from langchain_core.messages import (
 )
 from pymongo import MongoClient, errors
 
-from langchain_mongodb.utils import DRIVER_METADATA, append_client_metadata
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
             if connection_string:
                 raise ValueError("Must provide connection_string or client, not both")
             self.client = client
-            append_client_metadata(self.client)
+            _append_client_metadata(self.client)
         elif connection_string:
             try:
                 self.client = MongoClient(

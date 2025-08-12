@@ -20,7 +20,7 @@ DRIVER_METADATA = DriverInfo(
 )
 
 
-def append_client_metadata(client: AsyncMongoClient) -> None:
+def _append_client_metadata(client: AsyncMongoClient) -> None:
     # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
     if callable(client.append_metadata):
         client.append_metadata(DRIVER_METADATA)

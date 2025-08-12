@@ -16,7 +16,7 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
 
-from ..utils import DRIVER_METADATA, append_client_metadata
+from ..utils import DRIVER_METADATA, _append_client_metadata
 from .prompts import rag_prompt
 from .schema import entity_schema
 
@@ -184,7 +184,7 @@ class MongoDBGraphStore:
         self.collection = collection
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        append_client_metadata(collection.database.client)
+        _append_client_metadata(collection.database.client)
 
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = (

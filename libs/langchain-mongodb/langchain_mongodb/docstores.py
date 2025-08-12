@@ -9,7 +9,7 @@ from pymongo.collection import Collection
 
 from langchain_mongodb.utils import (
     DRIVER_METADATA,
-    append_client_metadata,
+    _append_client_metadata,
     make_serializable,
 )
 
@@ -37,7 +37,7 @@ class MongoDBDocStore(BaseStore):
         self.collection = collection
         self._text_key = text_key
 
-        append_client_metadata(self.collection.database.client)
+        _append_client_metadata(self.collection.database.client)
 
     @classmethod
     def from_connection_string(
