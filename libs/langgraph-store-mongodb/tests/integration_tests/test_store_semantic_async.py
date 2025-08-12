@@ -20,7 +20,7 @@ MONGODB_URI = os.environ.get(
     "MONGODB_URI", "mongodb://localhost:27017?directConnection=true"
 )
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
-COLLECTION_NAME = "semantic_search"
+COLLECTION_NAME = "semantic_search_async"
 INDEX_NAME = "vector_index"
 TIMEOUT, INTERVAL = 30, 1  # timeout to index new data
 
@@ -75,7 +75,7 @@ def collection() -> Generator[Collection, None, None]:
     client.close()
 
 
-def test_filters(collection: Collection) -> None:
+async def test_filters(collection: Collection) -> None:
     """Test permutations of namespace_prefix in filter."""
 
     index_config = create_vector_index_config(
@@ -112,19 +112,26 @@ def test_filters(collection: Collection) -> None:
             )
         )
 
-    store_mdb.batch(put_ops)
+    await store_mdb.abatch(put_ops)
     store_in_mem.batch(put_ops)
 
     query = "What is the grade of our pears?"
     # Case 1: fields is a string:
     namespace_prefix = ("a",)  #  filter ("a",) catches all docs
-    wait_until(
-        lambda: len(store_mdb.search(namespace_prefix, query=query)) == len(products),
-        TIMEOUT,
-        INTERVAL,
-    )
 
-    result_mdb = store_mdb.search(namespace_prefix, query=query)
+    # In our first search, we'll retry until the mongos has indexed the new docs
+    start = monotonic()
+    indexed = False
+    while monotonic() - start < TIMEOUT:
+        if len(await store_mdb.asearch(namespace_prefix, query=query)) == len(products):
+            indexed = True
+            break
+        else:
+            sleep(INTERVAL)
+    if not indexed:
+        raise TimeoutError("timeout waiting for: vector_index")
+
+    result_mdb = await store_mdb.asearch(namespace_prefix, query=query)
     assert result_mdb[0].value["product"] == "pears"  # test sorted by score
 
     result_mem = store_in_mem.search(namespace_prefix, query=query)
@@ -132,21 +139,23 @@ def test_filters(collection: Collection) -> None:
 
     # Case 2: filter on 2nd namespace in hierarchy
     namespace_prefix = ("a", "b")
-    result_mem = store_in_mem.search(namespace_prefix, query=query)
+    result_mem = await store_in_mem.asearch(namespace_prefix, query=query)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     # filter ("a",) catches all docs
     assert len(result_mem) == len(result_mdb) == len(products) - 1
     assert result_mdb[0].value["product"] == "pears"
 
-    # Case 3: Empty  namespace_prefix
+    # Case 3: Empty namespace_prefix
     namespace_prefix = ("",)
     result_mem = store_in_mem.search(namespace_prefix, query=query)
-    result_mdb = store_mdb.search(namespace_prefix, query=query)
+    result_mdb = await store_mdb.asearch(namespace_prefix, query=query)
     assert len(result_mem) == len(result_mdb) == 0
 
     # Case 4: With filter on value (nested)
     namespace_prefix = ("a",)
     available = {"metadata.available": True}
-    result_mdb = store_mdb.search(namespace_prefix, query=query, filter=available)
+    result_mdb = await store_mdb.asearch(
+        namespace_prefix, query=query, filter=available
+    )
     assert result_mdb[0].value["product"] == "oranges"
     assert len(result_mdb) == 1

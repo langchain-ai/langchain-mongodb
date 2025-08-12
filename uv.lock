@@ -1025,7 +1025,7 @@ dependencies = [
 requires-dist = [
     { name = "langchain-mongodb", specifier = ">=0.6.1" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.23,<3.0.0" },
-    { name = "pymongo", specifier = ">=4.12,<4.14" },
+    { name = "pymongo", specifier = ">=4.12,<4.15" },
 ]
 
 [package.metadata.requires-dev]
