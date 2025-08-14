@@ -135,8 +135,8 @@ def _execute_test(
 
     # Work around older output with "usage_metadata"
     if "usage_metadata" in str(output) and "usage_metadata" not in str(expected_output):
-        for generation in output.generations[0]:
-            generation.message.usage_metadata = None
+        for generation in output.generations[0]:  # type: ignore
+            generation.message.usage_metadata = None  # type: ignore
 
     assert output == expected_output  # type: ignore
 
