@@ -43,9 +43,9 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     """Penalty applied to vector search results in RRF: scores=1/(rank + penalty)"""
     fulltext_penalty: float = 60.0
     """Penalty applied to full-text search results in RRF: scores=1/(rank + penalty)"""
-    vector_weight: float = 0.5
+    vector_weight: float = 1.0
     """Weight applied to vector search results in RRF: score = weight * (1 / (rank + penalty + 1))"""
-    fulltext_weight: float = 0.5
+    fulltext_weight: float = 1.0
     """Weight applied to full-text search results in RRF: score = weight * (1 / (rank + penalty + 1))"""
     show_embeddings: float = False
     """If true, returned Document metadata will include vectors."""
