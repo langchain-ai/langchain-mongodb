@@ -1,4 +1,5 @@
-from collections.abc import Iterator, Sequence
+import asyncio
+from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import datetime
 from typing import (
@@ -6,7 +7,7 @@ from typing import (
     Optional,
 )
 
-from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables import RunnableConfig, run_in_executor
 from pymongo import ASCENDING, MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
 
@@ -464,3 +465,120 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         # Delete all writes associated with the thread ID
         self.writes_collection.delete_many({"thread_id": thread_id})
+
+    async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Asynchronously fetch a checkpoint tuple using the given configuration.
+
+        Asynchronously wraps the blocking `self.get_tuple` method.
+
+        Args:
+            config: Configuration specifying which checkpoint to retrieve.
+
+        Returns:
+            Optional[CheckpointTuple]: The requested checkpoint tuple, or None if not found.
+
+        """
+        return await run_in_executor(None, self.get_tuple, config)
+
+    async def alist(
+        self,
+        config: Optional[RunnableConfig],
+        *,
+        filter: Optional[dict[str, Any]] = None,
+        before: Optional[RunnableConfig] = None,
+        limit: Optional[int] = None,
+    ) -> AsyncIterator[CheckpointTuple]:
+        """Asynchronously list checkpoints that match the given criteria.
+
+        Asynchronously wraps the blocking `self.list` generator.
+
+        Runs `self.list(...)` in a background thread and yields its items
+        asynchronously from an asyncio.Queue. This allows integration of
+        synchronous iterators into async code.
+
+        Args:
+            config: Configuration object passed to `self.list`.
+            filter: Optional filter dictionary.
+            before: Optional parameter to limit results before a given checkpoint.
+            limit: Optional maximum number of results to yield.
+
+        Yields:
+           AsyncIterator[CheckpointTuple]: An iterator of checkpoint tuples.
+        """
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[CheckpointTuple] = asyncio.Queue()
+        sentinel = object()
+
+        def run() -> None:
+            try:
+                for item in self.list(
+                    config, filter=filter, before=before, limit=limit
+                ):
+                    loop.call_soon_threadsafe(queue.put_nowait, item)
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, sentinel)  # type: ignore
+
+        await run_in_executor(None, run)
+        while True:
+            item = await queue.get()
+            if item is sentinel:
+                break
+            yield item
+
+    async def aput(
+        self,
+        config: RunnableConfig,
+        checkpoint: Checkpoint,
+        metadata: CheckpointMetadata,
+        new_versions: ChannelVersions,
+    ) -> RunnableConfig:
+        """Asynchronously store a checkpoint with its configuration and metadata.
+
+        Asynchronously wraps the blocking `self.put` method.
+
+        Args:
+            config: Configuration for the checkpoint.
+            checkpoint: The checkpoint to store.
+            metadata: Additional metadata for the checkpoint.
+            new_versions: New channel versions as of this write.
+
+        Returns:
+            RunnableConfig: Updated configuration after storing the checkpoint.
+        """
+        return await run_in_executor(
+            None, self.put, config, checkpoint, metadata, new_versions
+        )
+
+    async def aput_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        """Asynchronously store intermediate writes linked to a checkpoint.
+
+        Asynchronously wraps the blocking `self.put_writes` method.
+
+        Args:
+            config: Configuration of the related checkpoint.
+            writes: List of writes to store.
+            task_id: Identifier for the task creating the writes.
+            task_path: Path of the task creating the writes.
+        """
+        return await run_in_executor(
+            None, self.put_writes, config, writes, task_id, task_path
+        )
+
+    async def adelete_thread(
+        self,
+        thread_id: str,
+    ) -> None:
+        """Delete all checkpoints and writes associated with a specific thread ID.
+
+        Asynchronously wraps the blocking `self.delete_thread` method.
+
+        Args:
+            thread_id: The thread ID whose checkpoints should be deleted.
+        """
+        return await run_in_executor(None, self.delete_thread, thread_id)

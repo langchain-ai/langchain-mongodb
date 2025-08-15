@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import builtins
 import sys
+import warnings
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -87,6 +88,12 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         ttl: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
+        warnings.warn(
+            f"{self.__class__.__name__} is deprecated and will be removed in 0.3.0 release. "
+            "Please use the async methods of MongoDBSaver instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__()
         self.client = client
         self.db = self.client[db_name]
