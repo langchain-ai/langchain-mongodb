@@ -272,7 +272,7 @@ def test_hybrid_search_weighted_rrf(
 
     balanced_results = balanced_retriever.invoke(query)
     total_score = sum(res.metadata["score"] for res in balanced_results)
-    assert abs(total_score - 0.5 * (total_vec_score + single_text_score)) < 0.001
+    assert abs(total_score - (total_vec_score + single_text_score)) < 0.001
 
 
 def test_fulltext_retriever(
