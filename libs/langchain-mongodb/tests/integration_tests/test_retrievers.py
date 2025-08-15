@@ -224,6 +224,57 @@ def test_hybrid_retriever_nested(
     assert "New Orleans" in results[0].page_content
 
 
+def test_hybrid_search_weighted_rrf(
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+):
+    vec_only_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=1.0,
+        fulltext_weight=0.0,
+    )
+
+    text_only_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=0.0,
+        fulltext_weight=1.0,
+    )
+
+    balanced_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=1.0,
+        fulltext_weight=1.0,
+    )
+
+    query = "Sandwiches"
+
+    text_only_results = text_only_retriever.invoke(query)
+    assert len(text_only_results) == 3  # but only one with non-zero text score
+    single_text_score = text_only_results[0].metadata["fulltext_score"]
+    assert single_text_score > 0
+    assert all(
+        result.metadata["fulltext_score"] == 0 for result in text_only_results[1:]
+    )
+    assert all(result.metadata["vector_score"] == 0 for result in text_only_results)
+    total_score = sum(res.metadata["score"] for res in text_only_results)
+    assert abs(total_score - single_text_score) < 0.001
+
+    vec_only_results = vec_only_retriever.invoke(query)
+    assert len(vec_only_results) == 3
+    assert all(result.metadata["vector_score"] > 0 for result in vec_only_results)
+    assert all(result.metadata["fulltext_score"] == 0 for result in vec_only_results)
+    total_vec_score = sum(res.metadata["score"] for res in vec_only_results)
+
+    balanced_results = balanced_retriever.invoke(query)
+    total_score = sum(res.metadata["score"] for res in balanced_results)
+    assert abs(total_score - (total_vec_score + single_text_score)) < 0.001
+
+
 def test_fulltext_retriever(
     indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
