@@ -43,6 +43,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     """Penalty applied to vector search results in RRF: scores=1/(rank + penalty)"""
     fulltext_penalty: float = 60.0
     """Penalty applied to full-text search results in RRF: scores=1/(rank + penalty)"""
+    vector_weight: float = 1.0
+    """Weight applied to vector search results in RRF: score = weight * (1 / (rank + penalty + 1))"""
+    fulltext_weight: float = 1.0
+    """Weight applied to full-text search results in RRF: score = weight * (1 / (rank + penalty + 1))"""
     show_embeddings: float = False
     """If true, returned Document metadata will include vectors."""
     top_k: Annotated[
@@ -95,7 +99,11 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
                 oversampling_factor=self.oversampling_factor,
             )
         ]
-        vector_pipeline += reciprocal_rank_stage("vector_score", self.vector_penalty)
+        vector_pipeline += reciprocal_rank_stage(
+            score_field="vector_score",
+            penalty=self.vector_penalty,
+            weight=self.vector_weight,
+        )
 
         combine_pipelines(pipeline, vector_pipeline, self.collection.name)
 
@@ -109,7 +117,11 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         )
 
         text_pipeline.extend(
-            reciprocal_rank_stage("fulltext_score", self.fulltext_penalty)
+            reciprocal_rank_stage(
+                score_field="fulltext_score",
+                penalty=self.fulltext_penalty,
+                weight=self.fulltext_weight,
+            )
         )
 
         combine_pipelines(pipeline, text_pipeline, self.collection.name)

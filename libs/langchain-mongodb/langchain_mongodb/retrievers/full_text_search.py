@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
@@ -7,7 +7,7 @@ from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb.pipelines import text_search_stage
-from langchain_mongodb.utils import make_serializable
+from langchain_mongodb.utils import _append_client_metadata, make_serializable
 
 
 class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
@@ -17,7 +17,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     """MongoDB Collection on an Atlas cluster"""
     search_index_name: str
     """Atlas Search Index name"""
-    search_field: str
+    search_field: Union[str, List[str]]
     """Collection field that contains the text to be searched. It must be indexed"""
     k: Optional[int] = None
     """Number of documents to return. Default is no limit"""
@@ -28,6 +28,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     top_k: Annotated[
         Optional[int], Field(deprecated='top_k is deprecated, use "k" instead')
     ] = None
+    _added_metadata: bool = False
     """Number of documents to return. Default is no limit"""
 
     def close(self) -> None:
@@ -55,13 +56,21 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             include_scores=self.include_scores,
         )
 
+        if not self._added_metadata:
+            _append_client_metadata(self.collection.database.client)
+            self._added_metadata = True
+
         # Execution
         cursor = self.collection.aggregate(pipeline)  # type: ignore[arg-type]
 
         # Formatting
         docs = []
         for res in cursor:
-            text = res.pop(self.search_field)
+            text = (
+                res.pop(self.search_field)
+                if isinstance(self.search_field, str)
+                else res.pop(self.search_field[0])
+            )
             make_serializable(res)
             docs.append(Document(page_content=text, metadata=res))
         return docs

@@ -2,7 +2,7 @@
 
 import logging
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
@@ -202,7 +202,7 @@ def _wait_for_predicate(
 def create_fulltext_search_index(
     collection: Collection,
     index_name: str,
-    field: str,
+    field: Union[str, List[str]],
     *,
     wait_until_complete: Optional[float] = None,
     **kwargs: Any,
@@ -222,9 +222,11 @@ def create_fulltext_search_index(
     if collection.name not in collection.database.list_collection_names():
         collection.database.create_collection(collection.name)
 
-    definition = {
-        "mappings": {"dynamic": False, "fields": {field: [{"type": "string"}]}}
-    }
+    if isinstance(field, str):
+        fields_definition = {field: [{"type": "string"}]}
+    else:
+        fields_definition = {f: [{"type": "string"}] for f in field}
+    definition = {"mappings": {"dynamic": False, "fields": fields_definition}}
     result = collection.create_search_index(
         SearchIndexModel(
             definition=definition,

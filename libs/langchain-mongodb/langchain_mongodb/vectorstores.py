@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from importlib.metadata import version
 from typing import (
     Any,
     Callable,
@@ -24,7 +23,6 @@ from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
 from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 from pymongo.errors import CollectionInvalid
 
 from langchain_mongodb.index import (
@@ -33,6 +31,8 @@ from langchain_mongodb.index import (
 )
 from langchain_mongodb.pipelines import vector_search_stage
 from langchain_mongodb.utils import (
+    DRIVER_METADATA,
+    _append_client_metadata,
     make_serializable,
     maximal_marginal_relevance,
     oid_to_str,
@@ -204,11 +204,11 @@ class MongoDBAtlasVectorSearch(VectorStore):
         collection: Collection[Dict[str, Any]],
         embedding: Embeddings,
         index_name: str = "vector_index",
-        text_key: str = "text",
+        text_key: Union[str, List[str]] = "text",
         embedding_key: str = "embedding",
         relevance_score_fn: str = "cosine",
         dimensions: int = -1,
-        auto_create_index: bool = True,
+        auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
         **kwargs: Any,
     ):
@@ -216,35 +216,43 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Args:
             collection: MongoDB collection to add the texts to
             embedding: Text embedding model to use
-            text_key: MongoDB field that will contain the text for each document
+            text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
+            The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
             embedding_key: Field that will contain the embedding for each document
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
-            dimensions: Number of dimensions in embedding.  If the value is set and
-                the index does not exist, an index will be created.
+            auto_create_index: Whether to automatically create an index if it does not exist.
+            dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
+                is `true`, the value will be inferred.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
                to be ready.
         """
         self._collection = collection
         self._embedding = embedding
         self._index_name = index_name
-        self._text_key = text_key
+        self._text_key = text_key if isinstance(text_key, str) else text_key[0]
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
 
-        if not auto_create_index or dimensions == -1:
+        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+        _append_client_metadata(self._collection.database.client)
+
+        if auto_create_index is False:
             return
+        if auto_create_index is None and dimensions == -1:
+            return
+        if dimensions == -1:
+            dimensions = len(embedding.embed_query("foo"))
+
         coll = self._collection
-        if not any(
-            [ix["name"] == self._index_name for ix in coll.list_search_indexes()]
-        ):
+        if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             create_vector_search_index(
                 collection=coll,
-                index_name=self._index_name,
+                index_name=index_name,
                 dimensions=dimensions,
-                path=self._embedding_key,
-                similarity=self._relevance_score_fn,
+                path=embedding_key,
+                similarity=relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
             )
 
@@ -286,7 +294,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]
@@ -406,7 +414,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             _id = doc.pop("_id")
             text = doc.pop("text")
             del doc["embedding"]
-            docs.append(Document(page_content=text, id=_id, metadata=doc))
+            docs.append(Document(page_content=text, id=oid_to_str(_id), metadata=doc))
         return docs
 
     def bulk_embed_and_insert_texts(

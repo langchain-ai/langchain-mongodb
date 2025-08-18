@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import functools
 import warnings
-from importlib.metadata import version
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.indexing.base import RecordManager
 from langchain_core.runnables.config import run_in_executor
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 from pymongo.errors import OperationFailure
+
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 
 class MongoDBRecordManager(RecordManager):
@@ -36,6 +36,8 @@ class MongoDBRecordManager(RecordManager):
         super().__init__(namespace=namespace)
         self._collection = collection
 
+        _append_client_metadata(self._collection.database.client)
+
     @classmethod
     def from_connection_string(
         cls, connection_string: str, namespace: str
@@ -51,7 +53,7 @@ class MongoDBRecordManager(RecordManager):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]

@@ -15,9 +15,9 @@ from langgraph.checkpoint.base import (
 )
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
-# Setup:
-# docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-server
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.environ.get(
+    "MONGODB_URI", "mongodb://localhost:27017/?directConnection=true"
+)
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "sync_checkpoints"
 
@@ -97,7 +97,7 @@ def test_null_chars(input_data: dict[str, Any]) -> None:
         )
         assert saver.get_tuple(null_value_cfg).metadata["my_key"] == null_str  # type: ignore
         assert (
-            list(saver.list(None, filter={"my_key": null_str}))[0].metadata["my_key"]  # type: ignore
+            list(saver.list(None, filter={"my_key": null_str}))[0].metadata["my_key"]
             == null_str
         )
 

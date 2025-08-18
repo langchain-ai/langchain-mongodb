@@ -1,6 +1,5 @@
 import json
 import logging
-from importlib.metadata import version
 from typing import Dict, List, Optional
 
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -10,7 +9,8 @@ from langchain_core.messages import (
     messages_from_dict,
 )
 from pymongo import MongoClient, errors
-from pymongo.driver_info import DriverInfo
+
+from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -112,13 +112,12 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
             if connection_string:
                 raise ValueError("Must provide connection_string or client, not both")
             self.client = client
+            _append_client_metadata(self.client)
         elif connection_string:
             try:
                 self.client = MongoClient(
                     connection_string,
-                    driver=DriverInfo(
-                        name="Langchain", version=version("langchain-mongodb")
-                    ),
+                    driver=DRIVER_METADATA,
                 )
             except errors.ConnectionFailure as error:
                 logger.error(error)

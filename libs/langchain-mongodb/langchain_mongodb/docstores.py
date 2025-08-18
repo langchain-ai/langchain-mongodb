@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from importlib.metadata import version
 from typing import Any, Generator, Iterable, Iterator, List, Optional, Sequence, Union
 
 from langchain_core.documents import Document
 from langchain_core.stores import BaseStore
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.driver_info import DriverInfo
 
 from langchain_mongodb.utils import (
+    DRIVER_METADATA,
+    _append_client_metadata,
     make_serializable,
 )
 
@@ -37,6 +37,8 @@ class MongoDBDocStore(BaseStore):
         self.collection = collection
         self._text_key = text_key
 
+        _append_client_metadata(self.collection.database.client)
+
     @classmethod
     def from_connection_string(
         cls,
@@ -55,7 +57,7 @@ class MongoDBDocStore(BaseStore):
         """
         client: MongoClient = MongoClient(
             connection_string,
-            driver=DriverInfo(name="Langchain", version=version("langchain-mongodb")),
+            driver=DRIVER_METADATA,
         )
         db_name, collection_name = namespace.split(".")
         collection = client[db_name][collection_name]

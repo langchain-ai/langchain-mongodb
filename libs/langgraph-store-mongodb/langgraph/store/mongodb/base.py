@@ -2,7 +2,6 @@ import logging
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from importlib.metadata import version
 from typing import Any, Literal, Optional, Union
 
 from bson import SON
@@ -16,7 +15,6 @@ from pymongo import (
     UpdateOne,
 )
 from pymongo.collection import Collection, ReturnDocument
-from pymongo.driver_info import DriverInfo
 
 from langgraph.store.base import (
     BaseStore,
@@ -38,6 +36,7 @@ from langgraph.store.base.embed import (
     ensure_embeddings,
     get_text_at_path,
 )
+from langgraph.store.mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +166,8 @@ class MongoDBStore(BaseStore):
         self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
         self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
+        _append_client_metadata(self.collection.database.client)
+
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
@@ -247,9 +248,7 @@ class MongoDBStore(BaseStore):
         try:
             client = MongoClient(
                 conn_string,
-                driver=DriverInfo(
-                    name="Langgraph", version=version("langgraph-store-mongodb")
-                ),
+                driver=DRIVER_METADATA,
             )
             db = client[db_name]
             if collection_name not in db.list_collection_names():
