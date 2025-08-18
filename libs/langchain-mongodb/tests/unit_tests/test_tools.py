@@ -73,7 +73,9 @@ class TestQueryMongoDBCheckerToolUnit(ToolsUnitTests):
         return dict(query="db.foo.aggregate()")
 
 
-def test_database_parse_command(db: MongoDBDatabase) -> None:
+def test_database_parse_command() -> None:
+    db = MongoDBDatabase(MockClient(), "test")
+
     command = """db.user.aggregate([ { "$match": { "_id": ObjectId("123412341234123412341234") } } ])"""
     result = db._parse_command(command)
     assert isinstance(result[0]["$match"]["_id"], ObjectId)
