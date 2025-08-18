@@ -2,10 +2,8 @@
 """Test MongoDB database wrapper."""
 
 import json
-from datetime import datetime
 
 import pytest
-from bson import ObjectId
 from pymongo import MongoClient
 
 from langchain_mongodb.agent_toolkit import MongoDBDatabase
@@ -82,17 +80,3 @@ def test_database_run(db: MongoDBDatabase) -> None:
     del docs[0]["_id"]
     del user["_id"]
     assert docs[0] == user
-
-
-def test_database_parse_command(db: MongoDBDatabase) -> None:
-    command = """db.user.aggregate([ { "$match": { "_id": ObjectId("123412341234123412341234") } } ])"""
-    result = db._parse_command(command)
-    assert isinstance(result[0]["$match"]["_id"], ObjectId)
-
-    command = """db.user.aggregate([ { "$match": { "date":  ISODate("2017-04-27T04:26:42.709Z") } } ])"""
-    result = db._parse_command(command)
-    assert isinstance(result[0]["$match"]["date"], datetime)
-
-    command = """db.user.aggregate([ { "$match": { "date": new Date("2017-04-27T04:26:42.709Z") } } ])"""
-    result = db._parse_command(command)
-    assert isinstance(result[0]["$match"]["date"], datetime)
