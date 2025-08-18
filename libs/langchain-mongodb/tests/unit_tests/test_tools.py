@@ -74,7 +74,7 @@ class TestQueryMongoDBCheckerToolUnit(ToolsUnitTests):
 
 
 def test_database_parse_command() -> None:
-    db = MongoDBDatabase(MockClient(), "test")
+    db = MongoDBDatabase(MockClient(), "test")  # type:ignore[arg-type]
 
     command = """db.user.aggregate([ { "$match": { "_id": ObjectId("123412341234123412341234") } } ])"""
     result = db._parse_command(command)

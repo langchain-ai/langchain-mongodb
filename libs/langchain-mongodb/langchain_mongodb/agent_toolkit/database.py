@@ -317,14 +317,14 @@ class MongoDBDatabase:
     def _convert_mongo_js_to_python(self, code: str) -> str:
         """Convert JS-style MongoDB syntax into Python-safe code."""
 
-        def _handle_iso_date(match):
+        def _handle_iso_date(match: Any) -> str:
             date_str = match.group(1)
             if not date_str:
                 raise ValueError("ISODate must contain a date string.")
             dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
 
-        def _handle_new_date(match):
+        def _handle_new_date(match: Any) -> str:
             date_str = match.group(1)
             if not date_str:
                 raise ValueError(
@@ -333,7 +333,7 @@ class MongoDBDatabase:
             dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
 
-        def _handle_object_id(match):
+        def _handle_object_id(match: Any) -> str:
             oid_str = match.group(1)
             if not oid_str:
                 raise ValueError("ObjectId must contain a value.")
