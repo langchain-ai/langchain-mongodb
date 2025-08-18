@@ -206,7 +206,6 @@ class MongoDBDatabase:
             ):
                 doc[key] = value[: MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE + 1]
 
-
     def _parse_command(self, command: str) -> Any:
         """
         Extracts and parses the aggregation pipeline from a JS-style MongoDB command.
@@ -219,7 +218,7 @@ class MongoDBDatabase:
         try:
             agg_str = command.split(".aggregate(", 1)[1].rsplit(")", 1)[0]
         except Exception as e:
-            raise ValueError(f"Could not extract aggregation pipeline: {e}")
+            raise ValueError(f"Could not extract aggregation pipeline: {e}") from e
 
         # Convert JavaScript-style constructs to Python syntax
         agg_str = self._convert_mongo_js_to_python(agg_str)
@@ -235,8 +234,7 @@ class MongoDBDatabase:
                 raise ValueError("Aggregation pipeline must be a list.")
             return agg_pipeline
         except Exception as e:
-            raise ValueError(f"Failed to parse aggregation pipeline: {e}")
-
+            raise ValueError(f"Failed to parse aggregation pipeline: {e}") from e
 
     def run(self, command: str) -> Union[str, Cursor]:
         """Execute a MongoDB aggregation command and return a string representing the results.
@@ -251,8 +249,10 @@ class MongoDBDatabase:
 
         try:
             col_name = command.split(".")[1]
-        except IndexError:
-            raise ValueError("Invalid command format. Could not extract collection name.")
+        except IndexError as e:
+            raise ValueError(
+                "Invalid command format. Could not extract collection name."
+            ) from e
 
         if col_name not in self.get_usable_collection_names():
             raise ValueError(f"Collection {col_name} does not exist!")
@@ -268,7 +268,7 @@ class MongoDBDatabase:
             result = coll.aggregate(agg_pipeline)
             return dumps(list(result), indent=2)
         except Exception as e:
-            raise ValueError(f"Error executing aggregation: {e}")
+            raise ValueError(f"Error executing aggregation: {e}") from e
 
     def get_collection_info_no_throw(
         self, collection_names: Optional[List[str]] = None
@@ -312,7 +312,7 @@ class MongoDBDatabase:
             "collection_names": ", ".join(collection_names),
         }
 
-    def _convert_mongo_js_to_python(code: str) -> str:
+    def _convert_mongo_js_to_python(self, code: str) -> str:
         """Convert JS-style MongoDB syntax into Python-safe code."""
 
         def _handle_iso_date(match):
@@ -325,7 +325,9 @@ class MongoDBDatabase:
         def _handle_new_date(match):
             date_str = match.group(1)
             if not date_str:
-                raise ValueError("new Date() without arguments is not allowed. Please pass an explicit date string.")
+                raise ValueError(
+                    "new Date() without arguments is not allowed. Please pass an explicit date string."
+                )
             dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
 
