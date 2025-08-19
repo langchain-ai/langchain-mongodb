@@ -210,7 +210,7 @@ class MongoDBDatabase:
 
     def _parse_command(self, command: str) -> Any:
         """
-        Extracts and parses the aggregation pipeline from a JS-style MongoDB command.
+        Extracts and parses the aggregation pipeline from a JavaScript-style MongoDB command.
         Handles ObjectId(), ISODate(), new Date() and converts them into Python constructs.
         """
         command = re.sub(r"\s+", " ", command.strip())
