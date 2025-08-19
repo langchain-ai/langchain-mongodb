@@ -315,7 +315,7 @@ class MongoDBDatabase:
         }
 
     def _convert_mongo_js_to_python(self, code: str) -> str:
-        """Convert JS-style MongoDB syntax into Python-safe code."""
+        """Convert JavaScript-style MongoDB syntax into Python-safe code."""
 
         def _handle_iso_date(match: Any) -> str:
             date_str = match.group(1)
