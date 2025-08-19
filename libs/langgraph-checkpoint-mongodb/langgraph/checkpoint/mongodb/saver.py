@@ -372,6 +372,9 @@ class MongoDBSaver(BaseCheckpointSaver):
             >>> print(saved_config)
             {'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef4f797-8335-6428-8001-8a1503f9b875'}}
         """
+        import pdb
+
+        pdb.set_trace()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]

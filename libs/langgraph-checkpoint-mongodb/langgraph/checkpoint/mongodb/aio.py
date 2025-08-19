@@ -353,6 +353,9 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             RunnableConfig: Updated configuration after storing the checkpoint.
         """
         await self._setup()
+        import pdb
+
+        pdb.set_trace()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]

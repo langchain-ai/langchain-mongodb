@@ -176,3 +176,34 @@ async def test_fanout(
         )
         end = time.monotonic()
         print(f"{cname}: {end - start:.4f} seconds")
+
+
+async def test_custom_properties(
+    checkpointer_mongodb: MongoDBSaver, checkpointer_mongodb_async: AsyncMongoDBSaver
+) -> None:
+    # Create the state graph
+    state_graph = fanout_to_subgraph()
+
+    # Compile the state graph with the provided checkpointing mechanism
+    compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb_async)
+
+    # Define configuration with thread ID and assistant ID
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": "123",
+            "assistant_id": "456",
+            "user_id": "789",
+        }
+    }
+
+    # Invoke the compiled state graph with user input
+    data = await compiled_state_graph.ainvoke(
+        input={"subjects": [], "step": 0},
+        config=config,
+        stream_mode="values",
+        debug=False,
+    )
+    import pdb
+
+    pdb.set_trace()
+    pass
