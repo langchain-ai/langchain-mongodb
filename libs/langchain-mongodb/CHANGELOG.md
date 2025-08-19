@@ -2,6 +2,16 @@
 
 ---
 
+## Changes in version 0.7.0 (2025/08/19)
+
+- Support separate weights in hybrid retriever.
+- Infer dimensions from embedding in auto-created index in ``MongoDBAtlasVectorSearch``
+  if not provided and ``auto_create_index`` is set to ``True``.
+- Add support for multiple fields in ``MongoDBAtlasFullTextSearchRetriever.search_field`` and
+  ``MongoDBAtlasVectorSearch.text_key``.
+- Add additional client metadata to ``collection`` objects consumed by ``langchain-mongodb``.
+- Allow ``agent_toolkit`` parser to handle Python and JavaScript objects as part of the command to run.
+
 ## Changes in version 0.6.1 (2025/05/12)
 
 - Improve robustness of `MongoDBDatabase.run`.
