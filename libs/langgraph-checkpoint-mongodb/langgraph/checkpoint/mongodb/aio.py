@@ -353,24 +353,24 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             RunnableConfig: Updated configuration after storing the checkpoint.
         """
         await self._setup()
-        import pdb
-
-        pdb.set_trace()
         thread_id = config["configurable"]["thread_id"]
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
+        metadata = dumps_metadata(metadata)
+        metadata.update(config.get("metadata", {}))
         doc = {
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
-            "metadata": dumps_metadata(metadata),
+            "metadata": metadata,
         }
         upsert_query = {
             "thread_id": thread_id,
             "checkpoint_ns": checkpoint_ns,
             "checkpoint_id": checkpoint_id,
         }
+
         if self.ttl:
             doc["created_at"] = datetime.now()
         # Perform your operations here

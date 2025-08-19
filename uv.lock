@@ -1034,7 +1034,7 @@ dev = [
     { name = "langchain-core", specifier = ">=0.3.55" },
     { name = "langchain-ollama", specifier = ">=0.2.2" },
     { name = "langchain-openai", specifier = ">=0.2.14" },
-    { name = "langgraph", specifier = "==0.4.10" },
+    { name = "langgraph", specifier = ">=0.3.23" },
     { name = "langgraph-checkpoint", specifier = ">=2.0.9" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
