@@ -376,13 +376,13 @@ class MongoDBSaver(BaseCheckpointSaver):
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
-        metadata = dumps_metadata(metadata)
+        metadata = metadata.copy()
         metadata.update(config.get("metadata", {}))
         doc = {
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
-            "metadata": metadata,
+            "metadata": dumps_metadata(metadata),
         }
         upsert_query = {
             "thread_id": thread_id,

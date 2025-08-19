@@ -87,7 +87,7 @@ def fanout_to_subgraph() -> StateGraph:
         return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
 
     parentgraph = StateGraph(OverallState)
-    parentgraph.add_node("generate_joke", subgraphc)  # type: ignore[arg-type]
+    parentgraph.add_node("generate_joke", subgraphc)
     parentgraph.add_conditional_edges(START, fanout)
     parentgraph.add_edge("generate_joke", END)
     return parentgraph
@@ -200,15 +200,16 @@ async def test_custom_properties_async(
 
     # Invoke the compiled state graph with user input
     await compiled_state_graph.ainvoke(
-        input={"subjects": [], "step": 0},
+        input={"subjects": [], "step": 0},  # type:ignore[arg-type]
         config=config,
         stream_mode="values",
         debug=False,
     )
 
     checkpoint_tuple = await checkpointer_mongodb_async.aget_tuple(config)
-    assert str(checkpoint_tuple.metadata["user_id"]) == user_id
-    assert str(checkpoint_tuple.metadata["assistant_id"]) == assistant_id
+    assert checkpoint_tuple is not None
+    assert checkpoint_tuple.metadata["user_id"] == user_id
+    assert checkpoint_tuple.metadata["assistant_id"] == assistant_id
 
 
 def test_custom_properties(checkpointer_mongodb: MongoDBSaver) -> None:
@@ -231,12 +232,13 @@ def test_custom_properties(checkpointer_mongodb: MongoDBSaver) -> None:
 
     # Invoke the compiled state graph with user input
     compiled_state_graph.invoke(
-        input={"subjects": [], "step": 0},
+        input={"subjects": [], "step": 0},  # type:ignore[arg-type]
         config=config,
         stream_mode="values",
         debug=False,
     )
 
     checkpoint_tuple = checkpointer_mongodb.get_tuple(config)
-    assert str(checkpoint_tuple.metadata["user_id"]) == user_id
-    assert str(checkpoint_tuple.metadata["assistant_id"]) == assistant_id
+    assert checkpoint_tuple is not None
+    assert checkpoint_tuple.metadata["user_id"] == user_id
+    assert checkpoint_tuple.metadata["assistant_id"] == assistant_id
