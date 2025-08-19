@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from bson import ObjectId
@@ -209,16 +209,34 @@ class MongoDBDatabase:
                 doc[key] = value[: MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE + 1]
 
     def _parse_command(self, command: str) -> Any:
-        # Convert a JavaScript command to a python object.
+        """
+        Extracts and parses the aggregation pipeline from a JavaScript-style MongoDB command.
+        Handles ObjectId(), ISODate(), new Date() and converts them into Python constructs.
+        """
         command = re.sub(r"\s+", " ", command.strip())
-        # Handle missing closing parens.
         if command.endswith("]"):
             command += ")"
-        agg_command = command[command.index("[") : -1]
+
         try:
-            return json.loads(agg_command)
+            agg_str = command.split(".aggregate(", 1)[1].rsplit(")", 1)[0]
         except Exception as e:
-            raise ValueError(f"Cannot execute command {command}") from e
+            raise ValueError(f"Could not extract aggregation pipeline: {e}") from e
+
+        # Convert JavaScript-style constructs to Python syntax
+        agg_str = self._convert_mongo_js_to_python(agg_str)
+
+        try:
+            eval_globals = {
+                "ObjectId": ObjectId,
+                "datetime": datetime,
+                "timezone": timezone,
+            }
+            agg_pipeline = eval(agg_str, eval_globals)
+            if not isinstance(agg_pipeline, list):
+                raise ValueError("Aggregation pipeline must be a list.")
+            return agg_pipeline
+        except Exception as e:
+            raise ValueError(f"Failed to parse aggregation pipeline: {e}") from e
 
     def run(self, command: str) -> Union[str, Cursor]:
         """Execute a MongoDB aggregation command and return a string representing the results.
@@ -230,14 +248,29 @@ class MongoDBDatabase:
         """
         if not command.startswith("db."):
             raise ValueError(f"Cannot run command {command}")
-        col_name = command.split(".")[1]
+
+        try:
+            col_name = command.split(".")[1]
+        except IndexError as e:
+            raise ValueError(
+                "Invalid command format. Could not extract collection name."
+            ) from e
+
         if col_name not in self.get_usable_collection_names():
             raise ValueError(f"Collection {col_name} does not exist!")
-        coll = self._db[col_name]
+
         if ".aggregate(" not in command:
-            raise ValueError(f"Cannot execute command {command}")
-        agg = self._parse_command(command)
-        return dumps(list(coll.aggregate(agg)), indent=2)
+            raise ValueError("Only aggregate(...) queries are currently supported.")
+
+        # Parse pipeline using helper
+        agg_pipeline = self._parse_command(command)
+
+        try:
+            coll = self._db[col_name]
+            result = coll.aggregate(agg_pipeline)
+            return dumps(list(result), indent=2)
+        except Exception as e:
+            raise ValueError(f"Error executing aggregation: {e}") from e
 
     def get_collection_info_no_throw(
         self, collection_names: Optional[List[str]] = None
@@ -280,3 +313,39 @@ class MongoDBDatabase:
             "collection_info": collection_info,
             "collection_names": ", ".join(collection_names),
         }
+
+    def _convert_mongo_js_to_python(self, code: str) -> str:
+        """Convert JavaScript-style MongoDB syntax into Python-safe code."""
+
+        def _handle_iso_date(match: Any) -> str:
+            date_str = match.group(1)
+            if not date_str:
+                raise ValueError("ISODate must contain a date string.")
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
+
+        def _handle_new_date(match: Any) -> str:
+            date_str = match.group(1)
+            if not date_str:
+                raise ValueError(
+                    "new Date() without arguments is not allowed. Please pass an explicit date string."
+                )
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
+
+        def _handle_object_id(match: Any) -> str:
+            oid_str = match.group(1)
+            if not oid_str:
+                raise ValueError("ObjectId must contain a value.")
+            return f"ObjectId('{oid_str}')"
+
+        patterns = [
+            (r'ISODate\(\s*["\']([^"\']*)["\']\s*\)', _handle_iso_date),
+            (r'new\s+Date\(\s*["\']([^"\']*)["\']\s*\)', _handle_new_date),
+            (r'ObjectId\(\s*["\']([^"\']*)["\']\s*\)', _handle_object_id),
+        ]
+
+        for pattern, replacer in patterns:
+            code = re.sub(pattern, replacer, code)
+
+        return code
