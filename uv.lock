@@ -1013,7 +1013,7 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.1.4"
+version = "0.2.0"
 source = { editable = "libs/langgraph-checkpoint-mongodb" }
 dependencies = [
     { name = "langchain-mongodb" },

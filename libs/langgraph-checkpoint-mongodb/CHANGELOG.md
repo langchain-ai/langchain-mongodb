@@ -2,10 +2,12 @@
 
 ---
 
-## Changes in version 0.2.0 (TBD)
+## Changes in version 0.2.0 (2025.08.20)
 
 - Implements async methods of MongoDBSaver.
-- Deprecates ASyncMongoDBSaver, to be removed in 0.3.0
+- Deprecates ASyncMongoDBSaver, to be removed in 0.3.0.
+- Add additional client metadata to ``collection`` objects consumed by ``langgraph-checkpoint-mongodb``.
+- Fixes persistence of user metadata for ``langgraph`` 0.5+.
 
 ## Changes in version 0.1.4 (2025/06/13)
 
