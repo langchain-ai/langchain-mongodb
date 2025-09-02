@@ -22,7 +22,7 @@ MONGODB_URI = os.environ.get(
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "semantic_search"
 INDEX_NAME = "vector_index"
-TIMEOUT, INTERVAL = 30, 1  # timeout to index new data
+TIMEOUT, INTERVAL = 60, 1  # timeout to index new data
 
 DIMENSIONS = 5  # Dimensions of embedding model
 
