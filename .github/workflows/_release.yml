@@ -40,11 +40,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v5
+        uses: astral-sh/setup-uv@557e51de59eb14aaaba2ed9621916900a91d50c6 # v5
         with:
-          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       # We want to keep this build stage *separate* from the release stage,
       # so that there's no sharing of permissions between them.
@@ -110,7 +108,7 @@ jobs:
       #   used in the real world.
 
       - name: Install uv
-        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v5
+        uses: astral-sh/setup-uv@557e51de59eb14aaaba2ed9621916900a91d50c6 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -211,11 +209,9 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v5
+        uses: astral-sh/setup-uv@557e51de59eb14aaaba2ed9621916900a91d50c6 # v5
         with:
-          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       - uses: actions/download-artifact@v5
         with:
@@ -223,7 +219,7 @@ jobs:
           path: ${{ inputs.working-directory }}/dist/
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
         with:
           packages-dir: ${{ inputs.working-directory }}/dist/
           verbose: true
@@ -252,7 +248,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v5
+        uses: astral-sh/setup-uv@557e51de59eb14aaaba2ed9621916900a91d50c6 # v5
         with:
           enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
@@ -264,7 +260,7 @@ jobs:
           path: ${{ inputs.working-directory }}/dist/
 
       - name: Create Release
-        uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1
         id: create-release
         with:
           artifacts: "${{ inputs.working-directory }}/dist/*"
