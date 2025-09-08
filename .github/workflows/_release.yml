@@ -42,9 +42,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@557e51de59eb14aaaba2ed9621916900a91d50c6 # v5
         with:
-          enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
-          cache-dependency-glob: "${{ inputs.working-directory }}/uv.lock"
 
       # We want to keep this build stage *separate* from the release stage,
       # so that there's no sharing of permissions between them.
