@@ -242,3 +242,55 @@ def create_fulltext_search_index(
             timeout=wait_until_complete,
         )
     logger.info(result)
+
+
+def create_autoembedded_vector_search_index(
+    collection: Collection,
+    index_name: str,
+    path: str,
+    model: str,
+    filters: Optional[List[str]] = None,
+    wait_until_complete: Optional[float] = None,
+    **kwargs: Any,
+) -> None:
+    """Experimental Utility function to create a vector search index with autoembedding.
+
+    Args:
+        collection (Collection): MongoDB Collection
+        index_name (str): Name of Index
+        path (str): field containing strings to produce embedding vectors from.
+        filters (List[str]): Fields/paths to index to allow filtering in $vectorSearch
+        wait_until_complete (Optional[float]): If provided, number of seconds to wait
+            until search index is ready.
+        kwargs: Keyword arguments supplying any additional options to SearchIndexModel.
+    """
+    logger.info("Creating Search Index %s on %s", index_name, collection.name)
+
+    if collection.name not in collection.database.list_collection_names():
+        collection.database.create_collection(collection.name)
+
+    fields =  [{
+                "type": "text",
+                "model": model,
+                "path": path,
+            }]
+    if filters:
+        for field in filters:
+            fields.append({"type": "filter", "path": field})
+    definition = {"fields": fields}
+
+    result = collection.create_search_index(
+        SearchIndexModel(
+            definition=definition,
+            name=index_name,
+            type="vectorSearch",
+        )
+    )
+
+    if wait_until_complete:
+        _wait_for_predicate(
+            predicate=lambda: _is_index_ready(collection, index_name),
+            err=f"{index_name=} did not complete in {wait_until_complete}!",
+            timeout=wait_until_complete,
+        )
+    logger.info(result)
