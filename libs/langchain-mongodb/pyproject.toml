@@ -44,6 +44,15 @@ dev = [
     "typing-extensions>=4.12.2",
 ]
 
+viz = [
+    "networkx",
+    "pandas",
+    "numpy",
+    "holoviews",
+    "jupyter",
+    "scikit-image",
+]
+
 [tool.pytest.ini_options]
 minversion = "7"
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
