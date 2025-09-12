@@ -51,7 +51,7 @@ def test_autoembedding(collection: Collection, texts: List[str], metadatas: List
     vectorstore = AutoEmbeddingVectorStore(
         collection=collection,
         index_name=INDEX_NAME,
-        text_key="content",
+        text_key="text",
         model="voyage-3-large",
         auto_create_index=True,
         auto_index_timeout=60
@@ -68,7 +68,10 @@ def test_autoembedding(collection: Collection, texts: List[str], metadatas: List
     result_ids = vectorstore.add_documents(documents)
     assert len(result_ids) == n_docs
 
-    vectorstore.similarity_search_with_score("Animals")
+    found = vectorstore.similarity_search_with_score("Animals", k=2)
+    assert len(found) == 2
+    assert all(res[0].page_content in ["Dogs are tough.", "Cats have fluff."] for res in found)
+
 
 
 '''

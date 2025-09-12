@@ -878,7 +878,7 @@ class AutoEmbeddingVectorStore(VectorStore):
         self,
         collection: Collection[Dict[str, Any]],
         index_name: str = "vector_index",
-        text_key: Union[str, List[str]] = "content",
+        text_key: Union[str, List[str]] = "text",
         model: str = "voyage-3-large",
         auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
