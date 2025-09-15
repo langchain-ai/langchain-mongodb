@@ -48,6 +48,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_INSERT_BATCH_SIZE = 100
 
 
+# TODO: fold the autoembedding indexes into MongoDBAtlasVectorSearch
+#   Add flag containing type: e.g. self.embedding_type in ["manual", "auto"], autoembedding (bool)
+#       - OR add model (str) param and infer: e.g. if embedding is not None: self.embedding_type = "manual"
+#       - assert not embedding and model
 class MongoDBAtlasVectorSearch(VectorStore):
     """MongoDB Atlas vector store integration.
 
@@ -204,7 +208,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def __init__(
         self,
         collection: Collection[Dict[str, Any]],
-        embedding: Embeddings,
+        embedding: Embeddings = None,
         index_name: str = "vector_index",
         text_key: Union[str, List[str]] = "text",
         embedding_key: str = "embedding",
@@ -1061,7 +1065,7 @@ class AutoEmbeddingVectorStore(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        embedding: Embeddings = VoyageAIEmbeddings(model="voyage-3-large"),
+        embedding: Embeddings = None, # VoyageAIEmbeddings(model="voyage-3-large"),
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
         ids: Optional[List[str]] = None,
