@@ -16,6 +16,7 @@ dependencies = [
     "langchain-text-splitters>=0.3",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
+    # "pymongo-vectorsearch-utils",
 ]
 
 [dependency-groups]

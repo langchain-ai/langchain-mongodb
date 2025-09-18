@@ -2,12 +2,15 @@
 
 import logging
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from pymongo.collection import Collection
-from pymongo.operations import SearchIndexModel
 
 logger = logging.getLogger(__file__)
+
+
+# Don't break imports for modules that expect these functions
+# to be in this module.
 
 
 def _vector_search_index_definition(
