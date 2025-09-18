@@ -186,7 +186,7 @@ class MongoDBGraphStore:
         self.collection = collection
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        _append_client_metadata(collection.database.client)
+        _append_client_metadata(collection.database.client, DRIVER_METADATA)
 
         self.entity_extraction_model = entity_extraction_model
         self.entity_prompt = (

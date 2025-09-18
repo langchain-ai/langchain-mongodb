@@ -54,7 +54,7 @@ class MongoDBLoader(BaseLoader):
         self.include_db_collection_in_metadata = include_db_collection_in_metadata
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        _append_client_metadata(self.db.client)
+        _append_client_metadata(self.db.client, DRIVER_METADATA)
 
     @classmethod
     def from_connection_string(

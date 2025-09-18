@@ -36,7 +36,7 @@ class MongoDBRecordManager(RecordManager):
         super().__init__(namespace=namespace)
         self._collection = collection
 
-        _append_client_metadata(self._collection.database.client)
+        _append_client_metadata(self._collection.database.client, DRIVER_METADATA)
 
     @classmethod
     def from_connection_string(
@@ -85,7 +85,7 @@ class MongoDBRecordManager(RecordManager):
         if len(keys) != len(group_ids):
             raise ValueError("Number of keys does not match number of group_ids")
 
-        for key, group_id in zip(keys, group_ids):
+        for key, group_id in zip(keys, group_ids, strict=False):
             self._collection.find_one_and_update(
                 {"namespace": self.namespace, "key": key},
                 {"$set": {"group_id": group_id, "updated_at": self.get_time()}},
