@@ -7,3 +7,7 @@ default:
 
 docs:
 	uv run sphinx-build -T -b html docs docs/_build/html
+
+
+update-locks:
+  uvx pre-commit run --all-files update-locks
