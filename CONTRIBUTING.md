@@ -53,6 +53,10 @@ If using `ollama`, we have a convenience script to download the library used in 
 scripts/setup_ollama.sh
 ```
 
+### Dependency updates
+
+Dependabot will raise PRs at most once per week, grouped by GitHub Actions updates and Python requirement file updates. We have a pre-commit hook that will update the uv.lock files when requirements change. To update the locks file on a failing PR, you can use a method like gh pr checkout <pr number>, then run `just update-locks` to update the lock file, and then push the changes. If a typing dependency has changed, also run `just typing` in the appropriate package(s) and handle any new findings.
+
 ### Testing
 
 Unit tests cover modular logic that does not require calls to outside APIs.
