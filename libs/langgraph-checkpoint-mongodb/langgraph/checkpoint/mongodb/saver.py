@@ -390,7 +390,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "checkpoint_id": checkpoint_id,
         }
         if self.ttl:
-            upsert_query["created_at"] = datetime.now()
+            doc["created_at"] = datetime.now()
 
         self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
         return {
