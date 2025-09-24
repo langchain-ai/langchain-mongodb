@@ -120,7 +120,7 @@ def test(checkpointer: MongoDBSaver) -> None:
 
     for state in checkpoints:
         if state.metadata:
-            print(f"\n{state.metadata["step"]=}")
+            print(f"\nstep: {state.metadata["step"]}")
         print(f"{state.next=}")
         print(f"{state.config["configurable"]["checkpoint_id"]=}")
         print(f"{state.values=}")
