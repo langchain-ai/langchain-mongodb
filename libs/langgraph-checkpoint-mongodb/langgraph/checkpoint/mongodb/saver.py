@@ -438,7 +438,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
             type_, serialized_value = self.serde.dumps_typed(value)
 
-            update_doc = {
+            update_doc: dict[str, Any] = {
                 "channel": channel,
                 "type": type_,
                 "value": serialized_value,

@@ -359,7 +359,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
         metadata = metadata.copy()
         metadata.update(config.get("metadata", {}))
-        doc = {
+        doc: dict[str, Any] = {
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
@@ -423,7 +423,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
 
             type_, serialized_value = self.serde.dumps_typed(value)
 
-            update_doc = {
+            update_doc: dict[str, Any] = {
                 "channel": channel,
                 "type": type_,
                 "value": serialized_value,
