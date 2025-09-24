@@ -390,7 +390,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "checkpoint_id": checkpoint_id,
         }
         if self.ttl:
-            upsert_query["created_at"] = datetime.now()
+            doc["created_at"] = datetime.now()
 
         self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
         return {
@@ -425,6 +425,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "$set" if all(w[0] in WRITES_IDX_MAP for w in writes) else "$setOnInsert"
         )
         operations = []
+        now = datetime.now()
         for idx, (channel, value) in enumerate(writes):
             upsert_query = {
                 "thread_id": thread_id,
@@ -434,20 +435,22 @@ class MongoDBSaver(BaseCheckpointSaver):
                 "task_path": task_path,
                 "idx": WRITES_IDX_MAP.get(channel, idx),
             }
-            if self.ttl:
-                upsert_query["created_at"] = datetime.now()
 
             type_, serialized_value = self.serde.dumps_typed(value)
+
+            update_doc: dict[str, Any] = {
+                "channel": channel,
+                "type": type_,
+                "value": serialized_value,
+            }
+
+            if self.ttl:
+                update_doc["created_at"] = now
+
             operations.append(
                 UpdateOne(
-                    upsert_query,
-                    {
-                        set_method: {
-                            "channel": channel,
-                            "type": type_,
-                            "value": serialized_value,
-                        }
-                    },
+                    filter=upsert_query,
+                    update={set_method: update_doc},
                     upsert=True,
                 )
             )

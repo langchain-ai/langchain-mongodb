@@ -359,7 +359,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
         metadata = metadata.copy()
         metadata.update(config.get("metadata", {}))
-        doc = {
+        doc: dict[str, Any] = {
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
@@ -410,6 +410,7 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
             "$set" if all(w[0] in WRITES_IDX_MAP for w in writes) else "$setOnInsert"
         )
         operations = []
+        now = datetime.now()
         for idx, (channel, value) in enumerate(writes):
             upsert_query = {
                 "thread_id": thread_id,
@@ -419,19 +420,22 @@ class AsyncMongoDBSaver(BaseCheckpointSaver):
                 "task_path": task_path,
                 "idx": WRITES_IDX_MAP.get(channel, idx),
             }
-            if self.ttl:
-                upsert_query["created_at"] = datetime.now()
+
             type_, serialized_value = self.serde.dumps_typed(value)
+
+            update_doc: dict[str, Any] = {
+                "channel": channel,
+                "type": type_,
+                "value": serialized_value,
+            }
+
+            if self.ttl:
+                update_doc["created_at"] = now
+
             operations.append(
                 UpdateOne(
-                    upsert_query,
-                    {
-                        set_method: {
-                            "channel": channel,
-                            "type": type_,
-                            "value": serialized_value,
-                        }
-                    },
+                    filter=upsert_query,
+                    update={set_method: update_doc},
                     upsert=True,
                 )
             )
