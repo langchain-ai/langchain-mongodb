@@ -1,4 +1,4 @@
-[Issue Key]([https://jira.mongodb.org/browse/{ISSUE_KEY})
+[Issue Key](https://jira.mongodb.org/browse/{ISSUE_KEY})
 
 ## Summary
 <!-- What is this PR introducing? If context is already provided from the JIRA ticket, still place it in the Pull Request as you should not make the reviewer do digging for a basic summary. -->
