@@ -562,7 +562,7 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.2.2"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "langchain-mongodb" },
