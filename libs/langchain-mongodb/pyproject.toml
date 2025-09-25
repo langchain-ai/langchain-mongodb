@@ -44,6 +44,7 @@ dev = [
     "typing-extensions>=4.12.2",
 ]
 
+[project.optional-dependencies]
 viz = [
     "networkx",
     "pandas",
@@ -51,6 +52,7 @@ viz = [
     "holoviews",
     "jupyter",
     "scikit-image",
+    "pyparsing",
 ]
 
 [tool.pytest.ini_options]
