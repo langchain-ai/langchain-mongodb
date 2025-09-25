@@ -62,6 +62,7 @@ repos:
       language: python
       require_serial: true
       fail_fast: true
+      pass_filenames: false
       files: ^(uv\.lock|pyproject\.toml)$
       additional_dependencies:
         - uv
