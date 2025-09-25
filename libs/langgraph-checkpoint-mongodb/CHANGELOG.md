@@ -2,7 +2,11 @@
 
 ---
 
-## Changes in version 0.2.0 (2025.08.20)
+## Changes in version 0.2.1 (2025/09/25)
+
+- Fixes bug when graph interrupted leading to DuplicateKeyError when TTL is set.
+
+## Changes in version 0.2.0 (2025/08/20)
 
 - Implements async methods of MongoDBSaver.
 - Deprecates ASyncMongoDBSaver, to be removed in 0.3.0.
