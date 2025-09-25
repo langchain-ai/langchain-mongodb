@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -1013,7 +1013,7 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "libs/langgraph-checkpoint-mongodb" }
 dependencies = [
     { name = "langchain-mongodb" },
