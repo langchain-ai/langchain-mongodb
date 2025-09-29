@@ -24,7 +24,7 @@
 - [ ] Is the intention of the code captured in relevant tests?
 - [ ] If there are new TODOs, has a related JIRA ticket been created?
 
-### Checklist for Reviewer {@primary\_reviewer}
+### Checklist for Reviewer {@primary_reviewer}
 
 - [ ] Does the title of the PR reference a JIRA Ticket?
 - [ ] Do you fully understand the implementation? (Would you be comfortable explaining how this code works to someone else?)
