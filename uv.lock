@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -904,13 +904,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "holoviews", marker = "extra == 'viz'" },
+    { name = "jupyter", marker = "extra == 'viz'" },
     { name = "langchain", specifier = ">=0.3" },
     { name = "langchain-core", specifier = ">=0.3" },
     { name = "langchain-text-splitters", specifier = ">=0.3" },
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
+    { name = "networkx", marker = "extra == 'viz'" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pymongo", specifier = ">=4.6.1" },
 ]
+provides-extras = ["viz"]
 
 [package.metadata.requires-dev]
 dev = [
