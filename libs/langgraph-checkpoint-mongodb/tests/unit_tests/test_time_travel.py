@@ -43,15 +43,12 @@ def validate_expense_node(state: ExpenseState) -> dict[str, Any]:
     ids=["ttl_none", "ttl_3600"],
 )
 def checkpointer(request: Any) -> Generator[MongoDBSaver]:
-    db_name = "langgraph_timetravel_db"
-    checkpoint_collection_name = "checkpoints"
-    writes_collection_name = "checkpoint_writes"
+    db_name = "langgraph-test"
+    checkpoint_collection_name = "timetravel_checkpoints"
+    writes_collection_name = "timetravel_writes"
 
     # Initialize MongoDB checkpointer
     client: MongoClient = MongoClient(MONGODB_URI)
-
-    # Clean up any existing test data.
-    client.drop_database(db_name)
 
     saver = MongoDBSaver(
         client=client,
