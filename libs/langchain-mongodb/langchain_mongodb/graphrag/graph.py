@@ -667,7 +667,7 @@ class MongoDBGraphStore:
 
 
 # TODO
-#   Discuss API
+#   Discuss API => split out json_opts and nx_opts
 #   Document
 #   Choose reasonable defaults
 #       - Currently I have sidestepped them leaving standard defaults.
