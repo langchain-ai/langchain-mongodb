@@ -45,13 +45,20 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+minversion = "7"
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
+log_cli_level = "INFO"
+faulthandler_timeout = 1500
+xfail_strict = true
 markers = [
     "requires: mark tests as requiring a specific library",
     "compile: mark placeholder test used to compile integration tests without running them",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error"
+]
 
 [tool.mypy]
 disallow_untyped_defs = true

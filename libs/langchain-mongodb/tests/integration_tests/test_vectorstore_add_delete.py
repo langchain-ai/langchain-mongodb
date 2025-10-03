@@ -12,6 +12,9 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.index import (
+    create_vector_search_index,
+)
 from langchain_mongodb.utils import oid_to_str
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
@@ -23,9 +26,24 @@ DIMENSIONS = 5
 
 @pytest.fixture
 def collection(client: MongoClient) -> Collection:
-    clx = client[DB_NAME][COLLECTION_NAME]
-    clx.delete_many({})
-    return clx
+    if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(COLLECTION_NAME)
+    else:
+        clxn = client[DB_NAME][COLLECTION_NAME]
+
+    clxn.delete_many({})
+
+    if not any([INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
+        create_vector_search_index(
+            collection=clxn,
+            index_name=INDEX_NAME,
+            dimensions=DIMENSIONS,
+            path="embedding",
+            similarity="cosine",
+            wait_until_complete=60,
+        )
+
+    return clxn
 
 
 @pytest.fixture(scope="module")
@@ -206,3 +224,34 @@ def test_add_documents(
     result_ids = vectorstore.add_documents(docs, ids, batch_size=batch_size)
     assert len(result_ids) == n_docs
     assert set(ids) == set(collection.distinct("_id"))
+
+
+def test_warning_for_misaligned_text_key(
+    collection: Collection, trivial_embeddings: Embeddings
+):
+    collection.delete_many({})
+    vectorstore = PatchedMongoDBAtlasVectorSearch(
+        collection=collection,
+        embedding=trivial_embeddings,
+        index_name=INDEX_NAME,
+    )
+
+    # If the collection is empty, no warning is raised.
+    assert len(vectorstore.similarity_search("foo")) == 0
+
+    # Insert a document that doesn't match the text key, and look for the warning.
+    collection.delete_many({})
+    vectorstore.add_texts(["foo"], ids=["1"])
+    # Update the doc to change the text field to a different one.
+    collection.update_one(
+        {"_id": "1"},
+        {"$unset": {vectorstore._text_key: ""}, "$set": {"fake_text_key": "foo"}},
+    )
+    with pytest.warns(UserWarning) as record:
+        vectorstore.similarity_search("foo")
+
+    assert len(record) == 1
+    assert (
+        record[0].message.args[0]
+        == "Could not find any documents with the text_key: 'text'"
+    )
