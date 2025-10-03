@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import (
     Any,
     Callable,
@@ -108,6 +109,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 namespace="db_name.collection_name",
                 embedding=OpenAIEmbeddings(),
                 index_name="vector_index",
+                text_key="text_field"
             )
 
     Add Documents:
@@ -807,14 +809,26 @@ class MongoDBAtlasVectorSearch(VectorStore):
         docs = []
 
         # Format
+        missing_text_key = False
         for res in cursor:
             if self._text_key not in res:
+                missing_text_key = True
                 continue
             text = res.pop(self._text_key)
             score = res.pop("score")
             make_serializable(res)
             docs.append(
                 (Document(page_content=text, metadata=res, id=res["_id"]), score)
+            )
+
+        if (
+            missing_text_key
+            and not len(docs)
+            and self._collection.count_documents({}) > 0
+        ):
+            warnings.warn(
+                f"Could not find any documents with the text_key: '{self._text_key}'",
+                stacklevel=2,
             )
         return docs
 
