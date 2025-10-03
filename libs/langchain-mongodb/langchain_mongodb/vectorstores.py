@@ -828,7 +828,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         ):
             warnings.warn(
                 f"Could not find any documents with the text_key: '{self._text_key}'",
-                stacklevel=2,
+                stacklevel=1,
             )
         return docs
 
