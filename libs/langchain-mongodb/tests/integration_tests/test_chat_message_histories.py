@@ -1,4 +1,5 @@
 import json
+import warnings
 
 from langchain.memory import ConversationBufferMemory  # type: ignore[import-not-found]
 from langchain_core.messages import message_to_dict
@@ -19,9 +20,12 @@ def test_memory_with_message_store() -> None:
         database_name=DB_NAME,
         collection_name=COLLECTION,
     )
-    memory = ConversationBufferMemory(
-        memory_key="baz", chat_memory=message_history, return_messages=True
-    )
+    with warnings.catch_warnings():
+        # Ignore warnings raised by base class.
+        warnings.simplefilter("ignore", DeprecationWarning)
+        memory = ConversationBufferMemory(
+            memory_key="baz", chat_memory=message_history, return_messages=True
+        )
 
     # add some messages
     memory.chat_memory.add_ai_message("This is me, the AI")
@@ -38,3 +42,4 @@ def test_memory_with_message_store() -> None:
     memory.chat_memory.clear()
 
     assert memory.chat_memory.messages == []
+    memory.chat_memory.close()

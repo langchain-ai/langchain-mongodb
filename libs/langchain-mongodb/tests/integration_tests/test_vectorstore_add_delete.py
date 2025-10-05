@@ -252,6 +252,6 @@ def test_warning_for_misaligned_text_key(
 
     assert len(record) == 1
     assert (
-        record[0].message.args[0]
+        record[0].message.args[0]  # type:ignore[union-attr]
         == "Could not find any documents with the text_key: 'text'"
     )

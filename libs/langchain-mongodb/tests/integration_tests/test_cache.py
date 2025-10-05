@@ -157,6 +157,7 @@ def test_mongodb_cache(
         _execute_test(prompt, llm, response)
     finally:
         get_llm_cache().clear()
+        get_llm_cache().close()
 
 
 @pytest.mark.parametrize(
@@ -208,3 +209,4 @@ def test_mongodb_atlas_cache_matrix(
         generations=llm_generations, llm_output={}
     )
     get_llm_cache().clear()
+    get_llm_cache().close()

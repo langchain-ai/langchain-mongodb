@@ -15,7 +15,8 @@ TIMEOUT = 120
 def collection() -> Collection:
     """Collection on MongoDB Cluster, not an Atlas one."""
     client: MongoClient = MongoClient()
-    return client["db"]["collection"]
+    yield client["db"]["collection"]
+    client.close()
 
 
 def test_create_vector_search_index(collection: Collection) -> None:

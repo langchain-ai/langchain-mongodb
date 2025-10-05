@@ -12,13 +12,21 @@ from tests.utils import create_database, create_llm
 
 
 class TestQueryMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    @classmethod
+    def setup_class(cls):
+        cls._db = create_database()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._db.close()
+
     @property
     def tool_constructor(self) -> Type[QueryMongoDBDatabaseTool]:
         return QueryMongoDBDatabaseTool
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=create_database())
+        return dict(db=self._db)
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -26,13 +34,21 @@ class TestQueryMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestInfoMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    @classmethod
+    def setup_class(cls):
+        cls._db = create_database()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._db.close()
+
     @property
     def tool_constructor(self) -> Type[InfoMongoDBDatabaseTool]:
         return InfoMongoDBDatabaseTool
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=create_database())
+        return dict(db=self._db)
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -40,13 +56,21 @@ class TestInfoMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestListMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    @classmethod
+    def setup_class(cls):
+        cls._db = create_database()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._db.close()
+
     @property
     def tool_constructor(self) -> Type[ListMongoDBDatabaseTool]:
         return ListMongoDBDatabaseTool
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=create_database())
+        return dict(db=self._db)
 
     @property
     def tool_invoke_params_example(self) -> dict:
@@ -54,13 +78,21 @@ class TestListMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestQueryMongoDBCheckerToolIntegration(ToolsIntegrationTests):
+    @classmethod
+    def setup_class(cls):
+        cls._db = create_database()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._db.close()
+
     @property
     def tool_constructor(self) -> Type[QueryMongoDBCheckerTool]:
         return QueryMongoDBCheckerTool
 
     @property
     def tool_constructor_params(self) -> dict:
-        return dict(db=create_database(), llm=create_llm())
+        return dict(db=self._db, llm=create_llm())
 
     @property
     def tool_invoke_params_example(self) -> dict:
