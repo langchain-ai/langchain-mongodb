@@ -26,14 +26,15 @@ from typing import Any, Dict, List, Union
 import numpy as np
 from pymongo.driver_info import DriverInfo
 
+# Don't break imports for modules that expect this function
+# to be in this module.
+from pymongo_search_utils import _append_client_metadata  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 Matrix = Union[List[List[float]], List[np.ndarray], np.ndarray]
 
 DRIVER_METADATA = DriverInfo(name="Langchain", version=version("langchain-mongodb"))
-
-# Don't break imports for modules that expect this function
-# to be in this module.
 
 
 def cosine_similarity(X: Matrix, Y: Matrix) -> np.ndarray:
