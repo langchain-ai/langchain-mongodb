@@ -6,11 +6,14 @@ from typing import Any, Callable, Dict, List, Optional
 
 from pymongo.collection import Collection
 
-logger = logging.getLogger(__file__)
-
-
 # Don't break imports for modules that expect these functions
 # to be in this module.
+from pymongo_search_utils import (  # noqa: F401
+    create_vector_search_index,
+    update_vector_search_index,
+)
+
+logger = logging.getLogger(__file__)
 
 
 def _vector_search_index_definition(
