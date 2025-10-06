@@ -74,3 +74,4 @@ def test_toolkit_response(db):
     for event in events:
         messages.extend(event["messages"])
     assert "USA" in messages[-1].content, messages[-1].content
+    db_wrapper.close()

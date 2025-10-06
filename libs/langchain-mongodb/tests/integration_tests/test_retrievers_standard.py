@@ -31,10 +31,12 @@ PAGE_CONTENT_FIELD = "text"
 SEARCH_INDEX_NAME = "text_index"
 
 
-def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
+def get_collection() -> Collection:
     client = MongoClient(CONNECTION_STRING)
-    coll = client[DB_NAME][COLLECTION_NAME]
+    return client[DB_NAME][COLLECTION_NAME]
 
+
+def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
     # Set up the vector search index and add the documents if needed.
     vs = PatchedMongoDBAtlasVectorSearch(
         coll,
@@ -44,16 +46,16 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
         text_key=PAGE_CONTENT_FIELD,
         auto_index_timeout=TIMEOUT,
     )
+    coll.delete_many({})
 
-    if coll.count_documents({}) == 0:
-        vs.add_documents(
-            [
-                Document(page_content="In 2023, I visited Paris"),
-                Document(page_content="In 2022, I visited New York"),
-                Document(page_content="In 2021, I visited New Orleans"),
-                Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
-            ]
-        )
+    vs.add_documents(
+        [
+            Document(page_content="In 2023, I visited Paris"),
+            Document(page_content="In 2022, I visited New York"),
+            Document(page_content="In 2021, I visited New Orleans"),
+            Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
+        ]
+    )
 
     # Set up the search index if needed.
     if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
@@ -64,10 +66,20 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
             wait_until_complete=TIMEOUT,
         )
 
-    return coll, vs
+    return vs
 
 
 class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
+    _coll: Collection
+
+    @classmethod
+    def setup_class(cls):
+        cls._coll = get_collection()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._coll.database.client.close()
+
     @property
     def retriever_constructor(self) -> Type[MongoDBAtlasFullTextSearchRetriever]:
         """Get a retriever for integration tests."""
@@ -75,9 +87,9 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
 
     @property
     def retriever_constructor_params(self) -> dict:
-        coll, _ = setup_test()
+        setup_test(self._coll)
         return {
-            "collection": coll,
+            "collection": self._coll,
             "search_index_name": SEARCH_INDEX_NAME,
             "search_field": PAGE_CONTENT_FIELD,
         }
@@ -91,6 +103,16 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
 
 
 class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
+    _coll: Collection
+
+    @classmethod
+    def setup_class(cls):
+        cls._coll = get_collection()
+
+    @classmethod
+    def teardown_class(cls):
+        cls._coll.database.client.close()
+
     @property
     def retriever_constructor(self) -> Type[MongoDBAtlasHybridSearchRetriever]:
         """Get a retriever for integration tests."""
@@ -98,10 +120,10 @@ class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
 
     @property
     def retriever_constructor_params(self) -> dict:
-        coll, vs = setup_test()
+        vs = setup_test(self._coll)
         return {
             "vectorstore": vs,
-            "collection": coll,
+            "collection": self._coll,
             "search_index_name": SEARCH_INDEX_NAME,
             "search_field": PAGE_CONTENT_FIELD,
         }

@@ -1,3 +1,4 @@
+import warnings
 from typing import Annotated, Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
@@ -46,7 +47,13 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
         Returns:
             List of relevant documents
         """
-        default_k = self.k if self.k is not None else self.top_k
+        is_top_k_set = False
+        with warnings.catch_warnings():
+            # Ignore warning raised by checking the value of top_k.
+            warnings.simplefilter("ignore", DeprecationWarning)
+            if self.top_k is not None:
+                is_top_k_set = True
+        default_k = self.k if not is_top_k_set else self.top_k
         pipeline = text_search_stage(  # type: ignore
             query=query,
             search_field=self.search_field,

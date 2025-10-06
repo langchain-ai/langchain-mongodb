@@ -194,12 +194,14 @@ def test_hybrid_retriever_deprecated_top_k(
     )
 
     query1 = "When did I visit France?"
-    results = retriever.invoke(query1)
+    with pytest.warns(DeprecationWarning):
+        results = retriever.invoke(query1)
     assert len(results) == 3
     assert "Paris" in results[0].page_content
 
     query2 = "When was the last time I visited new orleans?"
-    results = retriever.invoke(query2)
+    with pytest.warns(DeprecationWarning):
+        results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
 
 

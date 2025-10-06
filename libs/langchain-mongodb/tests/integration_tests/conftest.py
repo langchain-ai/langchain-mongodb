@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Generator, List
 
 import pytest
@@ -16,7 +17,10 @@ from ..utils import CONNECTION_STRING
 def technical_report_pages() -> List[Document]:
     """Returns a Document for each of the 100 pages of a GPT-4 Technical Report"""
     loader = PyPDFLoader("https://arxiv.org/pdf/2303.08774.pdf")
-    pages = loader.load()
+    with warnings.catch_warnings():
+        # Ignore warnings raised by base class.
+        warnings.simplefilter("ignore", ResourceWarning)
+        pages = loader.load()
     return pages
 
 
