@@ -68,6 +68,8 @@ def setup_test() -> tuple[Collection, MongoDBAtlasVectorSearch]:
 
 
 class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
+    _coll: Collection
+
     @classmethod
     def setup_class(cls):
         cls._coll, _ = setup_test()
@@ -98,6 +100,9 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
 
 
 class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
+    _coll: Collection
+    _vs: MongoDBAtlasVectorSearch
+
     @classmethod
     def setup_class(cls):
         cls._coll, cls._vs = setup_test()

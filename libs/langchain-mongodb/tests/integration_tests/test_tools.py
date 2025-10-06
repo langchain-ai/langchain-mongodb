@@ -1,17 +1,24 @@
 from typing import Type
 
+import pytest
 from langchain_tests.integration_tests import ToolsIntegrationTests
 
 from langchain_mongodb.agent_toolkit.tool import (
     InfoMongoDBDatabaseTool,
     ListMongoDBDatabaseTool,
+    MongoDBDatabase,
     QueryMongoDBCheckerTool,
     QueryMongoDBDatabaseTool,
 )
 from tests.utils import create_database, create_llm
 
+# Ignore ResourceWarning raised by base class.
+pytestmark = pytest.mark.filterwarnings("ignore:unclosed:ResourceWarning")
+
 
 class TestQueryMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    _db: MongoDBDatabase
+
     @classmethod
     def setup_class(cls):
         cls._db = create_database()
@@ -34,6 +41,8 @@ class TestQueryMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestInfoMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    _db: MongoDBDatabase
+
     @classmethod
     def setup_class(cls):
         cls._db = create_database()
@@ -56,6 +65,8 @@ class TestInfoMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestListMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
+    _db: MongoDBDatabase
+
     @classmethod
     def setup_class(cls):
         cls._db = create_database()
@@ -78,6 +89,8 @@ class TestListMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
 
 
 class TestQueryMongoDBCheckerToolIntegration(ToolsIntegrationTests):
+    _db: MongoDBDatabase
+
     @classmethod
     def setup_class(cls):
         cls._db = create_database()

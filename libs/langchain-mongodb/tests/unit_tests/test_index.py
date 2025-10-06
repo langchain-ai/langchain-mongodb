@@ -1,4 +1,5 @@
 from time import sleep
+from typing import Generator
 
 import pytest
 from pymongo import MongoClient
@@ -12,7 +13,7 @@ TIMEOUT = 120
 
 
 @pytest.fixture
-def collection() -> Collection:
+def collection() -> Generator[Collection]:
     """Collection on MongoDB Cluster, not an Atlas one."""
     client: MongoClient = MongoClient()
     yield client["db"]["collection"]

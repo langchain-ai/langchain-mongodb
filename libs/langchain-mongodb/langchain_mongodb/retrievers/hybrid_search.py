@@ -86,12 +86,12 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         # Get the appropriate value for k.
         is_top_k_set = False
         with warnings.catch_warnings():
-            # Ignore warnings raised by base class.
+            # Ignore warning raised by checking the value of top_k.
             warnings.simplefilter("ignore", DeprecationWarning)
             if self.top_k is not None:
                 is_top_k_set = True
         default_k = self.k if not is_top_k_set else self.top_k
-        k = kwargs.get("k", default_k)
+        k: int = kwargs.get("k", default_k)  # type:ignore[assignment]
 
         # First we build up the aggregation pipeline,
         # then it is passed to the server to execute

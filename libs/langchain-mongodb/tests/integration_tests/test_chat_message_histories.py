@@ -42,4 +42,4 @@ def test_memory_with_message_store() -> None:
     memory.chat_memory.clear()
 
     assert memory.chat_memory.messages == []
-    memory.chat_memory.close()
+    memory.chat_memory.close()  # type:ignore[attr-defined]
