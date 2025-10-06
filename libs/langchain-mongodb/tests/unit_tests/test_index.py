@@ -13,7 +13,7 @@ TIMEOUT = 120
 
 
 @pytest.fixture
-def collection() -> Generator[Collection]:
+def collection() -> Generator[None, Collection]:
     """Collection on MongoDB Cluster, not an Atlas one."""
     client: MongoClient = MongoClient()
     yield client["db"]["collection"]
