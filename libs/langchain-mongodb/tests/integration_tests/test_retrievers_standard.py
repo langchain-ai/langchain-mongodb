@@ -66,7 +66,7 @@ def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
             wait_until_complete=TIMEOUT,
         )
 
-    return coll, vs
+    return vs
 
 
 class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
