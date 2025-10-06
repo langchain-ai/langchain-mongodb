@@ -8,7 +8,7 @@ name = "langchain-mongodb"
 version = "0.7.0"
 description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "langchain-core>=0.3",
     "langchain>=0.3",
@@ -16,7 +16,6 @@ dependencies = [
     "langchain-text-splitters>=0.3",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
-    # "pymongo-vectorsearch-utils",
 ]
 
 [dependency-groups]
@@ -43,6 +42,7 @@ dev = [
     "langchain-tests==0.3.22",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
+    "pymongo-search-utils@git+https://github.com/mongodb-labs/pymongo-search-utils.git",
 ]
 
 [tool.pytest.ini_options]
