@@ -25,7 +25,7 @@ from langchain_core.vectorstores import VectorStore
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid
-from pymongo_vectorsearch_utils import bulk_embed_and_insert_texts
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb.index import (
     create_vector_search_index,
@@ -357,7 +357,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas_batch = []
             size = 0
             i = 0
-            for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+            for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=False)):
                 size += len(text) + len(metadata)
                 texts_batch.append(text)
                 metadatas_batch.append(metadata)
@@ -446,7 +446,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
+                strict=False,
             )
             result_ids.extend(
                 bulk_embed_and_insert_texts(

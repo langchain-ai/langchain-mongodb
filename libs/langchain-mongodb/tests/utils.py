@@ -26,7 +26,7 @@ from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.operations import SearchIndexModel
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
-from pymongo_vectorsearch_utils import bulk_embed_and_insert_texts
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
