@@ -49,14 +49,7 @@ viz = [
     "networkx",
     "holoviews",
     "jupyter",
-    "pyparsing",  # TODO All of the follow provide further functionality and layouts.
-#    "pandas",
-#    "numpy",
-#    "scikit-image",
-#    "datashader", # TODO - Review inclusion of datashader, used for grouping nodes in very large graphs
-#    "dask",
-#    "graphviz", TODO - Review inclusion of graphviz, used for additional plotting layouts
-#    "pydot",
+    "pyparsing",
 ]
 
 [tool.pytest.ini_options]
