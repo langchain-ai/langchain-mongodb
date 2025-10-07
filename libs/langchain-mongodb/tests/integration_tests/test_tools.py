@@ -1,6 +1,5 @@
 from typing import Type
 
-import pytest
 from langchain_tests.integration_tests import ToolsIntegrationTests
 
 from langchain_mongodb.agent_toolkit.tool import (
@@ -11,9 +10,6 @@ from langchain_mongodb.agent_toolkit.tool import (
     QueryMongoDBDatabaseTool,
 )
 from tests.utils import create_database, create_llm
-
-# Ignore ResourceWarning raised by base class.
-pytestmark = pytest.mark.filterwarnings("ignore:unclosed:ResourceWarning")
 
 
 class TestQueryMongoDBDatabaseToolIntegration(ToolsIntegrationTests):
