@@ -19,10 +19,6 @@ INDEX_NAME = "langchain-test-index-standard"
 DIMENSIONS = 6
 
 
-# Ignore ResourceWarning raised by base class.
-pytestmark = pytest.mark.filterwarnings("ignore:unclosed:ResourceWarning")
-
-
 @pytest.fixture
 def collection(client: MongoClient) -> Collection:
     if COLLECTION_NAME not in client[DB_NAME].list_collection_names():
