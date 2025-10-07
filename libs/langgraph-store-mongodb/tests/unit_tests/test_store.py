@@ -1,4 +1,5 @@
 import os
+import time
 from collections.abc import Generator
 from datetime import datetime
 
@@ -182,6 +183,8 @@ def test_ttl() -> None:
         orig_updated_at = res["updated_at"]
         res = store.get(namespace=namespace, key=key)
         assert res is not None
+        # Add a delay to ensure a different timestamp.
+        time.sleep(0.1)
         found = store.collection.find_one({})
         assert found is not None
         new_updated_at = found["updated_at"]
@@ -202,6 +205,8 @@ def test_ttl() -> None:
         orig_updated_at = found["updated_at"]
         res = store.get(namespace=namespace, key=key)
         assert res is not None
+        # Add a delay to ensure a different timestamp.
+        time.sleep(0.1)
         found = store.collection.find_one({})
         assert found is not None
         new_updated_at = found["updated_at"]
@@ -222,6 +227,8 @@ def test_ttl() -> None:
         orig_updated_at = found["updated_at"]
         res = store.get(namespace=namespace, key=key)
         assert res is not None
+        # Add a delay to ensure a different timestamp.
+        time.sleep(0.1)
         found = store.collection.find_one({})
         assert found is not None
         new_updated_at = found["updated_at"]
@@ -242,6 +249,8 @@ def test_ttl() -> None:
         orig_updated_at = found["updated_at"]
         res = store.get(refresh_ttl=False, namespace=namespace, key=key)
         assert res is not None
+        # Add a delay to ensure a different timestamp.
+        time.sleep(0.1)
         found = store.collection.find_one({})
         assert found is not None
         new_updated_at = found["updated_at"]
