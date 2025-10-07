@@ -2017,6 +2017,7 @@ viz = [
     { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pyparsing" },
 ]
 
 [package.dev-dependencies]
@@ -2056,6 +2057,7 @@ requires-dist = [
     { name = "networkx", marker = "extra == 'viz'" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pymongo", specifier = ">=4.6.1" },
+    { name = "pyparsing", marker = "extra == 'viz'" },
 ]
 provides-extras = ["viz"]
 
@@ -4044,6 +4046,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/c2/0352ba305f5d50340462cf786e3dc1a3bc8fe27a12d5f6dc028da83e48f9/pymongo-4.15.2-cp39-cp39-win32.whl", hash = "sha256:68fbc920409bd96e6a63b651254baa45e27473c4b73232a3fb5662279383a622", size = 752166, upload-time = "2025-10-01T21:25:44.389Z" },
     { url = "https://files.pythonhosted.org/packages/7d/37/7ecc265c0056f2eb295170ec0896583924196820578cd67b45ab8bfc8f16/pymongo-4.15.2-cp39-cp39-win_amd64.whl", hash = "sha256:6d797730d07bff953d05693e75d9575e7357739a5eb2747521987d2f99b9899f", size = 757022, upload-time = "2025-10-01T21:25:46.039Z" },
     { url = "https://files.pythonhosted.org/packages/20/90/e16ab0396ca3ce061fdf297bfa4d0f9e8befffa7bc50502b1a8e72267add/pymongo-4.15.2-cp39-cp39-win_arm64.whl", hash = "sha256:5b72de1a2f8cc52561c65a5062ade72e06da76e0899d4f11ae1c1bced1534ff8", size = 753468, upload-time = "2025-10-01T21:25:47.689Z" },
+]
+
+[[package]]
+name = "pyparsing"
+version = "3.2.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/a5/181488fc2b9d093e3972d2a472855aae8a03f000592dbfce716a512b3359/pyparsing-3.2.5.tar.gz", hash = "sha256:2df8d5b7b2802ef88e8d016a2eb9c7aeaa923529cd251ed0fe4608275d4105b6", size = 1099274, upload-time = "2025-09-21T04:11:06.277Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/5e/1aa9a93198c6b64513c9d7752de7422c06402de6600a8767da1524f9570b/pyparsing-3.2.5-py3-none-any.whl", hash = "sha256:e38a4f02064cf41fe6593d328d0512495ad1f3d8a91c4f73fc401b3079a59a5e", size = 113890, upload-time = "2025-09-21T04:11:04.117Z" },
 ]
 
 [[package]]

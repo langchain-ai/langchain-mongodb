@@ -48,11 +48,11 @@ dev = [
 viz = [
     "networkx",
     "holoviews",
-    "jupyter",  # TODO All of the follow provide further functionality and layouts.
+    "jupyter",
+    "pyparsing",  # TODO All of the follow provide further functionality and layouts.
 #    "pandas",
 #    "numpy",
 #    "scikit-image",
-#    "pyparsing",
 #    "datashader", # TODO - Review inclusion of datashader, used for grouping nodes in very large graphs
 #    "dask",
 #    "graphviz", TODO - Review inclusion of graphviz, used for additional plotting layouts
