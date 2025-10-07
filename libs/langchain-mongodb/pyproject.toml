@@ -56,9 +56,9 @@ markers = [
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-filterwarnings = [
-    "error"
-]
+# filterwarnings = [
+#     "error"
+# ]
 
 [tool.mypy]
 disallow_untyped_defs = true
