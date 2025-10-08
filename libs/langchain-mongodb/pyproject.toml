@@ -46,10 +46,10 @@ dev = [
 
 [project.optional-dependencies]
 viz = [
-    "networkx",
-    "holoviews",
-    "jupyter",
-    "pyparsing",
+    "networkx>=3.0",
+    "holoviews>=1.29",
+    "jupyter>=1.1",
+    "pyparsing>=3.1",
 ]
 
 [tool.pytest.ini_options]
