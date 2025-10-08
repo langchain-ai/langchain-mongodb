@@ -1,6 +1,5 @@
 from typing import Type
 
-from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_tests.integration_tests import (
     RetrieversIntegrationTests,
@@ -9,6 +8,9 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.index import (
+    create_fulltext_search_index,
+)
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
@@ -35,8 +37,6 @@ def get_collection() -> Collection:
 
 
 def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
-    coll.delete_many({})
-
     # Set up the vector search index and add the documents if needed.
     vs = PatchedMongoDBAtlasVectorSearch(
         coll,
@@ -45,17 +45,26 @@ def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
         auto_index_timeout=TIMEOUT,
-        auto_create_index=True,
     )
 
-    vs.add_documents(
-        [
-            Document(page_content="In 2023, I visited Paris"),
-            Document(page_content="In 2022, I visited New York"),
-            Document(page_content="In 2021, I visited New Orleans"),
-            Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
-        ]
-    )
+    if coll.count_documents({}) == 0:
+        vs.add_documents(
+            [
+                Document(page_content="In 2023, I visited Paris"),
+                Document(page_content="In 2022, I visited New York"),
+                Document(page_content="In 2021, I visited New Orleans"),
+                Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
+            ]
+        )
+
+    # Set up the search index if needed.
+    if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
+        create_fulltext_search_index(
+            collection=coll,
+            index_name=SEARCH_INDEX_NAME,
+            field=PAGE_CONTENT_FIELD,
+            wait_until_complete=TIMEOUT,
+        )
 
     return vs
 
@@ -91,10 +100,6 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
         Returns a str representing the "query" of an example retriever call.
         """
         return "When was the last time I visited new orleans?"
-
-    @flaky(max_runs=5, min_passes=3)
-    def test_k_constructor_param(self) -> None:
-        super().test_k_constructor_param()
 
 
 class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
