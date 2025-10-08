@@ -46,6 +46,37 @@ Ensure consistency and generality in relationship names when constructing knowle
 Instead of using specific and momentary types such as 'worked_at', use more general and timeless relationship types
 like 'employee'. Add details as attributes. Make sure to use general and timeless relationship types!
 
+### CRITICAL: Array Length Alignment
+The relationships object contains three arrays: `target_ids`, `types`, and `attributes`.
+**These three arrays MUST have EXACTLY the same length.**
+- Each position (index) in these arrays describes ONE complete relationship.
+- Position 0 in `target_ids`, `types`, and `attributes` together describe the first relationship.
+- Position 1 in `target_ids`, `types`, and `attributes` together describe the second relationship.
+- And so on...
+
+If a relationship has no attributes, you MUST still include an empty object `{{}}` in the `attributes` array at that position.
+
+Example of CORRECT alignment:
+```json
+"relationships": {{
+  "target_ids": ["Entity A", "Entity B"],
+  "types": ["partners", "supplier"],
+  "attributes": [
+    {{"since": ["2020"]}},
+    {{}}
+  ]
+}}
+```
+
+Example of INCORRECT (DO NOT DO THIS):
+```json
+"relationships": {{
+  "target_ids": ["Entity A", "Entity B"],
+  "types": ["partners"],
+  "attributes": [{{"since": ["2020"]}}]
+}}
+```
+
 **Allowed Relationship Types**:
 - Extract ONLY relationships whose `type` matches one of the following: {allowed_relationship_types}.
 - If this list is empty, ANY relationship type is permitted.
@@ -64,7 +95,8 @@ Before producing the final output:
 1. Validate that all extracted entities have an `_id` and `type`.
 2. Validate that all `type` values are in {allowed_entity_types}.
 3. Validate that all relationships use keys in {allowed_relationship_types}.
-4. Exclude any entities or relationships failing validation.
+4. **CRITICAL**: For each entity with relationships, verify that `target_ids`, `types`, and `attributes` arrays have EXACTLY the same length.
+5. Exclude any entities or relationships failing validation.
 
 ## Output Schema
 Output a valid JSON document with a single top-level key, `entities`, as an array of objects.

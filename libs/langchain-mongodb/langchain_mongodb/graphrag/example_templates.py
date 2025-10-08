@@ -25,7 +25,7 @@ and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
         "startDate": ["2018-01-01"]
       }},
       "relationships": {{
-        "targets": ["Jasbinder Kaur", "Jarnail Singh"],
+        "target_ids": ["Jasbinder Kaur", "Jarnail Singh"],
         "types": ["Friend", "Friend"],
         "attributes": [
           {{ "since": ["2019-05-01"] }},
@@ -37,7 +37,7 @@ and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
       "_id": "Jarnail Singh",
       "type": "Person",
       "relationships": {{
-        "targets": ["Alice Palace"],
+        "target_ids": ["Alice Palace"],
         "types": ["Friend"],
         "attributes": [{{ "since": ["2019-05-01"] }}]
       }}
@@ -46,7 +46,7 @@ and Jasbinder Kaur, who she has been seeing weekly since May 1, 2015.
       "_id": "Jasbinder Kaur",
       "type": "Person",
       "relationships": {{
-        "targets": ["Alice Palace"],
+        "target_ids": ["Alice Palace"],
         "types": ["Friend"],
         "attributes": [{{ "since": ["2015-05-01"], "frequency": ["weekly"] }}]
       }}
@@ -71,8 +71,9 @@ Elon Musk and Sam Altman were keynote speakers at the event.
         "location": ["San Francisco"]
       }},
       "relationships": {{
-        "targets": ["Elon Musk", "Sam Altman"],
-        "types": ["Speaker", "Speaker"]
+        "target_ids": ["Elon Musk", "Sam Altman"],
+        "types": ["Speaker", "Speaker"],
+        "attributes": [{{}}, {{}}]
       }}
     }},
     {{ "_id": "Elon Musk", "type": "Person" }},
@@ -92,8 +93,9 @@ Quantum computing is a field of study that focuses on developing computers based
       "_id": "Quantum Computing",
       "type": "Concept",
       "relationships": {{
-        "targets": ["Quantum Mechanics"],
-        "types": ["Based On"]
+        "target_ids": ["Quantum Mechanics"],
+        "types": ["Based On"],
+        "attributes": [{{}}]
       }}
     }},
     {{ "_id": "Quantum Mechanics", "type": "Concept" }}
@@ -114,8 +116,9 @@ NASA Administrator Bill Nelson praised the historic achievement.
       "type": "Event",
       "attributes": {{ "date": ["2023-03-01"] }},
       "relationships": {{
-        "targets": ["NASA"],
-        "types": ["Managed By"]
+        "target_ids": ["NASA"],
+        "types": ["Managed By"],
+        "attributes": [{{}}]
       }}
     }},
     {{
@@ -126,8 +129,9 @@ NASA Administrator Bill Nelson praised the historic achievement.
       "_id": "Bill Nelson",
       "type": "Person",
       "relationships": {{
-        "targets": ["Artemis II Mission"],
-        "types": ["Praised By"]
+        "target_ids": ["Artemis II Mission"],
+        "types": ["Praised By"],
+        "attributes": [{{}}]
       }}
     }}
   ]
@@ -146,16 +150,18 @@ It is known for its strong ownership model, which prevents data races.
       "_id": "Rust",
       "type": "Programming Language",
       "relationships": {{
-        "targets": ["Memory Safety"],
-        "types": ["Ensures"]
+        "target_ids": ["Memory Safety"],
+        "types": ["Ensures"],
+        "attributes": [{{}}]
       }}
     }},
     {{
       "_id": "Memory Safety",
       "type": "Concept",
       "relationships": {{
-        "targets": ["Ownership Model"],
-        "types": ["Uses"]
+        "target_ids": ["Ownership Model"],
+        "types": ["Uses"],
+        "attributes": [{{}}]
       }}
     }},
     {{ "_id": "Ownership Model", "type": "Concept" }}
