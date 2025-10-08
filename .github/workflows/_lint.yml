@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}
-        run: uv sync --extra viz --frozen
+        run: just install
 
       - name: Get .mypy_cache to speed up mypy
         uses: actions/cache@v4
