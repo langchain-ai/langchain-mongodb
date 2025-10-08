@@ -561,7 +561,7 @@ class MongoDBGraphStore:
         Args:
             nx_opts: Keyword arguments for networkx calls.
             json_opts: Keyword arguments for printing of node attributes and types.
-            **kwargs: Keywork arguments available for compatibility.
+            **kwargs: Keyword arguments available for compatibility.
 
         Returns: networkx.DiGraph
         """
@@ -655,7 +655,7 @@ class MongoDBGraphStore:
             json_opts: Keyword arguments for printing of node attributes and types.
             edge_opts: Keyword arguments to draw edges.
             node_opts: Keyword arguments to draw nodes.
-            **kwargs: Keywork arguments available for compatibility.
+            **kwargs: Keyword arguments available for compatibility.
 
         Returns: `holoviews.Graph <https://holoviews.org/user_guide/Network_Graphs.html>`_
 
