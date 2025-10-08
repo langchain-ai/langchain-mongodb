@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}
         run: |
-          if [[ "${{ inputs.working-directory }}" == *"langchain-mongodb"* ]]; then
+          if [[ "${{ env.WORKDIR }}" == *"langchain-mongodb"* ]]; then
             uv sync --frozen --extra viz
           else
             just install
