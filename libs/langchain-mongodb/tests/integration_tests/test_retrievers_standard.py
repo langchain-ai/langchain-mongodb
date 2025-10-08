@@ -8,9 +8,6 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain_mongodb.index import (
-    create_fulltext_search_index,
-)
 from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
@@ -37,6 +34,8 @@ def get_collection() -> Collection:
 
 
 def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
+    coll.delete_many({})
+
     # Set up the vector search index and add the documents if needed.
     vs = PatchedMongoDBAtlasVectorSearch(
         coll,
@@ -45,8 +44,8 @@ def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
         auto_index_timeout=TIMEOUT,
+        auto_create_index=True,
     )
-    coll.delete_many({})
 
     vs.add_documents(
         [
@@ -56,15 +55,6 @@ def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
             Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
         ]
     )
-
-    # Set up the search index if needed.
-    if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
-        create_fulltext_search_index(
-            collection=coll,
-            index_name=SEARCH_INDEX_NAME,
-            field=PAGE_CONTENT_FIELD,
-            wait_until_complete=TIMEOUT,
-        )
 
     return vs
 
