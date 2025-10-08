@@ -94,7 +94,7 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
 
     @flaky(max_runs=5, min_passes=3)
     def test_k_constructor_param(self) -> None:
-        super.test_k_constructor_param()
+        super().test_k_constructor_param()
 
 
 class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
