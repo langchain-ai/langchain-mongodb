@@ -47,7 +47,7 @@ dev = [
 [project.optional-dependencies]
 viz = [
     "networkx>=3.0",
-    "holoviews>=1.29",
+    "holoviews>=1.19",
     "jupyter>=1.1",
     "pyparsing>=3.1",
 ]
