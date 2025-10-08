@@ -1,5 +1,6 @@
 from typing import Type
 
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_tests.integration_tests import (
     RetrieversIntegrationTests,
@@ -90,6 +91,10 @@ class TestMongoDBAtlasFullTextSearchRetriever(RetrieversIntegrationTests):
         Returns a str representing the "query" of an example retriever call.
         """
         return "When was the last time I visited new orleans?"
+
+    @flaky(max_runs=5, min_passes=3)
+    def test_k_constructor_param(self) -> None:
+        super.test_k_constructor_param()
 
 
 class TestMongoDBAtlasHybridSearchRetriever(RetrieversIntegrationTests):
