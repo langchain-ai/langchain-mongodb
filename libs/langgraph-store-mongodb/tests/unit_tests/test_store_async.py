@@ -1,3 +1,4 @@
+import asyncio
 import os
 from collections.abc import AsyncGenerator
 from datetime import datetime
@@ -184,6 +185,8 @@ async def test_ttl() -> None:
         res = store.collection.find_one({})
         assert res is not None
         orig_updated_at = res["updated_at"]
+        # Add a delay to ensure a different timestamp.
+        await asyncio.sleep(0.1)
         res = await store.aget(namespace=namespace, key=key)
         assert res is not None
         found = store.collection.find_one({})
@@ -204,6 +207,8 @@ async def test_ttl() -> None:
         found = store.collection.find_one({})
         assert found is not None
         orig_updated_at = found["updated_at"]
+        # Add a delay to ensure a different timestamp.
+        await asyncio.sleep(0.1)
         res = await store.aget(namespace=namespace, key=key)
         assert res is not None
         found = store.collection.find_one({})
@@ -224,6 +229,8 @@ async def test_ttl() -> None:
         found = store.collection.find_one({})
         assert found is not None
         orig_updated_at = found["updated_at"]
+        # Add a delay to ensure a different timestamp.
+        await asyncio.sleep(0.1)
         res = await store.aget(namespace=namespace, key=key)
         assert res is not None
         found = store.collection.find_one({})
@@ -244,9 +251,11 @@ async def test_ttl() -> None:
         found = store.collection.find_one({})
         assert found is not None
         orig_updated_at = found["updated_at"]
+        # Add a delay to ensure a different timestamp.
+        await asyncio.sleep(0.1)
+        found = store.collection.find_one({})
         res = await store.aget(refresh_ttl=False, namespace=namespace, key=key)
         assert res is not None
-        found = store.collection.find_one({})
         assert found is not None
         new_updated_at = found["updated_at"]
         assert new_updated_at == orig_updated_at
