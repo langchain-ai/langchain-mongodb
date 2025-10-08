@@ -46,7 +46,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}
-        run: just install
+        run: |
+          if [[ "${{ inputs.working-directory }}" == *"langchain-mongodb"* ]]; then
+            uv sync --frozen --extra viz
+          else
+            just install
+          fi
 
       - name: Get .mypy_cache to speed up mypy
         uses: actions/cache@v4
