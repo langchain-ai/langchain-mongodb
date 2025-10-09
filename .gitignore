@@ -9,3 +9,4 @@ __pycache__
 docs/langchain_mongodb
 docs/langgraph_checkpoint_mongodb
 docs/index.md
+.vscode
