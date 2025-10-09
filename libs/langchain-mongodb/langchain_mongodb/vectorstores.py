@@ -228,7 +228,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
                 is `true`, the value will be inferred.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
-               to be ready.
+                to be ready.
         """
         self._collection = collection
         self._embedding = embedding
@@ -850,10 +850,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Args:
             dimensions (int): Number of dimensions in embedding
             filters (Optional[List[Dict[str, str]]], optional): additional filters
-            for index definition.
-                Defaults to None.
+                for index definition.
             update (Optional[bool]): Updates existing vectorSearch index.
-                 Defaults to False.
             wait_until_complete (Optional[float]): If given, a TimeoutError is raised
                 if search index is not ready after this number of seconds.
                 If not given, the default, operation will not wait.
