@@ -13,7 +13,9 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
+from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
@@ -85,10 +87,8 @@ def graph_store(
     collection: Collection,
     entity_extraction_model: BaseChatModel,
     text_chunks: list[str],
-) -> MongoDBGraphStore:
+) -> Generator[MongoDBGraphStore, None, None]:
     """Create MongoDBGraphStore and populate it with entities from text chunks."""
-    from langchain_core.documents import Document
-
     # Create the graph store
     store = MongoDBGraphStore(
         collection=collection,
@@ -105,7 +105,8 @@ def graph_store(
     # Verify that we processed all chunks
     assert len(bulkwrite_results) == len(documents)
 
-    return store
+    yield store
+    store.close()
 
 
 def test_large_graph_entity_count(graph_store: MongoDBGraphStore):
@@ -257,8 +258,6 @@ def test_chunk_count(text_chunks: list[str]):
 
 def test_graph_store_chat_response(graph_store: MongoDBGraphStore):
     """Test the chat response functionality with the large graph."""
-    from langchain_core.messages import AIMessage
-
     query = (
         "Tell me about the AI Ethics Initiative and which companies are supporting it."
     )
