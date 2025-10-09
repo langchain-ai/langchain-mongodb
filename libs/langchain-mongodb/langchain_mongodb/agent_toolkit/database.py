@@ -57,7 +57,9 @@ class MongoDBDatabase:
             )
         self._include_colls = set(include_collections or [])
         self._ignore_colls = set(ignore_collections or [])
-        self._all_colls = set(self._db.list_collection_names())
+        self._all_colls = set(
+            self._db.list_collection_names(authorizedCollections=True)
+        )
 
         self._sample_docs_in_coll_info = sample_docs_in_collection_info
         self._indexes_in_coll_info = indexes_in_collection_info

@@ -60,7 +60,9 @@ def create_vector_search_index(
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
 
-    if collection.name not in collection.database.list_collection_names():
+    if collection.name not in collection.database.list_collection_names(
+        authorizedCollections=True
+    ):
         collection.database.create_collection(collection.name)
 
     result = collection.create_search_index(
@@ -219,7 +221,9 @@ def create_fulltext_search_index(
     """
     logger.info("Creating Search Index %s on %s", index_name, collection.name)
 
-    if collection.name not in collection.database.list_collection_names():
+    if collection.name not in collection.database.list_collection_names(
+        authorizedCollections=True
+    ):
         collection.database.create_collection(collection.name)
 
     if isinstance(field, str):
