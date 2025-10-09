@@ -54,7 +54,6 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             if self.top_k is not None:
                 is_top_k_set = True
         default_k = self.k if not is_top_k_set else self.top_k
-        print(f"{is_top_k_set=}, {self.k=}, {default_k=}, {kwargs=}")
         pipeline = text_search_stage(  # type: ignore
             query=query,
             search_field=self.search_field,
