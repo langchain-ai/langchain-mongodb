@@ -46,16 +46,16 @@ def setup_test(coll: Collection) -> MongoDBAtlasVectorSearch:
         text_key=PAGE_CONTENT_FIELD,
         auto_index_timeout=TIMEOUT,
     )
-    coll.delete_many({})
 
-    vs.add_documents(
-        [
-            Document(page_content="In 2023, I visited Paris"),
-            Document(page_content="In 2022, I visited New York"),
-            Document(page_content="In 2021, I visited New Orleans"),
-            Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
-        ]
-    )
+    if coll.count_documents({}) == 0:
+        vs.add_documents(
+            [
+                Document(page_content="In 2023, I visited Paris"),
+                Document(page_content="In 2022, I visited New York"),
+                Document(page_content="In 2021, I visited New Orleans"),
+                Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
+            ]
+        )
 
     # Set up the search index if needed.
     if not any([ix["name"] == SEARCH_INDEX_NAME for ix in coll.list_search_indexes()]):
