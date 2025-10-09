@@ -37,7 +37,7 @@ def collection() -> Generator[Collection, None, None]:
     client.close()
 
 
-if "OPENAI_API_KEY" not in os.environ:
+if not ("OPENAI_API_KEY" in os.environ or "AZURE_OPENAI_ENDPOINT" in os.environ):
     pytest.skip(
         "GraphRAG tests require OpenAI for chat responses.", allow_module_level=True
     )
