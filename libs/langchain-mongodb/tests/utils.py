@@ -238,7 +238,7 @@ class MockDatabase:
     def __init__(self, client=None):
         self.client = client or MockClient()
 
-    def list_collection_names(self, authorizedCollections:bool) -> list[str]:
+    def list_collection_names(self, authorizedCollections: bool = True) -> list[str]:
         return ["test"]
 
     def __getitem__(self, key: str) -> Any:
