@@ -52,7 +52,9 @@ class MongoDBCache(BaseCache):
         self.__database_name = database_name
         self.__collection_name = collection_name
 
-        if self.__collection_name not in self.database.list_collection_names():
+        if self.__collection_name not in self.database.list_collection_names(
+            authorizedCollections=True
+        ):
             self.database.create_collection(self.__collection_name)
             # Create an index on key and llm_string
             self.collection.create_index([self.PROMPT, self.LLM])

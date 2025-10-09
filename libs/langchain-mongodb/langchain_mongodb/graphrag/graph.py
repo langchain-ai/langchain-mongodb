@@ -142,7 +142,9 @@ class MongoDBGraphStore:
                 driver=DRIVER_METADATA,
             )
             db = client[database_name]
-            if collection_name not in db.list_collection_names():
+            if collection_name not in db.list_collection_names(
+                authorizedCollections=True
+            ):
                 validator = {"$jsonSchema": self._schema} if validate else None
                 collection = client[database_name].create_collection(
                     collection_name,
