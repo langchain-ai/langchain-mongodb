@@ -455,7 +455,6 @@ class MongoDBAtlasVectorSearch(VectorStore):
         documents: List[Document],
         ids: Optional[List[str]] = None,
         batch_size: int = DEFAULT_INSERT_BATCH_SIZE,
-        **kwargs: Any,
     ) -> List[str]:
         """Add documents to the vectorstore.
 
