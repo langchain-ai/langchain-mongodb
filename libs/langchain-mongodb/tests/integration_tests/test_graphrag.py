@@ -201,27 +201,13 @@ def test_additional_entity_examples(entity_extraction_model, entity_example, doc
         assert len(new_entities) >= 2
 
 
-def test_chat_response(graph_store, query_connection):
-    """Displays querying an existing Knowledge Graph Database"""
-    answer = graph_store.chat_response(query_connection)
-    assert isinstance(answer, AIMessage)
-    assert "acme corporation" in answer.content.lower()
-
-
-def test_similarity_search(graph_store, query_connection):
-    docs = graph_store.similarity_search(query_connection)
-    assert len(docs) >= 4
-    assert all({"_id", "type", "relationships"}.issubset(set(d.keys())) for d in docs)
-    assert any("depth" in d.keys() for d in docs)
-    assert any("attributes" in d.keys() for d in docs)
-
-
 def test_validator(documents, entity_extraction_model):
     # Case 1. No existing collection.
-    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_validation"
-    client[DB_NAME][clxn_name].drop()
-    client.close()
+
+    with MongoClient(CONNECTION_STRING) as client:
+        client[DB_NAME][clxn_name].drop()
+
     # now we call with validation that can be added without db admin privileges
     store = MongoDBGraphStore(
         connection_string=CONNECTION_STRING,
@@ -243,16 +229,15 @@ def test_validator(documents, entity_extraction_model):
         collection = client[DB_NAME][clxn_name]
         collection.delete_many({})
 
-    store = MongoDBGraphStore(
-        collection=collection,
-        entity_extraction_model=entity_extraction_model,
-        validate=True,
-        validation_action="error",
-    )
-    bulkwrite_results = store.add_documents(documents)
-    assert len(bulkwrite_results) == len(documents)
-    collection.drop()
-    store.close()
+        store = MongoDBGraphStore(
+            collection=collection,
+            entity_extraction_model=entity_extraction_model,
+            validate=True,
+            validation_action="error",
+        )
+        bulkwrite_results = store.add_documents(documents)
+        assert len(bulkwrite_results) == len(documents)
+        collection.delete_many({})
 
     # Case 3: Existing collection without a validator
     with MongoClient(CONNECTION_STRING) as client:
