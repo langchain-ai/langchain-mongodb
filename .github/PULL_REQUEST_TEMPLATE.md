@@ -23,6 +23,7 @@
 - [ ] Did you update the changelog (if necessary)?
 - [ ] Is the intention of the code captured in relevant tests?
 - [ ] If there are new TODOs, has a related JIRA ticket been created?
+- [ ] Has a MongoDB Employee run [the patch build of this PR](https://github.com/mongodb-labs/ai-ml-pipeline-testing?tab=readme-ov-file#running-a-patch-build-of-a-given-pr)?
 
 ### Checklist for Reviewer {@primary_reviewer}
 
