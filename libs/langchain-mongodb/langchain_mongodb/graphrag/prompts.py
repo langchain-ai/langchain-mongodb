@@ -115,9 +115,14 @@ This example is in the form of a question. There is one entity,
 3. input: "For legal and operational purposes, many governments and organizations adopt specific definitions."
    output: []
 
-In the final example, there are no entities.
+In the third example, there are no entities.
 Though there are concepts and nouns that might be types or attributes of entities,
 there is nothing here that could be seen as being a unique identifier or name.
+
+4. input: ""
+   output: []
+
+In final third example, there are no entities.
 
 ### (Optional) Additional Examples
 
