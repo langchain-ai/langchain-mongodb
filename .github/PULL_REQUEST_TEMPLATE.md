@@ -32,6 +32,6 @@
 - [ ] Have you checked for spelling & grammar errors?
 - [ ] Is all relevant documentation (README or docstring) updated?
 
-## Focus Areas for Reviewer
+## Focus Areas for Reviewer (optional)
 
-<!-- List any complex portion of code you believe needs additional scrutiny and explain why.  -->
+<!-- List any complex portion of code you believe needs particular scrutiny and explain why.  -->
