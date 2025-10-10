@@ -112,7 +112,7 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
             if connection_string:
                 raise ValueError("Must provide connection_string or client, not both")
             self.client = client
-            _append_client_metadata(self.client)
+            _append_client_metadata(self.client, DRIVER_METADATA)
         elif connection_string:
             try:
                 self.client = MongoClient(
