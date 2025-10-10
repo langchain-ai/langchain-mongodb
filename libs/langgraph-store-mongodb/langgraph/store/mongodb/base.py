@@ -251,7 +251,9 @@ class MongoDBStore(BaseStore):
                 driver=DRIVER_METADATA,
             )
             db = client[db_name]
-            if collection_name not in db.list_collection_names():
+            if collection_name not in db.list_collection_names(
+                authorizedCollections=True
+            ):
                 db.create_collection(collection_name)
             collection = client[db_name][collection_name]
 

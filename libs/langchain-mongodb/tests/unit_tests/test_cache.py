@@ -81,7 +81,7 @@ def llm_cache(cls: Any) -> BaseCache:
         )
     )
     assert get_llm_cache()
-    return get_llm_cache()
+    return get_llm_cache()  # type:ignore[return-value]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -111,6 +111,7 @@ def _execute_test(
 
     # Update the cache
     llm_cache = get_llm_cache()
+    assert llm_cache is not None
     llm_cache.update(dumped_prompt, llm_string, response)
 
     # Retrieve the cached result through 'generate' call
@@ -175,7 +176,7 @@ def test_mongodb_cache(
     try:
         _execute_test(prompt, llm, response)
     finally:
-        get_llm_cache().clear()
+        get_llm_cache().clear()  # type:ignore[union-attr]
 
 
 @pytest.mark.parametrize(
@@ -227,4 +228,4 @@ def test_mongodb_atlas_cache_matrix(
     assert llm.generate(prompts) == LLMResult(
         generations=llm_generations, llm_output={}
     )
-    get_llm_cache().clear()
+    get_llm_cache().clear()  # type:ignore[union-attr]

@@ -39,19 +39,28 @@ dev = [
     "pypdf>=5.0.1",
     "langgraph>=0.2.72",
     "flaky>=3.8.1",
-    "langchain-tests==0.3.21",
+    "langchain-tests==0.3.22",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
 ]
 
 [tool.pytest.ini_options]
+minversion = "7"
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
+log_cli_level = "INFO"
+faulthandler_timeout = 1500
+xfail_strict = true
 markers = [
     "requires: mark tests as requiring a specific library",
     "compile: mark placeholder test used to compile integration tests without running them",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error",
+    # Ignore ResourceWarning raised by langchain standardized base classes.
+    "ignore:unclosed <socket.socket:ResourceWarning",
+]
 
 [tool.mypy]
 disallow_untyped_defs = true

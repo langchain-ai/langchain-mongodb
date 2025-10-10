@@ -1,4 +1,5 @@
 import json
+import warnings
 
 import mongomock
 import pytest
@@ -29,9 +30,12 @@ def test_memory_with_message_store() -> None:
     """Test the memory with a message store."""
     # setup MongoDB as a message store
     message_history = PatchedMongoDBChatMessageHistory()
-    memory = ConversationBufferMemory(
-        memory_key="baz", chat_memory=message_history, return_messages=True
-    )
+    with warnings.catch_warnings():
+        # Ignore warnings raised by base class.
+        warnings.simplefilter("ignore", DeprecationWarning)
+        memory = ConversationBufferMemory(
+            memory_key="baz", chat_memory=message_history, return_messages=True
+        )
 
     # add some messages
     memory.chat_memory.add_ai_message("This is me, the AI")
