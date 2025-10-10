@@ -36,7 +36,7 @@ class MongoDBRecordManager(RecordManager):
         super().__init__(namespace=namespace)
         self._collection = collection
 
-        _append_client_metadata(self._collection.database.client)
+        _append_client_metadata(self._collection.database.client, DRIVER_METADATA)
 
     @classmethod
     def from_connection_string(

@@ -239,7 +239,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._relevance_score_fn = relevance_score_fn
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        _append_client_metadata(self._collection.database.client)
+        _append_client_metadata(self._collection.database.client, DRIVER_METADATA)
 
         if auto_create_index is False:
             return

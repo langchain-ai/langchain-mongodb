@@ -37,7 +37,7 @@ class MongoDBDocStore(BaseStore):
         self.collection = collection
         self._text_key = text_key
 
-        _append_client_metadata(self.collection.database.client)
+        _append_client_metadata(self.collection.database.client, DRIVER_METADATA)
 
     @classmethod
     def from_connection_string(
