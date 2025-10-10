@@ -1,7 +1,9 @@
 [Issue Key](https://jira.mongodb.org/browse/{ISSUE_KEY})
 
 ## Summary
+
 <!-- What is this PR introducing? If context is already provided from the JIRA ticket, still place it in the Pull Request as you should not make the reviewer do digging for a basic summary. -->
+
 ## Changes in this PR
 
 <!-- What changes did you make to the code? What new APIs (public or private) were added, removed, or edited to generate the desired outcome explained in the above summary? -->
