@@ -30,7 +30,7 @@ def collection() -> Generator[Collection]:
     client.close()
 
 
-if "OPENAI_API_KEY" not in os.environ:
+if not ("OPENAI_API_KEY" in os.environ or "AZURE_OPENAI_ENDPOINT" in os.environ):
     pytest.skip(
         "GraphRAG tests require OpenAI for chat responses.", allow_module_level=True
     )
@@ -157,39 +157,6 @@ def test_extract_entities_from_empty_string_names(graph_store):
     assert len(no_names) == 0
 
 
-def test_related_entities(graph_store):
-    entity_names = ["John Doe", "Jane Smith"]
-    related_entities = graph_store.related_entities(entity_names)
-    assert len(related_entities) >= 4
-
-    no_entities = graph_store.related_entities([])
-    assert isinstance(no_entities, list)
-    assert len(no_entities) == 0
-
-
-def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
-    # First, create one client just to drop any existing collections
-    client = MongoClient(CONNECTION_STRING)
-    clxn_name = f"{COLLECTION_NAME}_addl_examples"
-    client[DB_NAME][clxn_name].drop()
-    # Test additional examples
-    store_with_addl_examples = MongoDBGraphStore(
-        connection_string=CONNECTION_STRING,
-        database_name=DB_NAME,
-        collection_name=clxn_name,
-        entity_extraction_model=entity_extraction_model,
-        entity_prompt=entity_prompt,
-        query_prompt=query_prompt,
-        entity_examples=entity_example,
-    )
-    store_with_addl_examples.collection.drop()
-
-    store_with_addl_examples.add_documents(documents)
-    entity_names = ["ACME Corporation", "GreenTech Ltd."]
-    new_entities = store_with_addl_examples.related_entities(entity_names)
-    assert len(new_entities) >= 2
-
-
 def test_chat_response(graph_store, query_connection):
     """Displays querying an existing Knowledge Graph Database"""
     answer = graph_store.chat_response(query_connection)
@@ -205,11 +172,42 @@ def test_similarity_search(graph_store, query_connection):
     assert any("attributes" in d.keys() for d in docs)
 
 
+def test_related_entities(graph_store):
+    entity_names = ["John Doe", "Jane Smith"]
+    related_entities = graph_store.related_entities(entity_names)
+    assert len(related_entities) >= 4
+
+    no_entities = graph_store.related_entities([])
+    assert isinstance(no_entities, list)
+    assert len(no_entities) == 0
+
+
+def test_additional_entity_examples(entity_extraction_model, entity_example, documents):
+    with MongoClient(CONNECTION_STRING) as client:
+        collection = client[DB_NAME][f"{COLLECTION_NAME}_addl_examples"]
+        collection.delete_many({})
+
+        store_with_addl_examples = MongoDBGraphStore(
+            collection=collection,
+            entity_extraction_model=entity_extraction_model,
+            entity_prompt=entity_prompt,
+            query_prompt=query_prompt,
+            entity_examples=entity_example,
+        )
+
+        store_with_addl_examples.add_documents(documents)
+        entity_names = ["ACME Corporation", "GreenTech Ltd."]
+        new_entities = store_with_addl_examples.related_entities(entity_names)
+        assert len(new_entities) >= 2
+
+
 def test_validator(documents, entity_extraction_model):
     # Case 1. No existing collection.
-    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_validation"
-    client[DB_NAME][clxn_name].drop()
+
+    with MongoClient(CONNECTION_STRING) as client:
+        client[DB_NAME][clxn_name].drop()
+
     # now we call with validation that can be added without db admin privileges
     store = MongoDBGraphStore(
         connection_string=CONNECTION_STRING,
@@ -224,47 +222,43 @@ def test_validator(documents, entity_extraction_model):
     entities = store.collection.find({}).to_list()
     # Using subset because SolarGrid Initiative is not always considered an entity
     assert {"Person", "Organization"}.issubset(set(e["type"] for e in entities))
-    client.close()
+    store.close()
 
     # Case 2: Existing collection with a validator
-    client = MongoClient(CONNECTION_STRING)
-    clxn_name = f"{COLLECTION_NAME}_validation"
-    collection = client[DB_NAME][clxn_name]
-    collection.delete_many({})
+    with MongoClient(CONNECTION_STRING) as client:
+        collection = client[DB_NAME][clxn_name]
+        collection.delete_many({})
 
-    store = MongoDBGraphStore(
-        collection=collection,
-        entity_extraction_model=entity_extraction_model,
-        validate=True,
-        validation_action="error",
-    )
-    bulkwrite_results = store.add_documents(documents)
-    assert len(bulkwrite_results) == len(documents)
-    collection.drop()
-    client.close()
+        store = MongoDBGraphStore(
+            collection=collection,
+            entity_extraction_model=entity_extraction_model,
+            validate=True,
+            validation_action="error",
+        )
+        bulkwrite_results = store.add_documents(documents)
+        assert len(bulkwrite_results) == len(documents)
+        collection.delete_many({})
 
     # Case 3: Existing collection without a validator
-    client = MongoClient(CONNECTION_STRING)
-    clxn_name = f"{COLLECTION_NAME}_validation"
-    collection = client[DB_NAME].create_collection(clxn_name)
-    store = MongoDBGraphStore(
-        collection=collection,
-        entity_extraction_model=entity_extraction_model,
-        validate=True,
-        validation_action="error",
-    )
-    bulkwrite_results = store.add_documents(documents)
-    assert len(bulkwrite_results) == len(documents)
-    client.close()
+    with MongoClient(CONNECTION_STRING) as client:
+        collection = client[DB_NAME][clxn_name]
+        store = MongoDBGraphStore(
+            collection=collection,
+            entity_extraction_model=entity_extraction_model,
+            validate=True,
+            validation_action="error",
+        )
+        bulkwrite_results = store.add_documents(documents)
+        assert len(bulkwrite_results) == len(documents)
 
 
 def test_allowed_entity_types(documents, entity_extraction_model):
     """Add allowed_entity_types. Use the validator to confirm behaviour."""
     allowed_entity_types = ["Person"]
     # drop collection
-    client = MongoClient(CONNECTION_STRING)
     collection_name = f"{COLLECTION_NAME}_allowed_entity_types"
-    client[DB_NAME][collection_name].drop()
+    with MongoClient(CONNECTION_STRING) as client:
+        client[DB_NAME][collection_name].drop()
     # create knowledge graph with only allowed_entity_types
     # this changes the schema at runtime
     store = MongoDBGraphStore(
@@ -283,15 +277,14 @@ def test_allowed_entity_types(documents, entity_extraction_model):
     all([len(e["relationships"].get("target_ids", [])) == 0 for e in entities])
     all([len(e["relationships"].get("types", [])) == 0 for e in entities])
     all([len(e["relationships"].get("attributes", [])) == 0 for e in entities])
+    store.close()
 
 
 def test_allowed_relationship_types(documents, entity_extraction_model):
     # drop collection
-    client = MongoClient(CONNECTION_STRING)
     clxn_name = f"{COLLECTION_NAME}_allowed_relationship_types"
-    client[DB_NAME][clxn_name].drop()
-    collection = client[DB_NAME].create_collection(clxn_name)
-    collection.drop()
+    with MongoClient(CONNECTION_STRING) as client:
+        client[DB_NAME][clxn_name].drop()
     # create knowledge graph with only allowed_relationship_types=["partner"]
     # this changes the schema at runtime
     store = MongoDBGraphStore(
@@ -309,3 +302,4 @@ def test_allowed_relationship_types(documents, entity_extraction_model):
     for ent in store.collection.find({}):
         relationships.update(set(ent.get("relationships", {}).get("types", [])))
     assert relationships == {"partner"}
+    store.close()
