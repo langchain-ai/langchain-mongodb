@@ -6,8 +6,6 @@
 
 - Only list authorized collections when listing collections.
 - In retrievers that require it (e.g. hybrid, full-text), warn when no documents have a text_key.
-- Make TestMongoDBAtlasFullTextSearchRetriever more robust.
-- Fix teardown step in release.yml.
 
 ## Changes in version 0.7.0 (2025/08/19)
 
