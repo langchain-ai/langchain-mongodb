@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 
 import pytest
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -16,6 +15,10 @@ from langchain_mongodb.graphrag.graph import MongoDBGraphStore
 from langchain_mongodb.graphrag.prompts import entity_prompt, query_prompt
 
 from ..utils import CONNECTION_STRING, DB_NAME
+
+if TYPE_CHECKING:
+    pass
+
 
 COLLECTION_NAME = "langchain_test_graphrag"
 
@@ -288,3 +291,39 @@ def test_allowed_relationship_types(documents, entity_extraction_model):
         relationships.update(set(ent.get("relationships", {}).get("types", [])))
     assert relationships == {"partner"}
     store.close()
+
+
+@pytest.mark.viz
+def test_networkx(graph_store):
+    """Basic test that MongoDBGraphStore can be exported to NetworkX Graph.
+
+    See examples for self-contained Jupyter notebook example.
+    To run: `pytest -m viz`
+    """
+    try:
+        import networkx as nx
+    except ImportError:
+        pytest.skip("This test requires optional-dependency `viz`")
+
+    nx_graph = graph_store.to_networkx()
+    # assert nx_graph.number_of_nodes() == len(nx_graph.nodes)
+    assert isinstance(nx_graph, nx.DiGraph)
+    assert nx_graph.number_of_nodes() == graph_store.collection.count_documents({})
+    assert nx_graph.number_of_edges() > 0
+
+
+@pytest.mark.viz
+def test_view(graph_store):
+    """Basic test that MongoDBGraphStore can be exported to NetworkX Graph.
+
+    See examples for self-contained Jupyter notebook example.
+    To run: `pytest -m viz`
+    """
+    try:
+        import holoviews as hv
+    except ImportError:
+        pytest.skip("This test requires optional-dependency `viz`")
+
+    view = graph_store.view()
+    assert isinstance(view, hv.Overlay)
+    assert len(view) == 2
