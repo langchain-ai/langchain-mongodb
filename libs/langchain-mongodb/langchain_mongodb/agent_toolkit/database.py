@@ -64,7 +64,7 @@ class MongoDBDatabase:
         self._sample_docs_in_coll_info = sample_docs_in_collection_info
         self._indexes_in_coll_info = indexes_in_collection_info
 
-        _append_client_metadata(self._client)
+        _append_client_metadata(self._client, DRIVER_METADATA)
 
     @classmethod
     def from_connection_string(
