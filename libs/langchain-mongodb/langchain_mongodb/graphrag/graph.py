@@ -558,7 +558,7 @@ class MongoDBGraphStore:
     ) -> networkx.DiGraph:
         """Utility converts Entity Collection to `NetworkX DiGraph <https://networkx.org/documentation/stable/index.html>`_
 
-        NOTE: Requires optional-dependency "viz", i.e. `uv sync --extra viz`
+        NOTE: Requires optional-dependency "viz", i.e. `pip install "langchain-mongodb[viz]"`.
 
         Args:
             nx_opts: Keyword arguments for networkx calls.
@@ -643,7 +643,7 @@ class MongoDBGraphStore:
         however, another good layout choice is:
         `layout=nx.multipartite_layout, nx_opts["subset_key"]= "type"`
 
-        NOTE: Requires optional-dependency "viz", i.e. `uv sync --extra viz`
+        NOTE: Requires optional-dependency "viz", i.e. `pip install "langchain-mongodb[viz]"`.
 
         You can save the view as any HoloViews object with `.save`.
         The type will be inferred from the filename's suffix,
