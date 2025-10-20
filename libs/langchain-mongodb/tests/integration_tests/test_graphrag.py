@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Generator
+from typing import Generator
 
 import pytest
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -15,10 +16,6 @@ from langchain_mongodb.graphrag.graph import MongoDBGraphStore
 from langchain_mongodb.graphrag.prompts import entity_prompt, query_prompt
 
 from ..utils import CONNECTION_STRING, DB_NAME
-
-if TYPE_CHECKING:
-    pass
-
 
 COLLECTION_NAME = "langchain_test_graphrag"
 
@@ -335,7 +332,7 @@ def test_view(graph_store):
     To run: `pytest -m viz`
     """
     try:
-        import holoviews as hv
+        import holoviews as hv  # type: ignore
     except ImportError:
         pytest.skip("This test requires optional-dependency `viz`")
 
