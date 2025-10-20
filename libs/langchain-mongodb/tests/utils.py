@@ -26,6 +26,7 @@ from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.operations import SearchIndexModel
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
@@ -63,7 +64,9 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         ids: Optional[List[str]] = None,
     ) -> List:
         """Patched insert_texts that waits for data to be indexed before returning"""
-        ids_inserted = super().bulk_embed_and_insert_texts(texts, metadatas, ids)
+        ids_inserted = bulk_embed_and_insert_texts(
+            self.embedding, self.collection, self._embedding_field_config, texts, metadatas, ids
+        )
         n_docs = self.collection.count_documents({})
         start = monotonic()
         while monotonic() - start <= TIMEOUT:
