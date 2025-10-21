@@ -1,7 +1,5 @@
 from typing import Any, Dict, Sequence, Tuple, Union
 
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.runnables import Runnable
 from langchain_core.structured_query import (
@@ -13,6 +11,13 @@ from langchain_core.structured_query import (
     Visitor,
 )
 from langchain_core.vectorstores import VectorStore
+
+try:
+    from langchain.retrievers import SelfQueryRetriever
+    from langchain.chains.query_constructor.schema import AttributeInfo
+except ImportError:
+    from langchain_classic.retrievers import SelfQueryRetriever
+    from langchain_classic.chains.query_constructor.schema import AttributeInfo
 from pydantic import Field
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
