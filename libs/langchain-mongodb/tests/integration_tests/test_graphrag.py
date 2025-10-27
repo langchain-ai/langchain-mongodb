@@ -318,7 +318,7 @@ def test_networkx(graph_store):
         pytest.skip("This test requires optional-dependency `viz`")
 
     nx_graph = graph_store.to_networkx()
-    # assert nx_graph.number_of_nodes() == len(nx_graph.nodes)
+    assert nx_graph.number_of_nodes() == len(nx_graph.nodes)
     assert isinstance(nx_graph, nx.DiGraph)
     assert nx_graph.number_of_nodes() == graph_store.collection.count_documents({})
     assert nx_graph.number_of_edges() > 0
