@@ -10,10 +10,10 @@ description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "langchain-core>=0.3",
-    "langchain>=0.3",
+    "langchain-core>=0.3,<1.0",
+    "langchain>=0.3,<1.0",
     "pymongo>=4.6.1",
-    "langchain-text-splitters>=0.3",
+    "langchain-text-splitters>=0.3,<1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
 ]
