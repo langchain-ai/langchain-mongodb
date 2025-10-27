@@ -10,10 +10,10 @@ description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "langchain-core>=0.3",
-    "langchain>=0.3",
+    "langchain-core>=0.3,<1.0",
+    "langchain>=0.3,<1.0",
     "pymongo>=4.6.1",
-    "langchain-text-splitters>=0.3",
+    "langchain-text-splitters>=0.3,<1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
 ]
@@ -44,6 +44,12 @@ dev = [
     "typing-extensions>=4.12.2",
 ]
 
+[project.optional-dependencies]
+viz = [
+    "networkx>=3.0",
+    "holoviews>=1.19",
+]
+
 [tool.pytest.ini_options]
 minversion = "7"
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
@@ -53,6 +59,7 @@ xfail_strict = true
 markers = [
     "requires: mark tests as requiring a specific library",
     "compile: mark placeholder test used to compile integration tests without running them",
+    "viz: marks tests as requiring optional-dependency group `viz`",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
