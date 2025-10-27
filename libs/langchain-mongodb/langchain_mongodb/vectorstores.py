@@ -22,9 +22,10 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient, ReplaceOne
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb.index import (
     create_vector_search_index,
@@ -238,7 +239,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._relevance_score_fn = relevance_score_fn
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        _append_client_metadata(self._collection.database.client)
+        _append_client_metadata(self._collection.database.client, DRIVER_METADATA)
 
         if auto_create_index is False:
             return
@@ -356,18 +357,29 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas_batch = []
             size = 0
             i = 0
-            for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+            for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=False)):
                 size += len(text) + len(metadata)
                 texts_batch.append(text)
                 metadatas_batch.append(metadata)
                 if (j + 1) % batch_size == 0 or size >= 47_000_000:
                     if ids:
-                        batch_res = self.bulk_embed_and_insert_texts(
-                            texts_batch, metadatas_batch, ids[i : j + 1]
+                        batch_res = bulk_embed_and_insert_texts(
+                            embedding_func=self._embedding.embed_documents,
+                            collection=self._collection,
+                            text_key=self._text_key,
+                            embedding_key=self._embedding_key,
+                            texts=texts_batch,
+                            metadatas=metadatas_batch,
+                            ids=ids[i : j + 1],
                         )
                     else:
-                        batch_res = self.bulk_embed_and_insert_texts(
-                            texts_batch, metadatas_batch
+                        batch_res = bulk_embed_and_insert_texts(
+                            embedding_func=self._embedding.embed_documents,
+                            collection=self._collection,
+                            text_key=self._text_key,
+                            embedding_key=self._embedding_key,
+                            texts=texts_batch,
+                            metadatas=metadatas_batch,
                         )
                     result_ids.extend(batch_res)
                     texts_batch = []
@@ -376,12 +388,23 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     i = j + 1
         if texts_batch:
             if ids:
-                batch_res = self.bulk_embed_and_insert_texts(
-                    texts_batch, metadatas_batch, ids[i : j + 1]
+                batch_res = bulk_embed_and_insert_texts(
+                    embedding_func=self._embedding.embed_documents,
+                    collection=self._collection,
+                    text_key=self._text_key,
+                    embedding_key=self._embedding_key,
+                    texts=texts_batch,
+                    metadatas=metadatas_batch,
+                    ids=ids[i : j + 1],
                 )
             else:
-                batch_res = self.bulk_embed_and_insert_texts(
-                    texts_batch, metadatas_batch
+                batch_res = bulk_embed_and_insert_texts(
+                    embedding_func=self._embedding.embed_documents,
+                    collection=self._collection,
+                    text_key=self._text_key,
+                    embedding_key=self._embedding_key,
+                    texts=texts_batch,
+                    metadatas=metadatas_batch,
                 )
             result_ids.extend(batch_res)
         return result_ids
@@ -419,37 +442,6 @@ class MongoDBAtlasVectorSearch(VectorStore):
             docs.append(Document(page_content=text, id=oid_to_str(_id), metadata=doc))
         return docs
 
-    def bulk_embed_and_insert_texts(
-        self,
-        texts: Union[List[str], Iterable[str]],
-        metadatas: Union[List[dict], Generator[dict, Any, Any]],
-        ids: Optional[List[str]] = None,
-    ) -> List[str]:
-        """Bulk insert single batch of texts, embeddings, and optionally ids.
-
-        See add_texts for additional details.
-        """
-        if not texts:
-            return []
-        # Compute embedding vectors
-        embeddings = self._embedding.embed_documents(list(texts))
-        if not ids:
-            ids = [str(ObjectId()) for _ in range(len(list(texts)))]
-        docs = [
-            {
-                "_id": str_to_oid(i),
-                self._text_key: t,
-                self._embedding_key: embedding,
-                **m,
-            }
-            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
-        ]
-        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
-        # insert the documents in MongoDB Atlas
-        result = self._collection.bulk_write(operations)
-        assert result.upserted_ids is not None
-        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
-
     def add_documents(
         self,
         documents: List[Document],
@@ -478,11 +470,18 @@ class MongoDBAtlasVectorSearch(VectorStore):
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
+                strict=False,
             )
             result_ids.extend(
-                self.bulk_embed_and_insert_texts(
-                    texts=texts, metadatas=metadatas, ids=ids[start:end]
+                bulk_embed_and_insert_texts(
+                    embedding_func=self._embedding.embed_documents,
+                    collection=self._collection,
+                    text_key=self._text_key,
+                    embedding_key=self._embedding_key,
+                    texts=texts,
+                    metadatas=metadatas,
+                    ids=ids[start:end],
                 )
             )
             start = end
