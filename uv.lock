@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -904,9 +904,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain", specifier = ">=0.3" },
-    { name = "langchain-core", specifier = ">=0.3" },
-    { name = "langchain-text-splitters", specifier = ">=0.3" },
+    { name = "langchain", specifier = ">=0.3,<1.0" },
+    { name = "langchain-core", specifier = ">=0.3,<1.0" },
+    { name = "langchain-text-splitters", specifier = ">=0.3,<1.0" },
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pymongo", specifier = ">=4.6.1" },
@@ -916,13 +916,13 @@ requires-dist = [
 dev = [
     { name = "flaky", specifier = ">=3.8.1" },
     { name = "freezegun", specifier = ">=1.2.2" },
-    { name = "langchain", specifier = ">=0.3.14" },
-    { name = "langchain-community", specifier = ">=0.3.27" },
-    { name = "langchain-core", specifier = ">=0.3.29" },
-    { name = "langchain-ollama", specifier = ">=0.2.2" },
-    { name = "langchain-openai", specifier = ">=0.2.14" },
-    { name = "langchain-tests", specifier = "==0.3.22" },
-    { name = "langchain-text-splitters", specifier = ">=0.3.5" },
+    { name = "langchain", specifier = ">=0.3.14,<1.0" },
+    { name = "langchain-community", specifier = ">=0.3.27,<1.0" },
+    { name = "langchain-core", specifier = ">=0.3.29,<1.0" },
+    { name = "langchain-ollama", specifier = ">=0.2.2,<1.0" },
+    { name = "langchain-openai", specifier = ">=0.2.14,<1.0" },
+    { name = "langchain-tests", specifier = "==0.3.22,<1.0" },
+    { name = "langchain-text-splitters", specifier = ">=0.3.5,<1.0" },
     { name = "langgraph", specifier = ">=0.2.72" },
     { name = "mongomock", specifier = ">=4.2.0.post1" },
     { name = "mypy", specifier = ">=1.10" },
