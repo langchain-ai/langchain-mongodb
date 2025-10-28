@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 import pymongo
-from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+from langchain_classic.retrievers.parent_document_retriever import ParentDocumentRetriever
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -39,8 +39,8 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     by the same MongoDB Collection.
 
     For more details, see superclasses
-        :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
-        and :class:`~langchain.retrievers.MultiVectorRetriever`.
+        :class:`~langchain_classic.retrievers.parent_document_retriever.ParentDocumentRetriever`
+        and :class:`~langchain_classic.retrievers.MultiVectorRetriever`.
 
     Examples:
         >>> from langchain_mongodb.retrievers.parent_document import (
@@ -148,8 +148,8 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         """Construct Retriever using one Collection for VectorStore and one for DocStore
 
         See parent classes
-        :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
-        and :class:`~langchain.retrievers.MultiVectorRetriever` for further details.
+        :class:`~langchain_classic.retrievers.parent_document_retriever.ParentDocumentRetriever`
+        and :class:`~langchain_classic.retrievers.MultiVectorRetriever` for further details.
 
         Args:
             connection_string: A valid MongoDB Atlas connection URI.

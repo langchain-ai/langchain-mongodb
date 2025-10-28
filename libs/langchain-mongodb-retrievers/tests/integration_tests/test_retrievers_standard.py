@@ -11,12 +11,12 @@ from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
 )
-from langchain_mongodb.retrievers import (
+from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import (
+from langchain_mongodb.test_utils import (
     CONNECTION_STRING,
     DB_NAME,
     TIMEOUT,

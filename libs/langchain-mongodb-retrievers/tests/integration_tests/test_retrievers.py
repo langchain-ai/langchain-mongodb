@@ -13,12 +13,11 @@ from langchain_mongodb.index import (
     create_fulltext_search_index,
     create_vector_search_index,
 )
-from langchain_mongodb.retrievers import (
+from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
 )
-
-from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+from langchain_mongodb.test_utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_retrievers"
 COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"

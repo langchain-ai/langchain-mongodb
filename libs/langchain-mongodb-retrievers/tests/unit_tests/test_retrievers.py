@@ -2,14 +2,14 @@ import pytest
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_mongodb.docstores import MongoDBDocStore
-from langchain_mongodb.retrievers import (
+from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
     MongoDBAtlasParentDocumentRetriever,
 )
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
-from ..utils import ConsistentFakeEmbeddings, MockCollection
+from langchain_mongodb.test_utils import ConsistentFakeEmbeddings, MockCollection
 
 
 @pytest.fixture()
