@@ -7,13 +7,16 @@ import pytest
 from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
+from langchain_mongodb import index
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 
-from langchain_mongodb import MongoDBAtlasVectorSearch, index
-from langchain_mongodb_retrievers import MongoDBAtlasSelfQueryRetriever
+from langchain_mongodb_retrievers import (
+    MongoDBAtlasSelfQueryRetriever,
+    MongoDBAtlasVectorSearch,
+)
 
-from langchain_mongodb.test_utils import (
+from ..utils import (
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,

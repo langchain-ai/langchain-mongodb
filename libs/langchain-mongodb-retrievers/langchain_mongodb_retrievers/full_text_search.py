@@ -4,11 +4,10 @@ from typing import Annotated, Any, Dict, List, Optional, Union
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from pydantic import Field
-from pymongo.collection import Collection
-
 from langchain_mongodb.pipelines import text_search_stage
 from langchain_mongodb.utils import _append_client_metadata, make_serializable
+from pydantic import Field
+from pymongo.collection import Collection
 
 
 class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):

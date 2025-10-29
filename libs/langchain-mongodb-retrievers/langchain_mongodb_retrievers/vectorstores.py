@@ -22,10 +22,6 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient, ReplaceOne
-from pymongo.collection import Collection
-from pymongo.errors import CollectionInvalid
-
 from langchain_mongodb.index import (
     create_vector_search_index,
     update_vector_search_index,
@@ -39,6 +35,9 @@ from langchain_mongodb.utils import (
     oid_to_str,
     str_to_oid,
 )
+from pymongo import MongoClient, ReplaceOne
+from pymongo.collection import Collection
+from pymongo.errors import CollectionInvalid
 
 VST = TypeVar("VST", bound=VectorStore)
 
@@ -356,7 +355,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas_batch = []
             size = 0
             i = 0
-            for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+            for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=False)):
                 size += len(text) + len(metadata)
                 texts_batch.append(text)
                 metadatas_batch.append(metadata)
@@ -442,7 +441,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 self._embedding_key: embedding,
                 **m,
             }
-            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
+            for i, t, m, embedding in zip(
+                ids, texts, metadatas, embeddings, strict=False
+            )
         ]
         operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas
@@ -478,7 +479,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
+                strict=False,
             )
             result_ids.extend(
                 self.bulk_embed_and_insert_texts(

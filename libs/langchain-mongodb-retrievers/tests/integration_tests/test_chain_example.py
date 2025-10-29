@@ -10,12 +10,11 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
+from langchain_mongodb import index
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from pymongo import MongoClient
 from pymongo.collection import Collection
-
-from langchain_mongodb import index
 
 from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 

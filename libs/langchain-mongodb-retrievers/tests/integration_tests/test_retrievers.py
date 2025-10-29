@@ -5,19 +5,20 @@ import pytest
 from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from pymongo import MongoClient
-from pymongo.collection import Collection
-
-from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
     create_vector_search_index,
 )
+from pymongo import MongoClient
+from pymongo.collection import Collection
+
 from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
+    MongoDBAtlasVectorSearch,
 )
-from langchain_mongodb.test_utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_retrievers"
 COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"

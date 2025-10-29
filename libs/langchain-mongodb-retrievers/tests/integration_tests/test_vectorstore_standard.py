@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.vectorstores import VectorStore
-from langchain_tests.integration_tests import VectorStoreIntegrationTests
-from pymongo import MongoClient
-from pymongo.collection import Collection
-
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
+from langchain_tests.integration_tests import VectorStoreIntegrationTests
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 

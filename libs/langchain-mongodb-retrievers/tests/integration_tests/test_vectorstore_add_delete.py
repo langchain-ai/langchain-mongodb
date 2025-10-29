@@ -8,14 +8,14 @@ import pytest  # type: ignore[import-not-found]
 from bson import ObjectId
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from pymongo import MongoClient
-from pymongo.collection import Collection
-
-from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
 from langchain_mongodb.utils import oid_to_str
+from pymongo import MongoClient
+from pymongo.collection import Collection
+
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 

@@ -12,8 +12,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, Generation, LLMResult
 from pymongo.collection import Collection
 
-from langchain_mongodb.cache import MongoDBAtlasSemanticCache, MongoDBCache
-from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers.cache import MongoDBAtlasSemanticCache, MongoDBCache
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 from ..utils import ConsistentFakeEmbeddings, FakeChatModel, FakeLLM, MockCollection
 
@@ -221,7 +221,7 @@ def test_mongodb_atlas_cache_matrix(
         for prompt_i_generations in generations
     ]
 
-    for prompt_i, llm_generations_i in zip(prompts, llm_generations):
+    for prompt_i, llm_generations_i in zip(prompts, llm_generations, strict=False):
         _execute_test(prompt_i, llm_string, llm_generations_i)
 
     get_llm_cache()._collection._simulate_cache_aggregation_query = True  # type: ignore

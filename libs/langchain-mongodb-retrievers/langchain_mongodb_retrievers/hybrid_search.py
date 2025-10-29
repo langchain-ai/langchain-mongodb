@@ -4,10 +4,6 @@ from typing import Annotated, Any, Dict, List, Optional
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from pydantic import Field
-from pymongo.collection import Collection
-
-from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.pipelines import (
     combine_pipelines,
     final_hybrid_stage,
@@ -16,6 +12,10 @@ from langchain_mongodb.pipelines import (
     vector_search_stage,
 )
 from langchain_mongodb.utils import make_serializable
+from pydantic import Field
+from pymongo.collection import Collection
+
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 
 class MongoDBAtlasHybridSearchRetriever(BaseRetriever):

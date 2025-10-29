@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 import pymongo
-from langchain_classic.retrievers.parent_document_retriever import ParentDocumentRetriever
+from langchain_classic.retrievers.parent_document_retriever import (
+    ParentDocumentRetriever,
+)
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -11,13 +13,13 @@ from langchain_core.callbacks import (
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
-from langchain_text_splitters import TextSplitter
-from pymongo import MongoClient
-
-from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.pipelines import vector_search_stage
 from langchain_mongodb.utils import DRIVER_METADATA, make_serializable
+from langchain_text_splitters import TextSplitter
+from pymongo import MongoClient
+
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 
 class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):

@@ -15,7 +15,7 @@ from langchain_core.structured_query import (
 from langchain_core.vectorstores import VectorStore
 from pydantic import Field
 
-from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 
 class MongoDBStructuredQueryTranslator(Visitor):

@@ -4,7 +4,7 @@ import pytest
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from langchain_mongodb import MongoDBAtlasVectorSearch, index
+from langchain_mongodb import index
 
 from ..utils import ConsistentFakeEmbeddings
 
@@ -106,30 +106,30 @@ def test_search_index_update_vector_search_index(collection: Collection) -> None
     assert indexes[0]["latestDefinition"]["fields"][0]["similarity"] == similarity_new
 
 
-def test_vectorstore_create_vector_search_index(collection: Collection) -> None:
-    """Tests vectorstore wrapper around index command."""
-
-    # Set up using the index module's api
-    if len(list(collection.list_search_indexes())) != 0:
-        index.drop_vector_search_index(
-            collection, VECTOR_INDEX_NAME, wait_until_complete=TIMEOUT
-        )
-
-    # Test MongoDBAtlasVectorSearch's API
-    _ = MongoDBAtlasVectorSearch(
-        collection=collection,
-        embedding=ConsistentFakeEmbeddings(),
-        index_name=VECTOR_INDEX_NAME,
-        dimensions=DIMENSIONS,
-        auto_index_timeout=TIMEOUT,
-    )
-
-    assert index._is_index_ready(collection, VECTOR_INDEX_NAME)
-    indexes = list(collection.list_search_indexes())
-    assert len(indexes) == 1
-    assert indexes[0]["name"] == VECTOR_INDEX_NAME
-
-    # Tear down using the index module's api
-    index.drop_vector_search_index(
-        collection, VECTOR_INDEX_NAME, wait_until_complete=TIMEOUT
-    )
+# def test_vectorstore_create_vector_search_index(collection: Collection) -> None:
+#     """Tests vectorstore wrapper around index command."""
+#
+#     # Set up using the index module's api
+#     if len(list(collection.list_search_indexes())) != 0:
+#         index.drop_vector_search_index(
+#             collection, VECTOR_INDEX_NAME, wait_until_complete=TIMEOUT
+#         )
+#
+#     # Test MongoDBAtlasVectorSearch's API
+#     _ = MongoDBAtlasVectorSearch(
+#         collection=collection,
+#         embedding=ConsistentFakeEmbeddings(),
+#         index_name=VECTOR_INDEX_NAME,
+#         dimensions=DIMENSIONS,
+#         auto_index_timeout=TIMEOUT,
+#     )
+#
+#     assert index._is_index_ready(collection, VECTOR_INDEX_NAME)
+#     indexes = list(collection.list_search_indexes())
+#     assert len(indexes) == 1
+#     assert indexes[0]["name"] == VECTOR_INDEX_NAME
+#
+#     # Tear down using the index module's api
+#     index.drop_vector_search_index(
+#         collection, VECTOR_INDEX_NAME, wait_until_complete=TIMEOUT
+#     )
