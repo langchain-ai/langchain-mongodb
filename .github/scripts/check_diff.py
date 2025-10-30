@@ -4,6 +4,7 @@ from typing import Dict
 
 LIB_DIRS = [
     "libs/langchain-mongodb",
+    "libs/langchain-mongodb-retrievers",
     "libs/langgraph-checkpoint-mongodb",
     "libs/langgraph-store-mongodb",
 ]
