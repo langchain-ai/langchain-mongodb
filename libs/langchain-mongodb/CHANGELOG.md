@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.7.2 (2025/10/30)
+
+- Pin LangChain version to < 1.0 to avoid compatibility issues while in pre-1.0.
+
 ## Changes in version 0.7.1 (2025/10/13)
 
 - Only list authorized collections when listing collections.
