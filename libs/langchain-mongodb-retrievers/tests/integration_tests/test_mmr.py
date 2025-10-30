@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import pytest  # type: ignore[import-not-found]
 from langchain_core.embeddings import Embeddings
-from pymongo import MongoClient
-from pymongo.collection import Collection
-
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 

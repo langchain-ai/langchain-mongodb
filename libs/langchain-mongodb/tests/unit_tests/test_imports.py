@@ -1,10 +1,7 @@
 from langchain_mongodb import __all__
 
 EXPECTED_ALL = [
-    "MongoDBAtlasVectorSearch",
     "MongoDBChatMessageHistory",
-    "MongoDBCache",
-    "MongoDBAtlasSemanticCache",
 ]
 
 
