@@ -1,7 +1,7 @@
 from typing import Any, Dict, Sequence, Tuple, Union
 
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_classic.chains.query_constructor.schema import AttributeInfo
+from langchain_classic.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.runnables import Runnable
 from langchain_core.structured_query import (
@@ -15,7 +15,7 @@ from langchain_core.structured_query import (
 from langchain_core.vectorstores import VectorStore
 from pydantic import Field
 
-from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 
 class MongoDBStructuredQueryTranslator(Visitor):

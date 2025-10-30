@@ -4,16 +4,23 @@ import os
 from typing import Generator, Sequence, Union
 
 import pytest
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_classic.chains.query_constructor.schema import AttributeInfo
+from langchain_classic.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
+from langchain_mongodb import index
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 
-from langchain_mongodb import MongoDBAtlasVectorSearch, index
-from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
+from langchain_mongodb_retrievers import (
+    MongoDBAtlasSelfQueryRetriever,
+    MongoDBAtlasVectorSearch,
+)
 
-from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import (
+    CONNECTION_STRING,
+    DB_NAME,
+    PatchedMongoDBAtlasVectorSearch,
+)
 
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120

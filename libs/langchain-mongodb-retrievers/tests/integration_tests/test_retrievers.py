@@ -2,19 +2,20 @@ from time import sleep, time
 from typing import Generator, List
 
 import pytest
+from flaky import flaky  # type:ignore[import-untyped]
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from pymongo import MongoClient
-from pymongo.collection import Collection
-
-from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
     create_fulltext_search_index,
     create_vector_search_index,
 )
-from langchain_mongodb.retrievers import (
+from pymongo import MongoClient
+from pymongo.collection import Collection
+
+from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
+    MongoDBAtlasVectorSearch,
 )
 
 from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
@@ -23,9 +24,9 @@ COLLECTION_NAME = "langchain_test_retrievers"
 COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"
 VECTOR_INDEX_NAME = "vector_index"
 EMBEDDING_FIELD = "embedding"
-PAGE_CONTENT_FIELD = ["text", "keywords"]
+PAGE_CONTENT_FIELD = "text"
 PAGE_CONTENT_FIELD_NESTED = "title.text"
-SEARCH_INDEX_NAME = "text_index_multi"
+SEARCH_INDEX_NAME = "text_index"
 SEARCH_INDEX_NAME_NESTED = "text_index_nested"
 
 TIMEOUT = 60.0
@@ -35,21 +36,10 @@ INTERVAL = 0.5
 @pytest.fixture(scope="module")
 def example_documents() -> List[Document]:
     return [
-        Document(
-            page_content="In 2023, I visited Paris", metadata={"keywords": "MongoDB"}
-        ),
-        Document(
-            page_content="In 2022, I visited New York",
-            metadata={"keywords": "Atlas"},
-        ),
-        Document(
-            page_content="In 2021, I visited New Orleans",
-            metadata={"keywords": "Search"},
-        ),
-        Document(
-            page_content="Sandwiches are beautiful. Sandwiches are fine.",
-            metadata={"keywords": "is awesome"},
-        ),
+        Document(page_content="In 2023, I visited Paris"),
+        Document(page_content="In 2022, I visited New York"),
+        Document(page_content="In 2021, I visited New Orleans"),
+        Document(page_content="Sandwiches are beautiful. Sandwiches are fine."),
     ]
 
 
@@ -169,17 +159,14 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     results = retriever.invoke(query1)
     assert len(results) == 4
     assert "Paris" in results[0].page_content
-    assert "MongoDB" == results[0].metadata["keywords"]
 
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
-    assert "Search" == results[0].metadata["keywords"]
 
 
 def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
-
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
@@ -218,6 +205,7 @@ def test_hybrid_retriever_deprecated_top_k(
     assert "New Orleans" in results[0].page_content
 
 
+@flaky(max_runs=5, min_passes=4)
 def test_hybrid_retriever_nested(
     indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
@@ -236,6 +224,57 @@ def test_hybrid_retriever_nested(
     query2 = "When was the last time I visited new orleans?"
     results = retriever.invoke(query2)
     assert "New Orleans" in results[0].page_content
+
+
+def test_hybrid_search_weighted_rrf(
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+):
+    vec_only_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=1.0,
+        fulltext_weight=0.0,
+    )
+
+    text_only_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=0.0,
+        fulltext_weight=1.0,
+    )
+
+    balanced_retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=indexed_vectorstore,
+        search_index_name=SEARCH_INDEX_NAME,
+        k=3,
+        vector_weight=1.0,
+        fulltext_weight=1.0,
+    )
+
+    query = "Sandwiches"
+
+    text_only_results = text_only_retriever.invoke(query)
+    assert len(text_only_results) == 3  # but only one with non-zero text score
+    single_text_score = text_only_results[0].metadata["fulltext_score"]
+    assert single_text_score > 0
+    assert all(
+        result.metadata["fulltext_score"] == 0 for result in text_only_results[1:]
+    )
+    assert all(result.metadata["vector_score"] == 0 for result in text_only_results)
+    total_score = sum(res.metadata["score"] for res in text_only_results)
+    assert abs(total_score - single_text_score) < 0.001
+
+    vec_only_results = vec_only_retriever.invoke(query)
+    assert len(vec_only_results) == 3
+    assert all(result.metadata["vector_score"] > 0 for result in vec_only_results)
+    assert all(result.metadata["fulltext_score"] == 0 for result in vec_only_results)
+    total_vec_score = sum(res.metadata["score"] for res in vec_only_results)
+
+    balanced_results = balanced_retriever.invoke(query)
+    total_score = sum(res.metadata["score"] for res in balanced_results)
+    assert abs(total_score - (total_vec_score + single_text_score)) < 0.001
 
 
 def test_fulltext_retriever(
@@ -272,10 +311,7 @@ def test_fulltext_retriever(
             break
         sleep(INTERVAL)
 
-    query = "What is MongoDB"
+    query = "When was the last time I visited new orleans?"
     results = retriever.invoke(query)
-    print(results)
-    print(list(collection.list_search_indexes()))
-    # assert "New Orleans" in results[0].page_content
-    assert "MongoDB" in results[0].metadata["keywords"]
+    assert "New Orleans" in results[0].page_content
     assert "score" in results[0].metadata

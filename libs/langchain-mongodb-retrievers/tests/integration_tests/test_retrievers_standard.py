@@ -1,19 +1,19 @@
 from typing import Type
 
 from langchain_core.documents import Document
+from langchain_mongodb.index import (
+    create_fulltext_search_index,
+)
 from langchain_tests.integration_tests import (
     RetrieversIntegrationTests,
 )
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain_mongodb.index import (
-    create_fulltext_search_index,
-)
-from langchain_mongodb.retrievers import (
+from langchain_mongodb_retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
+    MongoDBAtlasVectorSearch,
 )
 
 from ..utils import (

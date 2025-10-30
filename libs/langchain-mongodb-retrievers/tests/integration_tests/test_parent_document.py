@@ -2,15 +2,15 @@ from typing import List
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_mongodb.docstores import MongoDBDocStore
+from langchain_mongodb.index import create_vector_search_index
+from langchain_mongodb.utils import DRIVER_METADATA
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
 
-from langchain_mongodb.docstores import MongoDBDocStore
-from langchain_mongodb.index import create_vector_search_index
-from langchain_mongodb.retrievers import (
+from langchain_mongodb_retrievers import (
     MongoDBAtlasParentDocumentRetriever,
 )
-from langchain_mongodb.utils import DRIVER_METADATA
 
 from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
 

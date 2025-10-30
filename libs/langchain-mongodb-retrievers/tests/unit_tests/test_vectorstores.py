@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo.collection import Collection
 
-from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, MockCollection
 

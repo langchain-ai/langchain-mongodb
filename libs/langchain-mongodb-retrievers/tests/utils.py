@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 from copy import deepcopy
-from typing import Any, Dict, List, Mapping, Optional, cast
+from time import monotonic, sleep
+from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Union, cast
 
 from bson import ObjectId
 from langchain_core.callbacks.manager import (
@@ -20,13 +21,13 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pydantic import model_validator
-from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 from pymongo.operations import SearchIndexModel
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
 
-from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
+from langchain_mongodb_retrievers.cache import MongoDBAtlasSemanticCache
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 TIMEOUT = 120
 INTERVAL = 0.5
@@ -36,20 +37,59 @@ CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
 DB_NAME = "langchain_test_db"
 
 
-def create_database() -> MongoDBDatabase:
-    client = MongoClient(CONNECTION_STRING)
-    coll = client[DB_NAME]["test"]
-    coll.delete_many({})
-    coll.insert_one({})
-    return MongoDBDatabase(client, DB_NAME)
-
-
 def create_llm() -> BaseChatModel:
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return AzureChatOpenAI(model="o4-mini", timeout=60, cache=False, seed=12345)
     if os.environ.get("OPENAI_API_KEY"):
         return ChatOpenAI(model="gpt-4o-mini", timeout=60, cache=False, seed=12345)
     return ChatOllama(model="llama3:8b", cache=False, seed=12345)
+
+
+class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
+    def bulk_embed_and_insert_texts(
+        self,
+        texts: Union[List[str], Iterable[str]],
+        metadatas: Union[List[dict], Generator[dict, Any, Any]],
+        ids: Optional[List[str]] = None,
+    ) -> List:
+        """Patched insert_texts that waits for data to be indexed before returning"""
+        ids_inserted = super().bulk_embed_and_insert_texts(texts, metadatas, ids)
+        n_docs = self.collection.count_documents({})
+        start = monotonic()
+        while monotonic() - start <= TIMEOUT:
+            if (
+                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                == n_docs
+            ):
+                return ids_inserted
+            else:
+                sleep(INTERVAL)
+        raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
+
+    def _similarity_search_with_score(self, query_vector, **kwargs):
+        # Remove the _ids for testing purposes.
+        docs = super()._similarity_search_with_score(query_vector, **kwargs)
+        for doc, _ in docs:
+            del doc.metadata["_id"]
+        return docs
+
+    def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> Optional[bool]:
+        ret = super().delete(ids, **kwargs)
+        n_docs = self.collection.count_documents({})
+        start = monotonic()
+        while monotonic() - start <= TIMEOUT:
+            if (
+                len(
+                    self.similarity_search(
+                        "sandwich", k=max(n_docs, 1), oversampling_factor=1
+                    )
+                )
+                == n_docs
+            ):
+                return ret
+            else:
+                sleep(INTERVAL)
+        raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
 
 
 class ConsistentFakeEmbeddings(Embeddings):
@@ -276,6 +316,27 @@ class MockCollection(Collection):
             result.update(set_options)
         elif upsert:
             self._data.append({**find_query, **set_options})
+
+    def _execute_cache_aggregation_query(self, *args, **kwargs) -> List[Dict[str, Any]]:  # type: ignore
+        """Helper function only to be used for MongoDBAtlasSemanticCache Testing
+
+        Returns:
+            List[Dict[str, Any]]: Aggregation query result
+        """
+        pipeline: List[Dict[str, Any]] = args[0]
+        params = pipeline[0]["$vectorSearch"]
+        embedding = params["queryVector"]
+        # Assumes MongoDBAtlasSemanticCache.LLM == "llm_string"
+        llm_string = params["filter"][MongoDBAtlasSemanticCache.LLM]["$eq"]
+
+        acc = []
+        for document in self._data:
+            if (
+                document.get("embedding") == embedding
+                and document.get(MongoDBAtlasSemanticCache.LLM) == llm_string
+            ):
+                acc.append(document)
+        return acc
 
     def bulk_write(self, requests, **kwargs):
         upserted = []

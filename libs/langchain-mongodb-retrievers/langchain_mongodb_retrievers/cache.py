@@ -10,12 +10,12 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.load.dump import dumps
 from langchain_core.load.load import loads
 from langchain_core.outputs import Generation
+from langchain_mongodb.utils import DRIVER_METADATA
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from langchain_mongodb.utils import DRIVER_METADATA
-from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers.vectorstores import MongoDBAtlasVectorSearch
 
 logger = logging.getLogger(__file__)
 
