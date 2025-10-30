@@ -6,8 +6,6 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import index
 
-from ..utils import ConsistentFakeEmbeddings
-
 DB_NAME = "langchain_test_index_db"
 COLLECTION_NAME = "test_index"
 VECTOR_INDEX_NAME = "vector_index"
