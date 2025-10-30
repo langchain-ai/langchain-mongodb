@@ -6,13 +6,13 @@ import pytest
 from bson.errors import InvalidDocument
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
-from pymongo import MongoClient
-from pymongo.errors import OperationFailure
-
 from langgraph.checkpoint.base import (
     CheckpointMetadata,
     empty_checkpoint,
 )
+from pymongo import MongoClient
+from pymongo.errors import OperationFailure
+
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
 MONGODB_URI = os.environ.get(

@@ -86,7 +86,7 @@ jobs:
         uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # v7
         with:
           enable-cache: true
-          python-version: 3.9
+          python-version: "3.10"
       - run: just docs
 
   ci_success:

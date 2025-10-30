@@ -99,12 +99,13 @@ class MongoDBDocStore(BaseStore):
             batch_size: Number of documents to insert at a time.
                 Tuning this may help with performance and sidestep MongoDB limits.
         """
-        keys, docs = zip(*key_value_pairs)
+        keys, docs = zip(*key_value_pairs, strict=True)
         n_docs = len(docs)
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in docs[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in docs[start:end]],
+                strict=True,
             )
             self.insert_many(texts=texts, metadatas=metadatas, ids=keys[start:end])  # type: ignore
             start = end
@@ -149,6 +150,7 @@ class MongoDBDocStore(BaseStore):
         in the batch that do not have conflicting _ids will still be inserted.
         """
         to_insert = [
-            {"_id": i, self._text_key: t, **m} for i, t, m in zip(ids, texts, metadatas)
+            {"_id": i, self._text_key: t, **m}
+            for i, t, m in zip(ids, texts, metadatas, strict=True)
         ]
         self.collection.insert_many(to_insert)  # type: ignore

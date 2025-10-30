@@ -20,13 +20,13 @@ from typing import Annotated
 
 import pytest
 from langchain_core.runnables import RunnableConfig
-from typing_extensions import TypedDict
-
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.mongodb import AsyncMongoDBSaver, MongoDBSaver
 from langgraph.constants import START, Send
 from langgraph.graph import END, StateGraph
+from typing_extensions import TypedDict
+
+from langgraph.checkpoint.mongodb import AsyncMongoDBSaver, MongoDBSaver
 
 # --- Configuration ---
 MONGODB_URI = os.environ.get(
@@ -170,7 +170,7 @@ async def test_fanout(
         assert set(out[0]["generate_joke"].keys()) == {"jokes"}
         assert all(
             res["generate_joke"]["jokes"][0].endswith(
-                f'{" and the year before" * 3}... and cats!'
+                f"{' and the year before' * 3}... and cats!"
             )
             for res in out
         )

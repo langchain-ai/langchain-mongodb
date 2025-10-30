@@ -1,9 +1,9 @@
 import os
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.base import CheckpointMetadata, empty_checkpoint
 from pymongo import MongoClient
 
-from langgraph.checkpoint.base import CheckpointMetadata, empty_checkpoint
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
 
