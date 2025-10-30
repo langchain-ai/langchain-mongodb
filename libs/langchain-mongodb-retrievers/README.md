@@ -13,7 +13,7 @@ pip install -U langchain-mongodb-retriever
 ## Using MongoDBAtlasVectorSearch
 ```python
 import os
-from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb_retrievers import MongoDBAtlasVectorSearch
 from langchain_openai import OpenAIEmbeddings
 
 # Pull MongoDB Atlas URI from environment variables

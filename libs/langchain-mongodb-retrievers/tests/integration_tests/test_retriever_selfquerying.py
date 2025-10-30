@@ -4,8 +4,8 @@ import os
 from typing import Generator, Sequence, Union
 
 import pytest
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_classic.chains.query_constructor.schema import AttributeInfo
+from langchain_classic.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.documents import Document
 from langchain_mongodb import index
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
