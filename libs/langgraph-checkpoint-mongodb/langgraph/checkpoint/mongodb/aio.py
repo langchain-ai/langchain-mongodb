@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import builtins
-import sys
 import warnings
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
@@ -10,10 +8,6 @@ from datetime import datetime
 from typing import Any, Optional, cast
 
 from langchain_core.runnables import RunnableConfig
-from pymongo import UpdateOne
-from pymongo.asynchronous.database import AsyncDatabase
-from pymongo.asynchronous.mongo_client import AsyncMongoClient
-
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
     BaseCheckpointSaver,
@@ -23,6 +17,9 @@ from langgraph.checkpoint.base import (
     CheckpointTuple,
     get_checkpoint_id,
 )
+from pymongo import UpdateOne
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 
 from .utils import (
     DRIVER_METADATA,
@@ -30,20 +27,6 @@ from .utils import (
     dumps_metadata,
     loads_metadata,
 )
-
-if sys.version_info >= (3, 10):
-    anext = builtins.anext
-    aiter = builtins.aiter
-else:
-
-    async def anext(cls: Any) -> Any:
-        """Compatibility function until we drop 3.9 support: https://docs.python.org/3/library/functions.html#anext."""
-        return await cls.__anext__()
-
-    def aiter(cls: Any) -> Any:
-        """Compatibility function until we drop 3.9 support: https://docs.python.org/3/library/functions.html#anext."""
-        return cls.__aiter__()
-
 
 __all__ = ["AsyncMongoDBSaver"]
 

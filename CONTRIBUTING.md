@@ -135,3 +135,8 @@ just codespell
 ```
 
 If codespell is incorrectly flagging a word, you can skip spellcheck for that word by adding it to the codespell config in the `.pre-commit-config.yaml` file.
+
+### CI Configuration
+The CI configuration for this project is located in the `.github/workflows` directory.
+The `.github/scripts/check_diff.py` script is run automatically at the start of CI to determine which parts of the codebase have changed and need to be tested. I
+f you add new packages or change the directory structure, update this script accordingly.

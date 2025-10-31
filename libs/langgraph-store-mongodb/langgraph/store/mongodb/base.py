@@ -9,13 +9,6 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
 from langchain_mongodb.index import create_vector_search_index
 from langchain_mongodb.pipelines import vector_search_stage
-from pymongo import (
-    DeleteOne,
-    MongoClient,
-    UpdateOne,
-)
-from pymongo.collection import Collection, ReturnDocument
-
 from langgraph.store.base import (
     BaseStore,
     GetOp,
@@ -36,6 +29,13 @@ from langgraph.store.base.embed import (
     ensure_embeddings,
     get_text_at_path,
 )
+from pymongo import (
+    DeleteOne,
+    MongoClient,
+    UpdateOne,
+)
+from pymongo.collection import Collection, ReturnDocument
+
 from langgraph.store.mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
 logger = logging.getLogger(__name__)

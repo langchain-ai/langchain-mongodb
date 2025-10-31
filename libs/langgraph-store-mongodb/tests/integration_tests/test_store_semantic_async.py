@@ -1,16 +1,15 @@
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from time import monotonic, sleep
-from typing import Callable
 
 import pytest
 from langchain_core.embeddings import Embeddings
+from langgraph.store.base import PutOp
+from langgraph.store.memory import InMemoryStore
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import OperationFailure
 
-from langgraph.store.base import PutOp
-from langgraph.store.memory import InMemoryStore
 from langgraph.store.mongodb import (
     MongoDBStore,
     create_vector_index_config,

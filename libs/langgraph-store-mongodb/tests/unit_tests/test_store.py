@@ -4,8 +4,6 @@ from collections.abc import Generator
 from datetime import datetime
 
 import pytest
-from pymongo import MongoClient
-
 from langgraph.store.base import (
     GetOp,
     Item,
@@ -14,6 +12,8 @@ from langgraph.store.base import (
     PutOp,
     TTLConfig,
 )
+from pymongo import MongoClient
+
 from langgraph.store.mongodb import (
     MongoDBStore,
 )

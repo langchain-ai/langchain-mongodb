@@ -2,7 +2,6 @@ from typing import Any
 
 import pytest
 from langchain_core.runnables import RunnableConfig
-
 from langgraph.checkpoint.base import (
     CheckpointMetadata,
     create_checkpoint,

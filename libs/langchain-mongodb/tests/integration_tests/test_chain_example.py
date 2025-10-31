@@ -1,4 +1,4 @@
-"Demonstrates MongoDBAtlasVectorSearch.as_retriever() invoked in a chain" ""
+"Demonstrates MongoDBAtlasVectorSearch.as_retriever() invoked in a chain"
 
 from __future__ import annotations
 

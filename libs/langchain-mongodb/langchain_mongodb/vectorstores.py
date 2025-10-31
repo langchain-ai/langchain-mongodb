@@ -356,7 +356,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas_batch = []
             size = 0
             i = 0
-            for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+            for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=True)):
                 size += len(text) + len(metadata)
                 texts_batch.append(text)
                 metadatas_batch.append(metadata)
@@ -442,7 +442,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 self._embedding_key: embedding,
                 **m,
             }
-            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
+            for i, t, m, embedding in zip(
+                ids, texts, metadatas, embeddings, strict=True
+            )
         ]
         operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas
@@ -478,7 +480,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
+                strict=True,
             )
             result_ids.extend(
                 self.bulk_embed_and_insert_texts(

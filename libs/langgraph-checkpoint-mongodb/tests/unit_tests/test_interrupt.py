@@ -4,10 +4,10 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Interrupt
 from pymongo import MongoClient
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
-from langgraph.types import Interrupt
 
 MONGODB_URI = os.environ.get(
     "MONGODB_URI", "mongodb://127.0.0.1:27017?directConnection=true"

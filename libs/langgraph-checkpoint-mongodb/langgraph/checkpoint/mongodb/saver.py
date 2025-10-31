@@ -8,9 +8,6 @@ from typing import (
 )
 
 from langchain_core.runnables import RunnableConfig, run_in_executor
-from pymongo import ASCENDING, MongoClient, UpdateOne
-from pymongo.database import Database as MongoDatabase
-
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
     BaseCheckpointSaver,
@@ -20,6 +17,8 @@ from langgraph.checkpoint.base import (
     CheckpointTuple,
     get_checkpoint_id,
 )
+from pymongo import ASCENDING, MongoClient, UpdateOne
+from pymongo.database import Database as MongoDatabase
 
 from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
 
