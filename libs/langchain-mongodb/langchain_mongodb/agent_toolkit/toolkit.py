@@ -2,8 +2,6 @@
 
 from typing import List
 
-from langchain_core.caches import BaseCache as BaseCache
-from langchain_core.callbacks import Callbacks as Callbacks
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import BaseToolkit

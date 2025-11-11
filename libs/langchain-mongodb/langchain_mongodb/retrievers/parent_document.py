@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any, List, Optional
 
 import pymongo
-from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -20,10 +21,10 @@ from langchain_mongodb.pipelines import vector_search_stage
 from langchain_mongodb.utils import DRIVER_METADATA, make_serializable
 
 
-class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
+class MongoDBAtlasParentDocumentRetriever(BaseRetriever):
     """MongoDB Atlas's ParentDocumentRetriever
 
-    “Parent Document Retrieval” is a common approach to enhance the performance of
+    "Parent Document Retrieval" is a common approach to enhance the performance of
     retrieval methods in RAG by providing the LLM with a broader context to consider.
     In essence, we divide the original documents into relatively small chunks,
     embed each one, and store them in a vector database.
@@ -38,25 +39,25 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     and the docstore  :class:`~langchain_mongodb.docstores.MongoDBDocStore`
     by the same MongoDB Collection.
 
-    For more details, see superclasses
-        :class:`~langchain.retrievers.parent_document_retriever.ParentDocumentRetriever`
-        and :class:`~langchain.retrievers.MultiVectorRetriever`.
+    This retriever extends :class:`~langchain_core.retrievers.BaseRetriever` and
+    implements the parent document retrieval pattern without requiring the legacy
+    langchain-classic package, making it compatible with LangChain 1.0+.
 
     Examples:
         >>> from langchain_mongodb.retrievers.parent_document import (
-        >>>     ParentDocumentRetriever
+        >>>     MongoDBAtlasParentDocumentRetriever
         >>> )
         >>> from langchain_text_splitters import RecursiveCharacterTextSplitter
         >>> from langchain_openai import OpenAIEmbeddings
         >>>
-        >>> retriever = ParentDocumentRetriever.from_connection_string(
+        >>> retriever = MongoDBAtlasParentDocumentRetriever.from_connection_string(
         >>>     "mongodb+srv://<user>:<clustername>.mongodb.net",
         >>>     OpenAIEmbeddings(model="text-embedding-3-large"),
         >>>     RecursiveCharacterTextSplitter(chunk_size=400),
         >>>     "example_database"
         >>> )
-        retriever.add_documents([Document(..., technical_report_pages)
-        >>> resp = retriever.invoke("Langchain MongDB Partnership Ecosystem")
+        >>> retriever.add_documents([Document(...), ...])  # Parent documents
+        >>> resp = retriever.invoke("Langchain MongoDB Partnership Ecosystem")
         >>> print(resp)
         [Document(...), ...]
 
@@ -65,17 +66,22 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     vectorstore: MongoDBAtlasVectorSearch
     """Vectorstore API to add, embed, and search through child documents"""
 
+    child_splitter: TextSplitter
+
     docstore: MongoDBDocStore
     """Provides an API around the Collection to add the parent documents"""
 
     id_key: str = "doc_id"
     """Key stored in metadata pointing to parent document"""
 
+    search_kwargs: dict = {}
+    """Additional search parameters for vector search"""
+
     def _get_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: Optional[CallbackManagerForRetrieverRun] = None,
+            self,
+            query: str,
+            *,
+            run_manager: Optional[CallbackManagerForRetrieverRun] = None,
     ) -> List[Document]:
         query_vector = self.vectorstore._embedding.embed_query(query)
 
@@ -120,10 +126,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         return docs
 
     async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: AsyncCallbackManagerForRetrieverRun,
+            self,
+            query: str,
+            *,
+            run_manager: AsyncCallbackManagerForRetrieverRun,
     ) -> List[Document]:
         """Asynchronous version of get_relevant_documents"""
 
@@ -136,14 +142,14 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
 
     @classmethod
     def from_connection_string(
-        cls,
-        connection_string: str,
-        embedding_model: Embeddings,
-        child_splitter: TextSplitter,
-        database_name: str,
-        collection_name: str = "document_with_chunks",
-        id_key: str = "doc_id",
-        **kwargs: Any,
+            cls,
+            connection_string: str,
+            embedding_model: Embeddings,
+            child_splitter: TextSplitter,
+            database_name: str,
+            collection_name: str = "document_with_chunks",
+            id_key: str = "doc_id",
+            **kwargs: Any,
     ) -> MongoDBAtlasParentDocumentRetriever:
         """Construct Retriever using one Collection for VectorStore and one for DocStore
 
@@ -158,7 +164,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
                 If parent_splitter is given, the documents will have already been split.
             database_name: Name of database to connect to. Created if it does not exist.
             collection_name: Name of collection to use.
-                It includes parent documents, sub-documents and their  embeddings.
+                It includes parent documents, sub-documents, and their  embeddings.
             id_key: Key used to identify parent documents.
             **kwargs: Additional keyword arguments. See parent classes for more.
 
@@ -183,6 +189,44 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             id_key=id_key,
             **kwargs,
         )
+
+    def add_documents(
+        self,
+        documents: List[Document],
+        ids: Optional[List[str]] = None,
+        add_to_docstore: bool = True,
+    ) -> None:
+        """Add documents to vectorstore and docstore.
+
+        Args:
+            documents: List of parent documents to add
+            ids: Optional list of ids for documents. If not provided, will be generated.
+            add_to_docstore: Whether to add parent documents to docstore
+        """
+        if ids is None:
+            doc_ids = [str(uuid.uuid4()) for _ in documents]
+        else:
+            doc_ids = ids
+
+        # Split documents into chunks
+        sub_docs = []
+        for i, doc in enumerate(documents):
+            _id = doc_ids[i]
+            # Use child_splitter to split the document
+            _sub_docs = self.child_splitter.split_documents([doc])
+            # Add parent doc id to metadata
+            for _doc in _sub_docs:
+                _doc.metadata[self.id_key] = _id
+            sub_docs.extend(_sub_docs)
+
+        # Add chunks to vectorstore (OUTSIDE the loop)
+        self.vectorstore.add_documents(sub_docs)
+
+        # Add parent documents to docstore using mset (OUTSIDE the loop)
+        if add_to_docstore:
+            # mset expects a sequence of tuples (key, Document)
+            key_value_pairs = [(doc_id, doc) for doc_id, doc in zip(doc_ids, documents)]
+            self.docstore.mset(key_value_pairs)
 
     def close(self) -> None:
         """Close the resources used by the MongoDBAtlasParentDocumentRetriever."""

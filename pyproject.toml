@@ -1,11 +1,17 @@
 [project]
 name = "langchain-mongodb-monorepo"
-version = "0.1.0"
+version = "0.2.0"
 description = "LangChain MongoDB mono-repo"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-dependencies = []
+dependencies = [
+    "langchain-core>=1.0.0,<1.1.0",
+    "langchain-ollama>=1.0.0",
+    "langchain-openai>=1.0.0",
+    "langchain-tests>=1.0.0",
+    "pytest>=8.4.2",
+]
 
 [dependency-groups]
 dev = [
@@ -15,12 +21,12 @@ dev = [
     "sphinx>=7.4.7",
     "sphinx-copybutton>=0.5.2",
     "toml>=0.10.2",
-    "langchain-core>=0.3.30",
+    "langchain-core>=1.0.1,<1.1.0",
     "sphinxcontrib-googleanalytics>=0.4",
     "langchain-mongodb",
     "langgraph-checkpoint-mongodb",
     "langgraph-store-mongodb",
-    "langchain-community>=0.3.14",
+    "langchain-community>=1.0.0a1,<1.1.0",
     "myst-parser>=3.0.1",
     "ipython>=8.18.1",
 ]
