@@ -822,7 +822,6 @@ dev = [
     { name = "mypy", specifier = ">=1.10" },
     { name = "pip", specifier = ">=25.0.1" },
     { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pymongo-search-utils", git = "https://github.com/mongodb-labs/pymongo-search-utils.git" },
     { name = "pypdf", specifier = ">=5.0.1" },
     { name = "pytest", specifier = ">=7.3.0" },
     { name = "pytest-asyncio", specifier = ">=0.21.1" },
