@@ -43,6 +43,7 @@ dev = [
     "langchain-tests==0.3.22",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
+    "pymongo-search-utils@git+https://github.com/mongodb-labs/pymongo-search-utils.git",
 ]
 
 [tool.pytest.ini_options]
