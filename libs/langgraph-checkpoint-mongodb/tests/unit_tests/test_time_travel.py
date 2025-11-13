@@ -53,12 +53,13 @@ def checkpointer(request: Any) -> Generator[MongoDBSaver]:
     saver = MongoDBSaver(
         client=client,
         db_name=db_name,
-        collection_name=checkpoint_collection_name,
-        WRITES_COLLECTION_NAME=writes_collection_name,
+        checkpoint_collection_name=checkpoint_collection_name,
+        writes_collection_name=writes_collection_name,
         ttl=request.param,
     )
 
     # Can use this to compare
+    # from langgraph.checkpoint.memory import InMemorySaver
     # saver = InMemorySaver()
 
     yield saver
@@ -93,7 +94,7 @@ def test(checkpointer: MongoDBSaver) -> None:
     graph = workflow.compile(checkpointer=checkpointer)
 
     # Run the graph
-    graph.invoke(input=initial_state, config=config)  # type:ignore[arg-type]
+    graph.invoke(input=initial_state, config=config, stream_mode="checkpoints")  # type:ignore[arg-type]
 
     # Check to see whether the final state is approved
     final_state = graph.get_state(config=config)
@@ -108,10 +109,12 @@ def test(checkpointer: MongoDBSaver) -> None:
 
     target_checkpoint = None
     for checkpoint in checkpoints:
-        # Look for checkpoint after increment but before final processing
+        # Look for checkpoint after add_expense but before validate_expense
         if (
-            checkpoint.metadata and checkpoint.metadata.get("step") == 1
-        ):  # Before validate node
+            checkpoint.metadata
+            and checkpoint.metadata.get("step") == 1
+            and "validate_expense" in checkpoint.next
+        ):
             target_checkpoint = checkpoint
             break
 
@@ -126,15 +129,16 @@ def test(checkpointer: MongoDBSaver) -> None:
     assert target_checkpoint
     past_state = graph.get_state(target_checkpoint.config)
 
-    # Update the expense amount to 200 that validate amounts
+    # Update the expense amount to 200 that validates amounts
     updated_state = dict(**past_state.values)
-    # updated_state = {}
-    updated_state["amount"] = 200
-    updated_state["version"] = 2
+    updated_state["amount"] += 100
+    updated_state["version"] += 1
     updated_state["messages"] += ["Updated state"]
 
     updated_config = graph.update_state(
-        config=target_checkpoint.config, values=updated_state
+        config=target_checkpoint.config,
+        values=updated_state,
+        as_node="add_expense",
     )
 
     # Continue from the checkpoint

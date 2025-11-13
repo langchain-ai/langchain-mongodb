@@ -9,8 +9,8 @@ description = "Library with a MongoDB implementation of LangGraph checkpoint sav
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "langgraph-checkpoint>=2.0.23,<3.0.0",
-    "langchain-mongodb>=0.6.1",
+    "langgraph-checkpoint>=3.0.0",
+    "langchain-mongodb<1.0.0",
     "pymongo>=4.12,<4.16",
 ]
 
@@ -21,7 +21,6 @@ dev = [
     "langchain-ollama>=0.2.2",
     "langchain-openai>=0.2.14",
     "langgraph>=0.3.23",
-    "langgraph-checkpoint>=2.0.9",
     "pytest-asyncio>=0.21.1",
     "pytest>=7.2.1",
     "pytest-mock>=3.11.1",
