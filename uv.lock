@@ -920,7 +920,7 @@ dev = [
 
 [[package]]
 name = "langgraph-store-mongodb"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "libs/langgraph-store-mongodb" }
 dependencies = [
     { name = "langchain-mongodb" },
