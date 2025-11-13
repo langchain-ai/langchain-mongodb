@@ -9,7 +9,7 @@ description = "MongoDB implementation of the LangGraph long-term memory store."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "langgraph-checkpoint>=2.0.23,<3.0.0",
+    "langgraph-checkpoint>=3.0.0",
     "langchain-mongodb>=0.6.1",
 ]
 

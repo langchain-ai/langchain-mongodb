@@ -2,6 +2,11 @@
 
 ---
 
+## Changes in version 0.2.2 (2025/11/13)
+
+- Bumps minimum version of langgraph-checkpoint to 3.0 to address the Remode Code Execution CVE in JsonPlusSerializer's "json" mode, described [here](https://osv.dev/vulnerability/GHSA-wwqv-p2pp-99h5).
+- Fixed teardown step in release.yml GitHub workflow.
+
 ## Changes in version 0.2.1 (2025/09/25)
 
 - Fixes bug when graph interrupted leading to DuplicateKeyError when TTL is set.

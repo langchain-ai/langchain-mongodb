@@ -154,7 +154,8 @@ def test_nested_filter() -> None:
         assert (
             isinstance(doc["metadata"], dict)
             and isinstance(doc["metadata"]["writes"], dict)
-            and isinstance(doc["metadata"]["writes"]["message"], bytes)
+            and doc["metadata"]["writes"]["message"][0] == "msgpack"
+            and isinstance(doc["metadata"]["writes"]["message"][1], bytes)
         )
 
         # Test values of checkpoint

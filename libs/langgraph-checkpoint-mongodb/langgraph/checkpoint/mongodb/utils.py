@@ -41,7 +41,7 @@ def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
             output[key] = loads_metadata(value)
         return output
     else:
-        return serde.loads(metadata)
+        return serde.loads_typed(metadata)
 
 
 def dumps_metadata(
@@ -57,4 +57,4 @@ def dumps_metadata(
             output[key] = dumps_metadata(value)
         return output
     else:
-        return serde.dumps(metadata)
+        return serde.dumps_typed(metadata)
