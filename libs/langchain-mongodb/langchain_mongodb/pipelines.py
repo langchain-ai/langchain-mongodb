@@ -9,6 +9,8 @@ See the following for more:
 
 from typing import Any, Dict, List, Optional, Union
 
+from pymongo_search_utils import combine_pipelines  # noqa: F401
+
 
 def text_search_stage(
     query: str,
@@ -89,16 +91,6 @@ def vector_search_stage(
     if filter:
         stage["filter"] = filter
     return {"$vectorSearch": stage}
-
-
-def combine_pipelines(
-    pipeline: List[Any], stage: List[Dict[str, Any]], collection_name: str
-) -> None:
-    """Combines two aggregations into a single result set in-place."""
-    if pipeline:
-        pipeline.append({"$unionWith": {"coll": collection_name, "pipeline": stage}})
-    else:
-        pipeline.extend(stage)
 
 
 def reciprocal_rank_stage(
