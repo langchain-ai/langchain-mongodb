@@ -817,7 +817,7 @@ dev = [
     { name = "langchain-openai", specifier = ">=1.0" },
     { name = "langchain-tests", specifier = "==0.3.22" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
-    { name = "langgraph", specifier = ">=0.2.72" },
+    { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mongomock", specifier = ">=4.2.0.post1" },
     { name = "mypy", specifier = ">=1.10" },
     { name = "pip", specifier = ">=25.0.1" },
