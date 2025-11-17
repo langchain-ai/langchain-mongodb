@@ -53,9 +53,15 @@ with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME) as checkpointer:
 ### Async
 
 ```python
-from langgraph.checkpoint.pymongo import AsyncMongoDBSaver
+from langgraph.checkpoint.mongodb import MongoDBSaver
 
-async with AsyncMongoDBSaver.from_conn_string(MONGODB_URI) as checkpointer:
+write_config = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
+read_config = {"configurable": {"thread_id": "1"}}
+
+MONGODB_URI = "mongodb://localhost:27017"
+DB_NAME = "checkpoint_example"
+
+with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME) as checkpointer:
     checkpoint = {
         "v": 1,
         "ts": "2024-07-31T20:14:19.804150+00:00",
