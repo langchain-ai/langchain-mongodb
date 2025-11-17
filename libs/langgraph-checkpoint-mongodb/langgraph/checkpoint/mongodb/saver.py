@@ -470,6 +470,16 @@ class MongoDBSaver(BaseCheckpointSaver):
         # Delete all writes associated with the thread ID
         self.writes_collection.delete_many({"thread_id": thread_id})
 
+    async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Get a checkpoint tuple from the database.
+
+        Asynchronously wraps the blocking `self.get_tuple` method.
+
+         Args:
+             config (RunnableConfig): The config to use for retrieving the checkpoint.
+        """
+        return await run_in_executor(None, self.get_tuple, config)
+
     async def alist(
         self,
         config: Optional[RunnableConfig],
@@ -572,13 +582,3 @@ class MongoDBSaver(BaseCheckpointSaver):
             thread_id: The thread ID whose checkpoints should be deleted.
         """
         return await run_in_executor(None, self.delete_thread, thread_id)
-
-    async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
-        """Get a checkpoint tuple from the database.
-
-        Asynchronously wraps the blocking `self.get_tuple` method.
-
-         Args:
-             config (RunnableConfig): The config to use for retrieving the checkpoint.
-        """
-        return await run_in_executor(None, self.get_tuple, config)
