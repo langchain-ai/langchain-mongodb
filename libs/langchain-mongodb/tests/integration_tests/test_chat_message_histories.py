@@ -1,7 +1,14 @@
 import json
 import warnings
 
-from langchain.memory import ConversationBufferMemory  # type: ignore[import-not-found]
+try:
+    from langchain.memory import (  # type: ignore[import-not-found]
+        ConversationBufferMemory,
+    )
+except ImportError:
+    from langchain_classic.memory import (  # type: ignore[import-not-found]
+        ConversationBufferMemory,
+    )
 from langchain_core.messages import message_to_dict
 
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory

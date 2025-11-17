@@ -4,8 +4,21 @@ import os
 from typing import Generator, Sequence, Union
 
 import pytest
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+
+try:
+    from langchain.chains.query_constructor.schema import (  # type: ignore[import-not-found]
+        AttributeInfo,
+    )
+    from langchain.retrievers.self_query.base import (  # type: ignore[import-not-found]
+        SelfQueryRetriever,
+    )
+except ImportError:
+    from langchain_classic.chains.query_constructor.schema import (  # type: ignore[import-not-found]
+        AttributeInfo,
+    )
+    from langchain_classic.retrievers.self_query.base import (  # type: ignore[import-not-found]
+        SelfQueryRetriever,
+    )
 from langchain_core.documents import Document
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI

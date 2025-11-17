@@ -10,10 +10,11 @@ description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "langchain-core>=0.3,<1.0",
-    "langchain>=0.3,<1.0",
+    "langchain-core>=1.0",
+    "langchain>=1.0",
+    "langchain-classic>=1.0",
     "pymongo>=4.6.1",
-    "langchain-text-splitters>=0.3,<1.0",
+    "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
 ]
@@ -21,9 +22,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "freezegun>=1.2.2",
-    "langchain>=0.3.14,<1.0",
-    "langchain-core>=0.3.29,<1.0",
-    "langchain-text-splitters>=0.3.5,<1.0",
+    "langchain>=1.0",
+    "langchain-core>=1.0",
+    "langchain-text-splitters>=1.0",
     "pytest-mock>=3.10.0",
     "pytest>=7.3.0",
     "syrupy>=4.0.2",
@@ -33,13 +34,13 @@ dev = [
     "pre-commit>=4.0",
     "mypy>=1.10",
     "simsimd>=6.5.0",
-    "langchain-ollama>=0.2.2,<1.0",
-    "langchain-openai>=0.2.14,<1.0",
-    "langchain-community>=0.3.27,<1.0",
+    "langchain-ollama>=1.0",
+    "langchain-openai>=1.0",
+    "langchain-community>=0.3.27",
     "pypdf>=5.0.1",
     "langgraph>=0.2.72",
     "flaky>=3.8.1",
-    "langchain-tests==0.3.22,<1.0",
+    "langchain-tests==0.3.22",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
 ]
