@@ -882,3 +882,15 @@ class MongoDBAtlasVectorSearch(VectorStore):
             wait_until_complete=wait_until_complete,
             **kwargs,
         )  # type: ignore [operator]
+
+    def similarity_search_by_vector(
+        query_vector: list[float],
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Document]:
+        tuple_list = self.vector_store._similarity_search_with_score(
+            query_vector,
+            *args,
+            **kwargs,
+        )
+        return [doc for doc, _ in tuple_list]
