@@ -9,7 +9,10 @@ See the following for more:
 
 from typing import Any, Dict, List, Optional, Union
 
-from pymongo_search_utils import combine_pipelines  # noqa: F401
+from pymongo_search_utils import (
+    combine_pipelines,  # noqa: F401
+    final_hybrid_stage,  # noqa: F401
+)
 
 
 def text_search_stage(
@@ -128,27 +131,4 @@ def reciprocal_rank_stage(
             }
         },
         {"$replaceRoot": {"newRoot": "$docs"}},
-    ]
-
-
-def final_hybrid_stage(
-    scores_fields: List[str], limit: int, **kwargs: Any
-) -> List[Dict[str, Any]]:
-    """Sum weighted scores, sort, and apply limit.
-
-    Args:
-        scores_fields: List of fields given to scores of vector and text searches
-        limit: Number of documents to return
-
-    Returns:
-        Final aggregation stages
-    """
-
-    return [
-        {"$group": {"_id": "$_id", "docs": {"$mergeObjects": "$$ROOT"}}},
-        {"$replaceRoot": {"newRoot": "$docs"}},
-        {"$set": {score: {"$ifNull": [f"${score}", 0]} for score in scores_fields}},
-        {"$addFields": {"score": {"$add": [f"${score}" for score in scores_fields]}}},
-        {"$sort": {"score": -1}},
-        {"$limit": limit},
     ]
