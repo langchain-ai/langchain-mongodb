@@ -2,11 +2,11 @@
 
 import logging
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from pymongo.collection import Collection
-from pymongo.operations import SearchIndexModel
 from pymongo_search_utils import (
+    create_fulltext_search_index,  # noqa: F401
     create_vector_search_index,  # noqa: F401
     drop_vector_search_index,  # noqa: F401
     update_vector_search_index,  # noqa: F401
@@ -75,50 +75,3 @@ def _wait_for_predicate(
         if monotonic() - start > timeout:
             raise TimeoutError(err)
         sleep(interval)
-
-
-def create_fulltext_search_index(
-    collection: Collection,
-    index_name: str,
-    field: Union[str, List[str]],
-    *,
-    wait_until_complete: Optional[float] = None,
-    **kwargs: Any,
-) -> None:
-    """Experimental Utility function to create an Atlas Search index
-
-    Args:
-        collection (Collection): MongoDB Collection
-        index_name (str): Name of Index
-        field (str): Field to index
-        wait_until_complete (Optional[float]): If provided, number of seconds to wait
-            until search index is ready
-        kwargs: Keyword arguments supplying any additional options to SearchIndexModel.
-    """
-    logger.info("Creating Search Index %s on %s", index_name, collection.name)
-
-    if collection.name not in collection.database.list_collection_names(
-        authorizedCollections=True
-    ):
-        collection.database.create_collection(collection.name)
-
-    if isinstance(field, str):
-        fields_definition = {field: [{"type": "string"}]}
-    else:
-        fields_definition = {f: [{"type": "string"}] for f in field}
-    definition = {"mappings": {"dynamic": False, "fields": fields_definition}}
-    result = collection.create_search_index(
-        SearchIndexModel(
-            definition=definition,
-            name=index_name,
-            type="search",
-            **kwargs,
-        )
-    )
-    if wait_until_complete:
-        _wait_for_predicate(
-            predicate=lambda: _is_index_ready(collection, index_name),
-            err=f"{index_name=} did not complete in {wait_until_complete}!",
-            timeout=wait_until_complete,
-        )
-    logger.info(result)
