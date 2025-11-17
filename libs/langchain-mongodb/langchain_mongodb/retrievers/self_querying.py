@@ -1,21 +1,11 @@
 from typing import Any, Dict, Sequence, Tuple, Union
 
-try:
-    from langchain.chains.query_constructor.schema import (  # type: ignore[import-not-found]
-        AttributeInfo,
-    )
-except ImportError:
-    from langchain_classic.chains.query_constructor.schema import (  # type: ignore[import-not-found]
-        AttributeInfo,
-    )
-try:
-    from langchain.retrievers.self_query.base import (  # type: ignore[import-not-found]
-        SelfQueryRetriever,
-    )
-except ImportError:
-    from langchain_classic.retrievers.self_query.base import (  # type: ignore[import-not-found]
-        SelfQueryRetriever,
-    )
+from langchain_classic.chains.query_constructor.schema import (
+    AttributeInfo,
+)
+from langchain_classic.retrievers.self_query.base import (
+    SelfQueryRetriever,
+)
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.runnables import Runnable
 from langchain_core.structured_query import (

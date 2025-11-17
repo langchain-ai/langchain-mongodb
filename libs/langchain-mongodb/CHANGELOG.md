@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.8.0 (2025/11/18)
+
+- Update dependencies to align with LangChain 1.0, which is now the minimum supported version of LangChain.
+
 ## Changes in version 0.7.2 (2025/10/30)
 
 - Pin LangChain version to < 1.0 to avoid compatibility issues while in pre-1.0.
