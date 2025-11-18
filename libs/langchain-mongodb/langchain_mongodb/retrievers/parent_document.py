@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 import pymongo
-from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+from langchain_classic.retrievers.parent_document_retriever import (
+    ParentDocumentRetriever,
+)
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
