@@ -5,7 +5,6 @@ from langgraph.checkpoint.base import CheckpointMetadata, empty_checkpoint
 from pymongo import MongoClient
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
-from langgraph.checkpoint.mongodb.aio import AsyncMongoDBSaver
 
 # Setup:
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
@@ -99,7 +98,7 @@ async def test_adelete_thread() -> None:
     db[CHKPT_COLLECTION_NAME].delete_many({})
     db[WRITES_COLLECTION_NAME].delete_many({})
 
-    async with AsyncMongoDBSaver.from_conn_string(
+    with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, CHKPT_COLLECTION_NAME, WRITES_COLLECTION_NAME
     ) as saver:
         # Thread 1 data
@@ -130,7 +129,7 @@ async def test_adelete_thread() -> None:
             "writes": {"baz": "qux"},
         }
 
-        assert await saver.checkpoint_collection.count_documents({}) == 0
+        assert saver.checkpoint_collection.count_documents({}) == 0
 
         # Save checkpoints for both threads
         await saver.aput(config_1, chkpnt_1, metadata_1, {})
@@ -146,25 +145,13 @@ async def test_adelete_thread() -> None:
 
         # Verify we have write data
         assert (
-            await saver.checkpoint_collection.count_documents(
-                {"thread_id": thread_1_id}
-            )
-            > 0
+            saver.checkpoint_collection.count_documents({"thread_id": thread_1_id}) > 0
         )
+        assert saver.writes_collection.count_documents({"thread_id": thread_1_id}) > 0
         assert (
-            await saver.writes_collection.count_documents({"thread_id": thread_1_id})
-            > 0
+            saver.checkpoint_collection.count_documents({"thread_id": thread_2_id}) > 0
         )
-        assert (
-            await saver.checkpoint_collection.count_documents(
-                {"thread_id": thread_2_id}
-            )
-            > 0
-        )
-        assert (
-            await saver.writes_collection.count_documents({"thread_id": thread_2_id})
-            > 0
-        )
+        assert saver.writes_collection.count_documents({"thread_id": thread_2_id}) > 0
 
         # Delete thread 1
         await saver.adelete_thread(thread_1_id)
@@ -172,25 +159,13 @@ async def test_adelete_thread() -> None:
         # Verify thread 1 data is gone
         assert await saver.aget_tuple(config_1) is None
         assert (
-            await saver.checkpoint_collection.count_documents(
-                {"thread_id": thread_1_id}
-            )
-            == 0
+            saver.checkpoint_collection.count_documents({"thread_id": thread_1_id}) == 0
         )
-        assert (
-            await saver.writes_collection.count_documents({"thread_id": thread_1_id})
-            == 0
-        )
+        assert saver.writes_collection.count_documents({"thread_id": thread_1_id}) == 0
 
         # Verify thread 2 data still exists
         assert await saver.aget_tuple(config_2) is not None
         assert (
-            await saver.checkpoint_collection.count_documents(
-                {"thread_id": thread_2_id}
-            )
-            > 0
+            saver.checkpoint_collection.count_documents({"thread_id": thread_2_id}) > 0
         )
-        assert (
-            await saver.writes_collection.count_documents({"thread_id": thread_2_id})
-            > 0
-        )
+        assert saver.writes_collection.count_documents({"thread_id": thread_2_id}) > 0

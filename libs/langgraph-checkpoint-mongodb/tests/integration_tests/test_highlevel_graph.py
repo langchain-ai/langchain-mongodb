@@ -15,7 +15,7 @@ It also demonstrates the high-level API of subgraphs, add_conditional_edges, and
 import operator
 import os
 import time
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from typing import Annotated
 
 import pytest
@@ -26,7 +26,7 @@ from langgraph.constants import START, Send
 from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
 
-from langgraph.checkpoint.mongodb import AsyncMongoDBSaver, MongoDBSaver
+from langgraph.checkpoint.mongodb import MongoDBSaver
 
 # --- Configuration ---
 MONGODB_URI = os.environ.get(
@@ -119,21 +119,6 @@ def checkpointer_mongodb() -> Generator[MongoDBSaver, None, None]:
         checkpointer.writes_collection.drop()
 
 
-@pytest.fixture(scope="function")
-async def checkpointer_mongodb_async() -> AsyncGenerator[AsyncMongoDBSaver, None]:
-    async with AsyncMongoDBSaver.from_conn_string(
-        MONGODB_URI,
-        db_name=DB_NAME,
-        checkpoint_collection_name=CHECKPOINT_CLXN_NAME + "_async",
-        writes_collection_name=WRITES_CLXN_NAME + "_async",
-    ) as checkpointer:
-        await checkpointer.checkpoint_collection.delete_many({})
-        await checkpointer.writes_collection.delete_many({})
-        yield checkpointer
-        await checkpointer.checkpoint_collection.drop()
-        await checkpointer.writes_collection.drop()
-
-
 @pytest.fixture(autouse=True)
 def disable_langsmith() -> None:
     """Disable LangSmith tracing for all tests"""
@@ -144,12 +129,10 @@ def disable_langsmith() -> None:
 async def test_fanout(
     joke_subjects: OverallState,
     checkpointer_mongodb: MongoDBSaver,
-    checkpointer_mongodb_async: AsyncMongoDBSaver,
     checkpointer_memory: InMemorySaver,
 ) -> None:
     checkpointers = {
         "mongodb": checkpointer_mongodb,
-        "mongodb_async": checkpointer_mongodb_async,
         "in_memory": checkpointer_memory,
         "in_memory_async": checkpointer_memory,
     }
@@ -178,9 +161,7 @@ async def test_fanout(
         print(f"{cname}: {end - start:.4f} seconds")
 
 
-async def test_custom_properties_async(
-    checkpointer_mongodb: MongoDBSaver, checkpointer_mongodb_async: AsyncMongoDBSaver
-) -> None:
+async def test_custom_properties_async(checkpointer_mongodb: MongoDBSaver) -> None:
     # Create the state graph
     state_graph = fanout_to_subgraph()
 
@@ -196,7 +177,7 @@ async def test_custom_properties_async(
     }
 
     # Compile the state graph with the provided checkpointing mechanism
-    compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb_async)
+    compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb)
 
     # Invoke the compiled state graph with user input
     await compiled_state_graph.ainvoke(
@@ -206,7 +187,7 @@ async def test_custom_properties_async(
         debug=False,
     )
 
-    checkpoint_tuple = await checkpointer_mongodb_async.aget_tuple(config)
+    checkpoint_tuple = await checkpointer_mongodb.aget_tuple(config)
     assert checkpoint_tuple is not None
     assert checkpoint_tuple.metadata["user_id"] == user_id
     assert checkpoint_tuple.metadata["assistant_id"] == assistant_id
