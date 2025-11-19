@@ -884,6 +884,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         )  # type: ignore [operator]
 
     def similarity_search_by_vector(
+        self,
         query_vector: list[float],
         *args: Any,
         **kwargs: Any,
