@@ -793,6 +793,7 @@ dependencies = [
     { name = "lark" },
     { name = "numpy" },
     { name = "pymongo" },
+    { name = "pymongo-search-utils" },
 ]
 
 [package.metadata]
@@ -804,6 +805,7 @@ requires-dist = [
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pymongo", specifier = ">=4.6.1" },
+    { name = "pymongo-search-utils", git = "https://github.com/mongodb-labs/pymongo-search-utils.git" },
 ]
 
 [package.metadata.requires-dev]
@@ -822,7 +824,6 @@ dev = [
     { name = "mypy", specifier = ">=1.10" },
     { name = "pip", specifier = ">=25.0.1" },
     { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pymongo-search-utils", git = "https://github.com/mongodb-labs/pymongo-search-utils.git" },
     { name = "pypdf", specifier = ">=5.0.1" },
     { name = "pytest", specifier = ">=7.3.0" },
     { name = "pytest-asyncio", specifier = ">=0.21.1" },
@@ -1804,6 +1805,14 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a1/69/d56f0897cc4932a336820c5d2470ffed50be04c624b07d1ad6ea75aaa975/pymongo-4.13.2-cp313-cp313t-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:51040e1ba78d6671f8c65b29e2864483451e789ce93b1536de9cc4456ede87fa", size = 2219378, upload-time = "2025-06-16T18:16:04.108Z" },
     { url = "https://files.pythonhosted.org/packages/04/1e/427e7f99801ee318b6331062d682d3816d7e1d6b6013077636bd75d49c87/pymongo-4.13.2-cp313-cp313t-win32.whl", hash = "sha256:7ab86b98a18c8689514a9f8d0ec7d9ad23a949369b31c9a06ce4a45dcbffcc5e", size = 979460, upload-time = "2025-06-16T18:16:06.128Z" },
     { url = "https://files.pythonhosted.org/packages/b5/9c/00301a6df26f0f8d5c5955192892241e803742e7c3da8c2c222efabc0df6/pymongo-4.13.2-cp313-cp313t-win_amd64.whl", hash = "sha256:c38168263ed94a250fc5cf9c6d33adea8ab11c9178994da1c3481c2a49d235f8", size = 1011057, upload-time = "2025-06-16T18:16:07.917Z" },
+]
+
+[[package]]
+name = "pymongo-search-utils"
+version = "0.1.0.dev0"
+source = { git = "https://github.com/mongodb-labs/pymongo-search-utils.git#7dde56682e59f10618ce8b2b50a0a6c5f6606d94" }
+dependencies = [
+    { name = "pymongo" },
 ]
 
 [[package]]

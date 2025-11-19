@@ -17,6 +17,7 @@ dependencies = [
     "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
+    "pymongo-search-utils@git+https://github.com/mongodb-labs/pymongo-search-utils.git",
 ]
 
 [dependency-groups]
@@ -43,7 +44,6 @@ dev = [
     "langchain-tests==0.3.22",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
-    "pymongo-search-utils@git+https://github.com/mongodb-labs/pymongo-search-utils.git",
 ]
 
 [tool.pytest.ini_options]
@@ -84,3 +84,6 @@ lint.ignore = ["E501", "B008", "UP007", "UP006", "UP035", "UP045"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
