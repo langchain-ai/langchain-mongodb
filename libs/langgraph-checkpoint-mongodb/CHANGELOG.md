@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.3.0 (2025/11/18)
+## Changes in version 0.3.0 (2025/11/19)
 - Allow custom serde objects to be passed to MongoDBSaver for serialization/deserialization.
 - Remove the deprecated AsyncMongoDBSaver class, which has been replaced by MongoDBSaver's async methods.
 - Update dependencies to require LangChain and LangGraph versions 1.0.0 and above.
