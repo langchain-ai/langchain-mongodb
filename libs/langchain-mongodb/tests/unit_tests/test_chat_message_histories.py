@@ -3,7 +3,9 @@ import warnings
 
 import mongomock
 import pytest
-from langchain.memory import ConversationBufferMemory  # type: ignore[import-not-found]
+from langchain_classic.memory import (
+    ConversationBufferMemory,
+)
 from langchain_core.messages import message_to_dict
 from pytest_mock import MockerFixture
 
