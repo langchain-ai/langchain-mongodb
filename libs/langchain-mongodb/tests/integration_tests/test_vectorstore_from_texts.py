@@ -117,3 +117,41 @@ def test_search_pre_filter(
         "Sandwich", k=3, pre_filter={"c": {"$gt": 0}}
     )
     assert len(matches_filter) == 1
+
+
+def test_similarity_search_by_vector(
+    vectorstore: PatchedMongoDBAtlasVectorSearch,
+    embeddings: Embeddings,
+    texts: List[str],
+) -> None:
+    # Test similarity_search_by_vector method
+    # First, embed a query text to get a vector
+    query_text = "Sandwich"
+    query_vector = embeddings.embed_query(query_text)
+
+    # Perform search by vector
+    output = vectorstore.similarity_search_by_vector(query_vector, k=2)
+
+    # Should return results
+    assert len(output) == 2
+    # Results should be Document objects
+    assert all(hasattr(doc, "page_content") for doc in output)
+    assert all(hasattr(doc, "metadata") for doc in output)
+
+
+def test_similarity_search_by_vector_with_filter(
+    vectorstore: PatchedMongoDBAtlasVectorSearch,
+    embeddings: Embeddings,
+) -> None:
+    # Test similarity_search_by_vector with pre_filter
+    query_text = "Sandwich"
+    query_vector = embeddings.embed_query(query_text)
+
+    # Search with filter
+    filtered_output = vectorstore.similarity_search_by_vector(
+        query_vector, k=3, pre_filter={"c": {"$gt": 0}}
+    )
+
+    # Should only return documents matching the filter
+    assert len(filtered_output) == 1
+    assert "c" in filtered_output[0].metadata
