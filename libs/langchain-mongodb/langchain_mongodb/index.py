@@ -15,15 +15,18 @@ def _vector_search_index_definition(
     path: str,
     similarity: str,
     filters: Optional[List[str]] = None,
+    vector_index_options: dict | None = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     # https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/
+    vector_index_options = vector_index_options or {}
     fields = [
         {
             "numDimensions": dimensions,
             "path": path,
             "similarity": similarity,
             "type": "vector",
+            **vector_index_options,
         },
     ]
     if filters:
@@ -41,6 +44,7 @@ def create_vector_search_index(
     path: str,
     similarity: str,
     filters: Optional[List[str]] = None,
+    vector_index_options: dict | None = None,
     *,
     wait_until_complete: Optional[float] = None,
     **kwargs: Any,
@@ -72,6 +76,7 @@ def create_vector_search_index(
                 path=path,
                 similarity=similarity,
                 filters=filters,
+                vector_index_options=vector_index_options,
                 **kwargs,
             ),
             name=index_name,
@@ -122,6 +127,7 @@ def update_vector_search_index(
     path: str,
     similarity: str,
     filters: Optional[List[str]] = None,
+    vector_index_options: dict | None = None,
     *,
     wait_until_complete: Optional[float] = None,
     **kwargs: Any,
@@ -151,6 +157,7 @@ def update_vector_search_index(
             path=path,
             similarity=similarity,
             filters=filters,
+            vector_index_options=vector_index_options,
             **kwargs,
         ),
     )

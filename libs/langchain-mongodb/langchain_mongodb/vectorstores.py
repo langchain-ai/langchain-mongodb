@@ -212,6 +212,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         dimensions: int = -1,
         auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
+        vector_index_options: dict | None = None,
         **kwargs: Any,
     ):
         """
@@ -256,6 +257,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 path=embedding_key,
                 similarity=relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
+                vector_index_options=vector_index_options,
             )
 
     @property
@@ -841,6 +843,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         filters: Optional[List[str]] = None,
         update: bool = False,
         wait_until_complete: Optional[float] = None,
+        vector_index_options: dict | None = None,
         **kwargs: Any,
     ) -> None:
         """Creates a MongoDB Atlas vectorSearch index for the VectorStore
@@ -879,6 +882,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             path=self._embedding_key,
             similarity=self._relevance_score_fn,
             filters=filters or [],
+            vector_index_options=vector_index_options,
             wait_until_complete=wait_until_complete,
             **kwargs,
         )  # type: ignore [operator]
