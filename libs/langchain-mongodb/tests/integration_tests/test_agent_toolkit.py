@@ -4,8 +4,8 @@ import sqlite3
 import pytest
 import requests
 from flaky import flaky  # type:ignore[import-untyped]
+from langchain.agents import create_agent  # type: ignore[assignment]
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
-from langgraph.prebuilt import create_react_agent
 from pymongo import MongoClient
 
 from langchain_mongodb.agent_toolkit import (
@@ -64,7 +64,7 @@ def test_toolkit_response(db):
     prompt = MONGODB_AGENT_SYSTEM_PROMPT.format(top_k=5)
 
     test_query = "Which country's customers spent the most?"
-    agent = create_react_agent(llm, toolkit.get_tools(), prompt=prompt)
+    agent = create_agent(llm, toolkit.get_tools(), system_prompt=prompt)
     agent.step_timeout = 60
     events = agent.stream(
         {"messages": [("user", test_query)]},
