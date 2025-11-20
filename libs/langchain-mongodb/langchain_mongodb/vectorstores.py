@@ -22,9 +22,10 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient, ReplaceOne
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb.index import (
     create_vector_search_index,
@@ -429,28 +430,15 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         See add_texts for additional details.
         """
-        if not texts:
-            return []
-        # Compute embedding vectors
-        embeddings = self._embedding.embed_documents(list(texts))
-        if not ids:
-            ids = [str(ObjectId()) for _ in range(len(list(texts)))]
-        docs = [
-            {
-                "_id": str_to_oid(i),
-                self._text_key: t,
-                self._embedding_key: embedding,
-                **m,
-            }
-            for i, t, m, embedding in zip(
-                ids, texts, metadatas, embeddings, strict=True
-            )
-        ]
-        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
-        # insert the documents in MongoDB Atlas
-        result = self._collection.bulk_write(operations)
-        assert result.upserted_ids is not None
-        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
+        return bulk_embed_and_insert_texts(
+            texts,
+            metadatas,
+            self._embedding.embed_documents,
+            self._collection,
+            self._text_key,
+            self._embedding_key,
+            ids,
+        )
 
     def add_documents(
         self,

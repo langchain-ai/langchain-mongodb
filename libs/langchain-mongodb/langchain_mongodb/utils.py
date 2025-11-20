@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 from pymongo import MongoClient
 from pymongo.driver_info import DriverInfo
+from pymongo_search_utils import append_client_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,7 @@ DRIVER_METADATA = DriverInfo(name="Langchain", version=version("langchain-mongod
 
 
 def _append_client_metadata(client: MongoClient) -> None:
-    # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-    if callable(client.append_metadata):
-        client.append_metadata(DRIVER_METADATA)
+    append_client_metadata(client=client, driver_info=DRIVER_METADATA)
 
 
 def cosine_similarity(X: Matrix, Y: Matrix) -> np.ndarray:

@@ -799,6 +799,7 @@ dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pymongo" },
+    { name = "pymongo-search-utils" },
 ]
 
 [package.dev-dependencies]
@@ -836,6 +837,7 @@ requires-dist = [
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pymongo", specifier = ">=4.6.1" },
+    { name = "pymongo-search-utils", git = "https://github.com/mongodb-labs/pymongo-search-utils.git" },
 ]
 
 [package.metadata.requires-dev]
@@ -1870,6 +1872,14 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/a1/87340e5a38003ef3591fdfc4b911fb32531b0dbbed8ab2431006858590fe/pymongo-4.14.0-cp313-cp313t-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:5fe93676afe37794f01b8df5cf16528dce4d7d174cdf51ea1586c234eb5263c2", size = 2221380, upload-time = "2025-08-06T13:40:45.256Z" },
     { url = "https://files.pythonhosted.org/packages/0a/68/3970d18b0b58c4681598bc1e233f33c15ff0c388422b17ddd195e214f35d/pymongo-4.14.0-cp313-cp313t-win32.whl", hash = "sha256:1462fc2bb39527f01eea5378172b66c45d62e22fa4be957afe2ec747c4d2ff51", size = 980892, upload-time = "2025-08-06T13:40:46.908Z" },
     { url = "https://files.pythonhosted.org/packages/2d/fa/68b1555e62ed3ee87f8a2de99d5fb840cf045748da4488870b4dced44a95/pymongo-4.14.0-cp313-cp313t-win_amd64.whl", hash = "sha256:e506af9b25aac77cc5c5ea4a72f81764e4f5ea90ca799aac43d665ab269f291d", size = 1011181, upload-time = "2025-08-06T13:40:48.641Z" },
+]
+
+[[package]]
+name = "pymongo-search-utils"
+version = "0.1.0.dev0"
+source = { git = "https://github.com/mongodb-labs/pymongo-search-utils.git#7dde56682e59f10618ce8b2b50a0a6c5f6606d94" }
+dependencies = [
+    { name = "pymongo" },
 ]
 
 [[package]]
