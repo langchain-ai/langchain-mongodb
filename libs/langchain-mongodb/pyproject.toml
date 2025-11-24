@@ -40,7 +40,7 @@ dev = [
     "pypdf>=5.0.1",
     "langgraph>=1.0.0",
     "flaky>=3.8.1",
-    "langchain-tests==0.3.22",
+    "langchain-tests==1.0.2",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
 ]

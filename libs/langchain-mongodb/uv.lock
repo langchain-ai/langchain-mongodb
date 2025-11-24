@@ -770,7 +770,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "1.0.5"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -781,9 +781,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/61/c356e19525a210baf960968dbfb03ee38a05e05ddb41efeb32abfcb4e360/langchain_core-1.0.5.tar.gz", hash = "sha256:7ecbad9a60dde626252733a9c18c7377f4468cfe00465ffa99f5e9c6cb9b82d2", size = 778259, upload-time = "2025-11-14T16:59:27.277Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/17/67c1cc2ace919e2b02dd9d783154d7fb3f1495a4ef835d9cd163b7855ac2/langchain_core-1.1.0.tar.gz", hash = "sha256:2b76a82d427922c8bc51c08404af4fc2a29e9f161dfe2297cb05091e810201e7", size = 781995, upload-time = "2025-11-21T21:01:26.958Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/ee/aaf2343a35080154c82ceb110e03dd00f15459bc72e518df51724cbc41a9/langchain_core-1.0.5-py3-none-any.whl", hash = "sha256:d24c0cf12cfcd96dd4bd479aa91425f3a6652226cd824228ae422a195067b74e", size = 471506, upload-time = "2025-11-14T16:59:25.629Z" },
+    { url = "https://files.pythonhosted.org/packages/71/1e/e129fc471a2d2a7b3804480a937b5ab9319cab9f4142624fcb115f925501/langchain_core-1.1.0-py3-none-any.whl", hash = "sha256:2c9f27dadc6d21ed4aa46506a37a56e6a7e2d2f9141922dc5c251ba921822ee6", size = 473752, upload-time = "2025-11-21T21:01:25.841Z" },
 ]
 
 [[package]]
@@ -847,7 +847,7 @@ dev = [
     { name = "langchain-core", specifier = ">=1.0" },
     { name = "langchain-ollama", specifier = ">=1.0" },
     { name = "langchain-openai", specifier = ">=1.0" },
-    { name = "langchain-tests", specifier = "==0.3.22" },
+    { name = "langchain-tests", specifier = "==1.0.2" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mongomock", specifier = ">=4.2.0.post1" },
@@ -893,7 +893,7 @@ wheels = [
 
 [[package]]
 name = "langchain-tests"
-version = "0.3.22"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -909,9 +909,9 @@ dependencies = [
     { name = "syrupy" },
     { name = "vcrpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/60/2e29d5ee555ddcd42fe854171e714fedcb6fe3fef59b94cd31d083a88440/langchain_tests-0.3.22.tar.gz", hash = "sha256:f4a57e5fdd9d4b0b30b7525f64cfaf959dc62f44b6825427abcce6bbbc83db72", size = 46872, upload-time = "2025-10-01T14:41:54.174Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/73/29ff92b758e49c967b6816ca8ca7ad091b77bbf113741a9f628335d8373b/langchain_tests-1.0.2.tar.gz", hash = "sha256:7e96d82499ee32ab141e93bdeb122c942db41ff326bcc87ca27290ede92f0f78", size = 159564, upload-time = "2025-11-22T23:37:09.015Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/8c/c240ef03e21f8c945f8d24e0e71b84b8c0c5bdb3ae5cf3511e2680bd80a3/langchain_tests-0.3.22-py3-none-any.whl", hash = "sha256:b38173666236740343432ca1619fc7f742657649ff9e237ac89db5be921ee819", size = 49448, upload-time = "2025-10-01T14:41:52.064Z" },
+    { url = "https://files.pythonhosted.org/packages/25/b6/96434f4a01f7270ed29918c37c2e6b82ce208780f94c43a5ea133bd94a95/langchain_tests-1.0.2-py3-none-any.whl", hash = "sha256:713936d9e474ba39eeade95ee8e9d2e237b15a74d4896cae66ef1a9bd0a44d48", size = 50796, upload-time = "2025-11-22T23:37:07.612Z" },
 ]
 
 [[package]]
