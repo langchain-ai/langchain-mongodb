@@ -921,7 +921,7 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint-mongodb"
-version = "0.2.2"
+version = "0.3.0"
 source = { editable = "libs/langgraph-checkpoint-mongodb" }
 dependencies = [
     { name = "langchain-mongodb" },
@@ -931,7 +931,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-mongodb", specifier = "<1.0.0" },
+    { name = "langchain-mongodb", specifier = ">=0.8.0" },
     { name = "langgraph-checkpoint", specifier = ">=3.0.0" },
     { name = "pymongo", specifier = ">=4.12,<4.16" },
 ]
@@ -939,10 +939,10 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "anyio", specifier = ">=4.4.0" },
-    { name = "langchain-core", specifier = ">=0.3.55" },
-    { name = "langchain-ollama", specifier = ">=0.2.2" },
-    { name = "langchain-openai", specifier = ">=0.2.14" },
-    { name = "langgraph", specifier = ">=0.3.23" },
+    { name = "langchain-core", specifier = ">=1.0.0" },
+    { name = "langchain-ollama", specifier = ">=1.0.0" },
+    { name = "langchain-openai", specifier = ">=1.0.0" },
+    { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pytest", specifier = ">=7.2.1" },
