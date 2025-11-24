@@ -873,8 +873,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
     def similarity_search_by_vector(
         self,
-        query_vector: list[float],
-        *args: Any,
+        embedding: list[float],
+        k: int = 4,
         **kwargs: Any,
     ) -> list[Document]:
         """Return MongoDB documents most similar to the given query vector.
@@ -883,7 +883,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         search system alongside your database.
 
          Args:
-            query_vector: Embedding vector to search for.
+            embedding: Embedding vector to search for.
             k: (Optional) number of documents to return. Defaults to 4.
             pre_filter: List of MQL match expressions comparing an indexed field
             post_filter_pipeline: (Optional) Pipeline of MongoDB aggregation stages
@@ -897,9 +897,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Returns:
             List of documents most similar to the query vector.
         """
-        tuple_list = self.vector_store._similarity_search_with_score(
-            query_vector,
-            *args,
+        tuple_list = self._similarity_search_with_score(
+            embedding,
+            k=k,
             **kwargs,
         )
         return [doc for doc, _ in tuple_list]
