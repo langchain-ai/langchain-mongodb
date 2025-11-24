@@ -431,13 +431,13 @@ class MongoDBAtlasVectorSearch(VectorStore):
         See add_texts for additional details.
         """
         return bulk_embed_and_insert_texts(
-            texts,
-            metadatas,
-            self._embedding.embed_documents,
-            self._collection,
-            self._text_key,
-            self._embedding_key,
-            ids,
+            texts=texts,
+            metadatas=metadatas,
+            embedding_func=self._embedding.embed_documents,
+            collection=self._collection,
+            text_key=self._text_key,
+            embedding_key=self._embedding_key,
+            ids=ids,
         )
 
     def add_documents(

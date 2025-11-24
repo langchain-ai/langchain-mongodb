@@ -17,7 +17,7 @@ dependencies = [
     "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
-    "pymongo-search-utils@git+https://github.com/mongodb-labs/pymongo-search-utils.git",
+    "pymongo-search-utils>=0.1.0",
 ]
 
 [dependency-groups]
@@ -84,6 +84,3 @@ lint.ignore = ["E501", "B008", "UP007", "UP006", "UP035", "UP045"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
