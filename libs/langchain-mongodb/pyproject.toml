@@ -17,6 +17,7 @@ dependencies = [
     "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
+    "pymongo-search-utils>=0.1.0",
 ]
 
 [dependency-groups]
@@ -40,7 +41,7 @@ dev = [
     "pypdf>=5.0.1",
     "langgraph>=1.0.0",
     "flaky>=3.8.1",
-    "langchain-tests==0.3.22",
+    "langchain-tests==1.0.2",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
 ]
@@ -65,6 +66,7 @@ filterwarnings = [
 
 [tool.mypy]
 disallow_untyped_defs = true
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
