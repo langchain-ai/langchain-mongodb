@@ -874,3 +874,36 @@ class MongoDBAtlasVectorSearch(VectorStore):
             wait_until_complete=wait_until_complete,
             **kwargs,
         )  # type: ignore [operator]
+
+    def similarity_search_by_vector(
+        self,
+        embedding: list[float],
+        k: int = 4,
+        **kwargs: Any,
+    ) -> list[Document]:
+        """Return MongoDB documents most similar to the given query vector.
+
+        Atlas Vector Search eliminates the need to run a separate
+        search system alongside your database.
+
+         Args:
+            embedding: Embedding vector to search for.
+            k: (Optional) number of documents to return. Defaults to 4.
+            pre_filter: List of MQL match expressions comparing an indexed field
+            post_filter_pipeline: (Optional) Pipeline of MongoDB aggregation stages
+                to filter/process results after $vectorSearch.
+            oversampling_factor: Multiple of k used when generating number of candidates
+                at each step in the HNSW Vector Search.
+            include_embeddings: If True, the embedding vector of each result
+                will be included in metadata.
+            kwargs: Additional arguments are specific to the search_type
+
+        Returns:
+            List of documents most similar to the query vector.
+        """
+        tuple_list = self._similarity_search_with_score(
+            embedding,
+            k=k,
+            **kwargs,
+        )
+        return [doc for doc, _ in tuple_list]
