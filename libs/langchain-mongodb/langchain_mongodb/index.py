@@ -20,15 +20,18 @@ def _vector_search_index_definition(
     path: str,
     similarity: str,
     filters: Optional[List[str]] = None,
+    vector_index_options: dict | None = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     # https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/
+    vector_index_options = vector_index_options or {}
     fields = [
         {
             "numDimensions": dimensions,
             "path": path,
             "similarity": similarity,
             "type": "vector",
+            **vector_index_options,
         },
     ]
     if filters:
