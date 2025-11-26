@@ -267,6 +267,7 @@ jobs:
           generateReleaseNotes: true
           tag: ${{ inputs.working-directory }}/v${{ needs.build.outputs.version }}
           commit: main
+          name: Release - ${{ needs.build.outputs.pkg-name }}==${{ needs.build.outputs.version }}
 
       - name: Add github release url to summary
         env:
