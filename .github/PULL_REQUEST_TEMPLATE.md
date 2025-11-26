@@ -1,4 +1,4 @@
-[Issue Key](https://jira.mongodb.org/browse/{ISSUE_KEY})
+[JIRA TICKET](https://jira.mongodb.org/browse/{ISSUE_KEY})
 
 ## Summary
 
@@ -12,28 +12,19 @@
 
 <!-- How did you test the code? If you added unit tests, you can say that. If you didn’t introduce unit tests, explain why. All code should be tested in some way – so please list what your validation strategy was. -->
 
-### Screenshots (optional)
-
-<!-- Usually a great supplement to a test plan, especially if this requires local testing. -->
-
 ## Checklist
 
 <!-- Do not delete the items provided on this checklist -->
 
 ### Checklist for Author
 
-- [ ] Did you update the changelog (if necessary)?
-- [ ] Is the intention of the code captured in relevant tests?
-- [ ] If there are new TODOs, has a related JIRA ticket been created?
+- [ ] Does the title of the PR reference a JIRA Ticket?
+- [ ] Do you fully understand the implementation? (Would you be comfortable explaining how this code works to someone else?)
+- [ ] Is all relevant documentation (README or docstring) updated?
 - [ ] Has a MongoDB Employee run [the patch build of this PR](https://github.com/mongodb-labs/ai-ml-pipeline-testing?tab=readme-ov-file#running-a-patch-build-of-a-given-pr)?
 
 ### Checklist for Reviewer {@primary_reviewer}
 
 - [ ] Does the title of the PR reference a JIRA Ticket?
 - [ ] Do you fully understand the implementation? (Would you be comfortable explaining how this code works to someone else?)
-- [ ] Have you checked for spelling & grammar errors?
 - [ ] Is all relevant documentation (README or docstring) updated?
-
-## Focus Areas for Reviewer (optional)
-
-<!-- List any complex portion of code you believe needs particular scrutiny and explain why.  -->
