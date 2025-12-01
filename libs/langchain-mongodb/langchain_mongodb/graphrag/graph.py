@@ -74,7 +74,7 @@ class MongoDBGraphStore:
 
     In MongoDB, Knowledge Graphs are stored in a single Collection.
     Each MongoDB Document represents a single entity (node),
-    and it relationships (edges) are defined in a nested field named
+    and its relationships (edges) are defined in a nested field named
     "relationships". The schema, and an example, are described in the
     :data:`~langchain_mongodb.graphrag.prompts.entity_context` prompts module.
 
