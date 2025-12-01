@@ -585,7 +585,7 @@ class MongoDBGraphStore:
 
         # First pass: Add all nodes with their attributes
         nx_graph = nx.DiGraph(**nx_opts)
-        for doc in self.collection.find({}):
+        for doc in self.collection.find({}, {"type": 1, "attributes": 1}):
             # Add node with all attributes
             node_id = doc["_id"]
             node_attrs = {}
@@ -596,7 +596,7 @@ class MongoDBGraphStore:
             nx_graph.add_node(node_id, **node_attrs, **json_opts)
 
         # Second pass: Add edges based on relationships
-        for doc in self.collection.find({}):
+        for doc in self.collection.find({}, {"_id": 1, "relationships": 1}):
             source_id = doc["_id"]
             relationships = doc.get("relationships", {})
             # relationships can contain numerous target_ids, each with type and attributes
