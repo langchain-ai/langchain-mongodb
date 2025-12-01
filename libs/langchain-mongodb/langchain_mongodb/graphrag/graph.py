@@ -640,8 +640,9 @@ class MongoDBGraphStore:
 
         The default layout chosen is the spring_layout.
         This maximizes the distance between nodes. As our entities have a type field,
-        however, another good layout choice is:
+        however, another good layout choice might be
         `layout=nx.multipartite_layout, nx_opts["subset_key"]= "type"`
+        as multipartite layout positions nodes in straight lines by subset key.
 
         NOTE: Requires optional-dependency "viz", i.e. `pip install "langchain-mongodb[viz]"`.
 
