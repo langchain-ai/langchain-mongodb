@@ -5,25 +5,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-mongodb"
-version = "0.7.1"
+version = "0.8.0"
 description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "langchain-core>=0.3,<1.0",
-    "langchain>=0.3,<1.0",
+    "langchain-core>=1.0",
+    "langchain>=1.0",
+    "langchain-classic>=1.0",
     "pymongo>=4.6.1",
-    "langchain-text-splitters>=0.3,<1.0",
+    "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
+    "pymongo-search-utils>=0.1.0",
 ]
 
 [dependency-groups]
 dev = [
     "freezegun>=1.2.2",
-    "langchain>=0.3.14",
-    "langchain-core>=0.3.29",
-    "langchain-text-splitters>=0.3.5",
+    "langchain>=1.0",
+    "langchain-core>=1.0",
+    "langchain-text-splitters>=1.0",
     "pytest-mock>=3.10.0",
     "pytest>=7.3.0",
     "syrupy>=4.0.2",
@@ -33,13 +35,13 @@ dev = [
     "pre-commit>=4.0",
     "mypy>=1.10",
     "simsimd>=6.5.0",
-    "langchain-ollama>=0.2.2",
-    "langchain-openai>=0.2.14",
+    "langchain-ollama>=1.0",
+    "langchain-openai>=1.0",
     "langchain-community>=0.3.27",
     "pypdf>=5.0.1",
-    "langgraph>=0.2.72",
+    "langgraph>=1.0.0",
     "flaky>=3.8.1",
-    "langchain-tests==0.3.22",
+    "langchain-tests==1.0.2",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
 ]
@@ -71,6 +73,7 @@ filterwarnings = [
 
 [tool.mypy]
 disallow_untyped_defs = true
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
@@ -84,7 +87,7 @@ lint.select = [
   "B",  # flake8-bugbear
   "I",  # isort
 ]
-lint.ignore = ["E501", "B008", "UP007", "UP006", "UP035"]
+lint.ignore = ["E501", "B008", "UP007", "UP006", "UP035", "UP045"]
 
 [tool.coverage.run]
 omit = ["tests/*"]

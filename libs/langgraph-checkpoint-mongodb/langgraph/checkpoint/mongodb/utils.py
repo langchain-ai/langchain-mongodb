@@ -6,14 +6,10 @@ Utilities for langchain-checkpoint-mongod.
 from importlib.metadata import version
 from typing import Any, Union
 
-from pymongo import AsyncMongoClient
-from pymongo.driver_info import DriverInfo
-
 from langgraph.checkpoint.base import CheckpointMetadata
 from langgraph.checkpoint.serde.base import SerializerProtocol
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-
-serde: SerializerProtocol = JsonPlusSerializer()
+from pymongo import AsyncMongoClient
+from pymongo.driver_info import DriverInfo
 
 DRIVER_METADATA = DriverInfo(
     name="Langgraph", version=version("langgraph-checkpoint-mongodb")
@@ -26,7 +22,9 @@ def _append_client_metadata(client: AsyncMongoClient) -> None:
         client.append_metadata(DRIVER_METADATA)
 
 
-def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
+def loads_metadata(
+    serde: SerializerProtocol, metadata: dict[str, Any]
+) -> CheckpointMetadata:
     """Deserialize metadata document
 
     The CheckpointMetadata class itself cannot be stored directly in MongoDB,
@@ -39,13 +37,14 @@ def loads_metadata(metadata: dict[str, Any]) -> CheckpointMetadata:
     if isinstance(metadata, dict):
         output = dict()
         for key, value in metadata.items():
-            output[key] = loads_metadata(value)
+            output[key] = loads_metadata(serde, value)
         return output
     else:
-        return serde.loads(metadata)
+        return serde.loads_typed(metadata)
 
 
 def dumps_metadata(
+    serde: SerializerProtocol,
     metadata: Union[CheckpointMetadata, Any],
 ) -> Union[bytes, dict[str, Any]]:
     """Serialize all values in metadata dictionary.
@@ -55,7 +54,7 @@ def dumps_metadata(
     if isinstance(metadata, dict):
         output = dict()
         for key, value in metadata.items():
-            output[key] = dumps_metadata(value)
+            output[key] = dumps_metadata(serde, value)
         return output
     else:
-        return serde.dumps(metadata)
+        return serde.dumps_typed(metadata)

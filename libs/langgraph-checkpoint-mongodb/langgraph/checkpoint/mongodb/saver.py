@@ -8,9 +8,6 @@ from typing import (
 )
 
 from langchain_core.runnables import RunnableConfig, run_in_executor
-from pymongo import ASCENDING, MongoClient, UpdateOne
-from pymongo.database import Database as MongoDatabase
-
 from langgraph.checkpoint.base import (
     WRITES_IDX_MAP,
     BaseCheckpointSaver,
@@ -20,6 +17,10 @@ from langgraph.checkpoint.base import (
     CheckpointTuple,
     get_checkpoint_id,
 )
+from langgraph.checkpoint.serde.base import SerializerProtocol
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from pymongo import ASCENDING, MongoClient, UpdateOne
+from pymongo.database import Database as MongoDatabase
 
 from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
 
@@ -82,6 +83,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         checkpoint_collection_name: str = "checkpoints",
         writes_collection_name: str = "checkpoint_writes",
         ttl: Optional[int] = None,
+        serde: SerializerProtocol | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -90,6 +92,10 @@ class MongoDBSaver(BaseCheckpointSaver):
         self.checkpoint_collection = self.db[checkpoint_collection_name]
         self.writes_collection = self.db[writes_collection_name]
         self.ttl = ttl
+        if serde is not None:
+            self.serde = serde
+        else:
+            self.serde = JsonPlusSerializer()
 
         # Create indexes if not present
         if len(self.checkpoint_collection.list_indexes().to_list()) < 2:
@@ -237,7 +243,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             return CheckpointTuple(
                 {"configurable": config_values},
                 checkpoint,
-                loads_metadata(doc["metadata"]),
+                loads_metadata(self.serde, doc["metadata"]),
                 (
                     {
                         "configurable": {
@@ -292,7 +298,7 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         if filter:
             for key, value in filter.items():
-                query[f"metadata.{key}"] = dumps_metadata(value)
+                query[f"metadata.{key}"] = dumps_metadata(self.serde, value)
 
         if before is not None:
             query["checkpoint_id"] = {"$lt": before["configurable"]["checkpoint_id"]}
@@ -326,7 +332,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                     }
                 },
                 checkpoint=self.serde.loads_typed((doc["type"], doc["checkpoint"])),
-                metadata=loads_metadata(doc["metadata"]),
+                metadata=loads_metadata(self.serde, doc["metadata"]),
                 parent_config=(
                     {
                         "configurable": {
@@ -382,7 +388,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
             "checkpoint": serialized_checkpoint,
-            "metadata": dumps_metadata(metadata),
+            "metadata": dumps_metadata(self.serde, metadata),
         }
         upsert_query = {
             "thread_id": thread_id,

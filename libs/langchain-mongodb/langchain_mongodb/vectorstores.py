@@ -22,9 +22,10 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient, ReplaceOne
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid
+from pymongo_search_utils import bulk_embed_and_insert_texts
 
 from langchain_mongodb.index import (
     create_vector_search_index,
@@ -212,6 +213,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         dimensions: int = -1,
         auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
+        vector_index_options: dict | None = None,
         **kwargs: Any,
     ):
         """
@@ -256,6 +258,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 path=embedding_key,
                 similarity=relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
+                vector_index_options=vector_index_options,
             )
 
     @property
@@ -356,7 +359,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             metadatas_batch = []
             size = 0
             i = 0
-            for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+            for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=True)):
                 size += len(text) + len(metadata)
                 texts_batch.append(text)
                 metadatas_batch.append(metadata)
@@ -429,26 +432,15 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         See add_texts for additional details.
         """
-        if not texts:
-            return []
-        # Compute embedding vectors
-        embeddings = self._embedding.embed_documents(list(texts))
-        if not ids:
-            ids = [str(ObjectId()) for _ in range(len(list(texts)))]
-        docs = [
-            {
-                "_id": str_to_oid(i),
-                self._text_key: t,
-                self._embedding_key: embedding,
-                **m,
-            }
-            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
-        ]
-        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
-        # insert the documents in MongoDB Atlas
-        result = self._collection.bulk_write(operations)
-        assert result.upserted_ids is not None
-        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
+        return bulk_embed_and_insert_texts(
+            texts=texts,
+            metadatas=metadatas,
+            embedding_func=self._embedding.embed_documents,
+            collection=self._collection,
+            text_key=self._text_key,
+            embedding_key=self._embedding_key,
+            ids=ids,
+        )
 
     def add_documents(
         self,
@@ -478,7 +470,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         start = 0
         for end in range(batch_size, n_docs + batch_size, batch_size):
             texts, metadatas = zip(
-                *[(doc.page_content, doc.metadata) for doc in documents[start:end]]
+                *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
+                strict=True,
             )
             result_ids.extend(
                 self.bulk_embed_and_insert_texts(
@@ -838,6 +831,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         filters: Optional[List[str]] = None,
         update: bool = False,
         wait_until_complete: Optional[float] = None,
+        vector_index_options: dict | None = None,
         **kwargs: Any,
     ) -> None:
         """Creates a MongoDB Atlas vectorSearch index for the VectorStore
@@ -876,6 +870,40 @@ class MongoDBAtlasVectorSearch(VectorStore):
             path=self._embedding_key,
             similarity=self._relevance_score_fn,
             filters=filters or [],
+            vector_index_options=vector_index_options,
             wait_until_complete=wait_until_complete,
             **kwargs,
         )  # type: ignore [operator]
+
+    def similarity_search_by_vector(
+        self,
+        embedding: list[float],
+        k: int = 4,
+        **kwargs: Any,
+    ) -> list[Document]:
+        """Return MongoDB documents most similar to the given query vector.
+
+        Atlas Vector Search eliminates the need to run a separate
+        search system alongside your database.
+
+         Args:
+            embedding: Embedding vector to search for.
+            k: (Optional) number of documents to return. Defaults to 4.
+            pre_filter: List of MQL match expressions comparing an indexed field
+            post_filter_pipeline: (Optional) Pipeline of MongoDB aggregation stages
+                to filter/process results after $vectorSearch.
+            oversampling_factor: Multiple of k used when generating number of candidates
+                at each step in the HNSW Vector Search.
+            include_embeddings: If True, the embedding vector of each result
+                will be included in metadata.
+            kwargs: Additional arguments are specific to the search_type
+
+        Returns:
+            List of documents most similar to the query vector.
+        """
+        tuple_list = self._similarity_search_with_score(
+            embedding,
+            k=k,
+            **kwargs,
+        )
+        return [doc for doc, _ in tuple_list]
