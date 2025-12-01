@@ -326,7 +326,7 @@ def test_networkx(graph_store):
 
 @pytest.mark.viz
 def test_view(graph_store):
-    """Basic test that MongoDBGraphStore can be exported to NetworkX Graph.
+    """Basic test that MongoDBGraphStore can be visualized through HoloViews.
 
     See examples for self-contained Jupyter notebook example.
     To run: `pytest -m viz`
