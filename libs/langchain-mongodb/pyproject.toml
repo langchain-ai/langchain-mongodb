@@ -46,6 +46,12 @@ dev = [
     "typing-extensions>=4.12.2",
 ]
 
+[project.optional-dependencies]
+viz = [
+    "networkx>=3.0",
+    "holoviews>=1.19",
+]
+
 [tool.pytest.ini_options]
 minversion = "7"
 addopts = "--snapshot-warn-unused --strict-markers --strict-config --durations=5"
@@ -55,6 +61,7 @@ xfail_strict = true
 markers = [
     "requires: mark tests as requiring a specific library",
     "compile: mark placeholder test used to compile integration tests without running them",
+    "viz: marks tests as requiring optional-dependency group `viz`",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

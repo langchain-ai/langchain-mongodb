@@ -303,3 +303,39 @@ def test_allowed_relationship_types(documents, entity_extraction_model):
         relationships.update(set(ent.get("relationships", {}).get("types", [])))
     assert relationships == {"partner"}
     store.close()
+
+
+@pytest.mark.viz
+def test_networkx(graph_store):
+    """Basic test that MongoDBGraphStore can be exported to NetworkX Graph.
+
+    See examples for self-contained Jupyter notebook example.
+    To run: `pytest -m viz`
+    """
+    try:
+        import networkx as nx
+    except ImportError:
+        pytest.skip("This test requires optional-dependency `viz`")
+
+    nx_graph = graph_store.to_networkx()
+    assert nx_graph.number_of_nodes() == len(nx_graph.nodes)
+    assert isinstance(nx_graph, nx.DiGraph)
+    assert nx_graph.number_of_nodes() == graph_store.collection.count_documents({})
+    assert nx_graph.number_of_edges() > 0
+
+
+@pytest.mark.viz
+def test_view(graph_store):
+    """Basic test that MongoDBGraphStore can be visualized through HoloViews.
+
+    See examples for self-contained Jupyter notebook example.
+    To run: `pytest -m viz`
+    """
+    try:
+        import holoviews as hv  # type: ignore
+    except ImportError:
+        pytest.skip("This test requires optional-dependency `viz`")
+
+    view = graph_store.view()
+    assert isinstance(view, hv.Overlay)
+    assert len(view) == 2
