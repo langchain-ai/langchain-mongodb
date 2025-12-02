@@ -633,11 +633,6 @@ class MongoDBGraphStore:
         We first convert the entity collection to a NetworkX Graph,
         and then convert it to a Holoviews Graph via their API.
 
-        Both of these libraries are incredibly feature rich.
-        We encourage those interested in visualization and/or graph analysis
-        to dig deeper into their documentation.
-        The customization options are truly stunning.
-
         The default layout chosen is the spring_layout.
         This maximizes the distance between nodes. As our entities have a type field,
         however, another good layout choice might be
