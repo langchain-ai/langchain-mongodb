@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeAlias, Union
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -21,11 +21,6 @@ from .prompts import rag_prompt
 from .schema import entity_schema
 
 if TYPE_CHECKING:
-    try:
-        from typing import TypeAlias  # type:ignore[attr-defined] # Python 3.10+
-    except ImportError:  # Python 3.9 fallback  # TODO Remove [PYTHON-5658]
-        from typing_extensions import TypeAlias
-
     Entity: TypeAlias = Dict[str, Any]
     """Represents an Entity in the knowledge graph with specific schema. See .schema"""
 
