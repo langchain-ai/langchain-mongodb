@@ -4,7 +4,7 @@
 
 ## Changes in version 0.9.0 (2025/12/03)
 
-- Add visualization support to `MongoDBGraphStore` with optional `langchain_mongo[viz]`.
+- Add visualization support to `MongoDBGraphStore` with optional `langchain_mongodb[viz]`.
 - Add `search_by_vector` method to `MongoDBAtlasVectorSearch`.
 - Add support for passing additional vector index options to the vector search index definition and related functions.
 
