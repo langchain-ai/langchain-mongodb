@@ -22,9 +22,9 @@ All contributions must be written and understood by human contributors.
 
 ### Checklist for Author
 
-- [ ] Does the title of the PR reference a JIRA Ticket?
-- [ ] Do you fully understand the implementation? (Would you be comfortable explaining how this code works to someone else?)
-- [ ] Is all relevant documentation (README or docstring) updated?
+- [ ] Did you update the changelog (if necessary)? 
+- [ ] Is the intention of the code captured in relevant tests?
+- [ ] If there are new TODOs, has a related JIRA ticket been created?
 - [ ] Has a MongoDB Employee run [the patch build of this PR](https://github.com/mongodb-labs/ai-ml-pipeline-testing?tab=readme-ov-file#running-a-patch-build-of-a-given-pr)?
 
 ### Checklist for Reviewer
