@@ -2,10 +2,17 @@
 
 ---
 
+## Changes in version 0.9.0 (2025/12/03)
+
+- Add visualization support to `MongoDBGraphStore` with optional `langchain_mongo[viz]`.
+- Add `search_by_vector` method to `MongoDBAtlasVectorSearch`.
+- Add support for passing additional vector index options to the vector search index definition and related functions.
+
 ## Changes in version 0.8.0 (2025/11/18)
 
 - Update dependencies to align with LangChain 1.0, which is now the minimum supported version of LangChain.
   This includes adding `langchain_classic` as a dependency to support existing Retriever APIs.
+- Drop support for Python 3.9.
 
 ## Changes in version 0.7.2 (2025/10/30)
 
