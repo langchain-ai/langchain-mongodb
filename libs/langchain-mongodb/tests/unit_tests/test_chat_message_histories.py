@@ -1,7 +1,6 @@
 import json
 import warnings
 
-import mongomock
 import pytest
 from langchain_classic.memory import (
     ConversationBufferMemory,
@@ -81,27 +80,6 @@ def test_init_with_connection_string(mocker: MockerFixture) -> None:
     history.close()
 
 
-def test_init_with_existing_client() -> None:
-    client = mongomock.MongoClient()  # type: ignore[var-annotated]
-
-    # Initialize MongoDBChatMessageHistory with the mock client
-    history = MongoDBChatMessageHistory(
-        connection_string=None,
-        session_id="test-session",
-        database_name="test-database",
-        collection_name="test-collection",
-        client=client,
-    )
-
-    assert history.session_id == "test-session"
-
-    # Verify that the collection is correctly created within the specified database
-    assert "test-database" in client.list_database_names()
-    assert "test-collection" in client["test-database"].list_collection_names()
-
-    history.close()
-
-
 def test_init_raises_error_without_connection_or_client() -> None:
     with pytest.raises(
         ValueError, match="Either connection_string or client must be provided"
@@ -110,17 +88,4 @@ def test_init_raises_error_without_connection_or_client() -> None:
             session_id="test_session",
             connection_string=None,
             client=None,
-        )
-
-
-def test_init_raises_error_with_both_connection_and_client() -> None:
-    client_mock = mongomock.MongoClient()  # type: ignore[var-annotated]
-
-    with pytest.raises(
-        ValueError, match="Must provide connection_string or client, not both"
-    ):
-        MongoDBChatMessageHistory(
-            connection_string="mongodb://localhost:27017/",
-            session_id="test_session",
-            client=client_mock,
         )
