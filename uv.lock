@@ -898,7 +898,6 @@ dev = [
     { name = "langchain-tests", specifier = "==1.0.2" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0.0" },
-    { name = "mongomock", specifier = ">=4.2.0.post1" },
     { name = "mypy", specifier = ">=1.10" },
     { name = "pip", specifier = ">=25.0.1" },
     { name = "pre-commit", specifier = ">=4.0" },

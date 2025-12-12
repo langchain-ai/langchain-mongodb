@@ -31,7 +31,6 @@ dev = [
     "syrupy>=4.0.2",
     "pytest-watcher>=0.3.4",
     "pytest-asyncio>=0.21.1",
-    "mongomock>=4.2.0.post1",
     "pre-commit>=4.0",
     "mypy>=1.10",
     "simsimd>=6.5.0",
