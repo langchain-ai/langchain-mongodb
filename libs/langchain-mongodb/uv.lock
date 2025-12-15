@@ -1243,7 +1243,7 @@ dev = [
     { name = "langchain-core", specifier = ">=1.0" },
     { name = "langchain-ollama", specifier = ">=1.0" },
     { name = "langchain-openai", specifier = ">=1.0" },
-    { name = "langchain-tests", specifier = "==1.0.2" },
+    { name = "langchain-tests", specifier = "==1.1.0" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mypy", specifier = ">=1.10" },
@@ -1288,7 +1288,7 @@ wheels = [
 
 [[package]]
 name = "langchain-tests"
-version = "1.0.2"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1304,9 +1304,9 @@ dependencies = [
     { name = "syrupy" },
     { name = "vcrpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/73/29ff92b758e49c967b6816ca8ca7ad091b77bbf113741a9f628335d8373b/langchain_tests-1.0.2.tar.gz", hash = "sha256:7e96d82499ee32ab141e93bdeb122c942db41ff326bcc87ca27290ede92f0f78", size = 159564, upload-time = "2025-11-22T23:37:09.015Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/04/c5acad79f791b65606fb98ff92dfec6f8237ab9dd7a0468d39e4cb910a72/langchain_tests-1.1.0.tar.gz", hash = "sha256:68fe0b626d617167b182a95980e7b571c7d47ce8178e0f7d918b9b183b0bfb56", size = 178498, upload-time = "2025-12-12T21:57:40.34Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/b6/96434f4a01f7270ed29918c37c2e6b82ce208780f94c43a5ea133bd94a95/langchain_tests-1.0.2-py3-none-any.whl", hash = "sha256:713936d9e474ba39eeade95ee8e9d2e237b15a74d4896cae66ef1a9bd0a44d48", size = 50796, upload-time = "2025-11-22T23:37:07.612Z" },
+    { url = "https://files.pythonhosted.org/packages/09/49/9ae563c565e183486945bfaeb0c06f5ab62e573337b1fbe28feaf4ae9777/langchain_tests-1.1.0-py3-none-any.whl", hash = "sha256:6b0a95129e24fa5d7f534df0252e22f9b9cb7f40db6932aa2e7b600432ba6e58", size = 52102, upload-time = "2025-12-12T21:57:39.18Z" },
 ]
 
 [[package]]
@@ -3202,15 +3202,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393, upload-time = "2025-10-09T14:16:51.245Z" },
-]
-
-[[package]]
-name = "sentinels"
-version = "1.1.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6f/9b/07195878aa25fe6ed209ec74bc55ae3e3d263b60a489c6e73fdca3c8fe05/sentinels-1.1.1.tar.gz", hash = "sha256:3c2f64f754187c19e0a1a029b148b74cf58dd12ec27b4e19c0e5d6e22b5a9a86", size = 4393, upload-time = "2025-08-12T07:57:50.26Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/65/dea992c6a97074f6d8ff9eab34741298cac2ce23e2b6c74fb7d08afdf85c/sentinels-1.1.1-py3-none-any.whl", hash = "sha256:835d3b28f3b47f5284afa4bf2db6e00f2dc5f80f9923d4b7e7aeeeccf6146a11", size = 3744, upload-time = "2025-08-12T07:57:48.858Z" },
 ]
 
 [[package]]

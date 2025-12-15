@@ -895,7 +895,7 @@ dev = [
     { name = "langchain-core", specifier = ">=1.0" },
     { name = "langchain-ollama", specifier = ">=1.0" },
     { name = "langchain-openai", specifier = ">=1.0" },
-    { name = "langchain-tests", specifier = "==1.0.2" },
+    { name = "langchain-tests", specifier = "==1.1.0" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mypy", specifier = ">=1.10" },
