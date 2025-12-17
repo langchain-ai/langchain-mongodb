@@ -1,6 +1,4 @@
-"""
-
-Script to migrate metadata member of checkpoint collections
+"""Script to migrate metadata of checkpoint collections
 - from <=v0.2.1 which is json
 - to >=v0.2.2 which is typed (defaulting to msgpack)
 
@@ -8,13 +6,6 @@ Data that was created on <v0.2.2 cannot be read by newer langgraph-checkpoint-mo
 
 Notes:
     - writes_collections is not in scope as it has always used serde.dumps_typed / serde.loads_typed
-
-# TODO:
-    - Add test of consistency through MongoDBSaver API (v>=0.2.2)
-    - Add durability to stop and continue halfway
-    - Add argparse for database and collections
-    - Extend out to N collections and databases
-    - Add batching
 """
 
 import argparse
