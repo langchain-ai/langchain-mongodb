@@ -10,6 +10,7 @@ Notes:
 
 import argparse
 import logging
+import time
 from typing import Any, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata
@@ -18,8 +19,6 @@ from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
-
-logging.basicConfig(level=logging.INFO)
 
 serde = JsonPlusSerializer()
 
@@ -45,10 +44,7 @@ def parse_args() -> argparse.Namespace:
         "--collections",
         nargs="+",
         required=True,
-        help=(
-            "One or more checkpoint collection names to migrate. "
-            "Each will be copied to <name>-new."
-        ),
+        help="One or more checkpoint collection names to migrate",
     )
 
     parser.add_argument(
@@ -59,54 +55,51 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--suffix",
+        default="-new",
+        help="Suffix for migrated collections (default: -new)",
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run migration without writing any data",
+    )
+
+    parser.add_argument(
         "--clear-destination",
         action="store_true",
-        help="Delete destination (<collection>-new) before migrating",
+        help="Delete destination collection before migrating",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging verbosity",
     )
 
     return parser.parse_args()
 
 
 def loads_metadata_orig(metadata: dict[str, Any]) -> CheckpointMetadata:
-    """Deserialize metadata document
-
-    The CheckpointMetadata class itself cannot be stored directly in MongoDB,
-    but as a dictionary it can. For efficient filtering in MongoDB,
-    we keep dict keys as strings.
-
-    metadata is stored in MongoDB collection with string keys and
-    serde serialized keys.
-    """
     if isinstance(metadata, dict):
-        output = dict()
-        for key, value in metadata.items():
-            output[key] = loads_metadata_orig(value)
-        return output
-    else:
-        return serde.loads_typed(("json", metadata))
+        return {k: loads_metadata_orig(v) for k, v in metadata.items()}
+    return serde.loads_typed(("json", metadata))
 
 
 def dumps_metadata_new(
     metadata: Union[CheckpointMetadata, Any],
 ) -> Union[bytes, dict[str, Any]]:
-    """Serialize all values in metadata dictionary.
-
-    Keep dict keys as strings for efficient filtering in MongoDB
-    """
     if isinstance(metadata, dict):
-        output = dict()
-        for key, value in metadata.items():
-            output[key] = dumps_metadata_new(value)
-        return output
-    else:
-        return serde.dumps_typed(metadata)
+        return {k: dumps_metadata_new(v) for k, v in metadata.items()}
+    return serde.dumps_typed(metadata)
 
 
 def insert_non_duplicates(clxn, buffer):
     try:
         clxn.insert_many(buffer, ordered=False)
     except BulkWriteError as e:
-        # Ignore duplicate key errors, re-raise anything else
         write_errors = e.details.get("writeErrors", [])
         non_dupe_errors = [err for err in write_errors if err.get("code") != 11000]
         if non_dupe_errors:
@@ -118,23 +111,36 @@ def insert_non_duplicates(clxn, buffer):
 def main():
     args = parse_args()
 
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+
+    start_time = time.time()
+
     client = MongoClient(args.mongodb_uri)
     db = client[args.db]
 
-    logging.info("Beginning checkpoint data migration.")
+    logging.info("Beginning checkpoint data migration")
     logging.info(f"mongodb_uri={args.mongodb_uri}")
     logging.info(f"db={args.db}")
     logging.info(f"collections={args.collections}")
     logging.info(f"batch_size={args.batch_size}")
+    logging.info(f"suffix={args.suffix}")
+    logging.info(f"dry_run={args.dry_run}")
+
+    total_scanned = 0
+    total_migrated = 0
 
     for collection_name in args.collections:
         logging.info(f"--- Migrating collection: {collection_name} ---")
 
         clxn_orig = db[collection_name]
-        clxn_new = db[f"{collection_name}-new"]
+        dest_name = f"{collection_name}{args.suffix}"
+        clxn_new = db[dest_name]
 
-        if args.clear_destination:
-            logging.warning(f"Clearing destination collection {clxn_new.name}")
+        if args.clear_destination and not args.dry_run:
+            logging.warning(f"Clearing destination collection {dest_name}")
             clxn_new.delete_many({})
 
         n_orig = clxn_orig.count_documents({})
@@ -149,65 +155,66 @@ def main():
 
         cursor = clxn_orig.find({}, batch_size=args.batch_size)
         for doc in cursor:
+            total_scanned += 1
+
             if "metadata" in doc:
-                load_meta_orig = loads_metadata_orig(doc["metadata"])
-                doc["metadata"] = dumps_metadata_new(load_meta_orig)
+                doc["metadata"] = dumps_metadata_new(
+                    loads_metadata_orig(doc["metadata"])
+                )
 
             buffer.append(doc)
             processed += 1
 
             if len(buffer) >= args.batch_size:
-                insert_non_duplicates(clxn_new, buffer)
-
-                if processed % (10 * args.batch_size) == 0:
-                    logging.info(
-                        f"[{collection_name}] Migrated {processed}/{n_orig} documents"
-                    )
+                if not args.dry_run:
+                    insert_non_duplicates(clxn_new, buffer)
+                else:
+                    buffer.clear()
 
         if buffer:
-            insert_non_duplicates(clxn_new, buffer)
+            if not args.dry_run:
+                insert_non_duplicates(clxn_new, buffer)
+            else:
+                buffer.clear()
+
+        total_migrated += processed
 
         logging.info(
-            f"[{collection_name}] Migration complete. Total documents migrated: {processed}"
+            f"[{collection_name}] Migration complete. Documents processed: {processed}"
         )
 
-        n_new = clxn_new.count_documents({})
-        assert n_new == processed
+        if not args.dry_run:
+            n_new = clxn_new.count_documents({})
+            assert n_new == processed
 
-        # Validation via MongoDBSaver
-        saver_new = MongoDBSaver(
-            client=client,
-            db_name=args.db,
-            checkpoint_collection_name=f"{collection_name}-new",
-        )
-
-        checkpoints_new = saver_new.list(config=None, limit=2)
-        sample_thread = next(checkpoints_new).config["configurable"]["thread_id"]
-        sample_checkpoint = saver_new.get_tuple(
-            config={"configurable": {"thread_id": sample_thread}}
-        )
-
-        try:
-            import json
-
-            logging.info(
-                f"[{collection_name}] sample metadata={json.dumps(sample_checkpoint.metadata)}"
+            saver_new = MongoDBSaver(
+                client=client,
+                db_name=args.db,
+                checkpoint_collection_name=dest_name,
             )
-        except Exception as e:
-            logging.error(f"[{collection_name}] Unable to json dump metadata: {e}")
 
-        # Demonstrate expected failure on old data
-        saver_orig = MongoDBSaver(
-            client=client,
-            db_name=args.db,
-            checkpoint_collection_name=collection_name,
-        )
-        try:
-            list(saver_orig.list(config=None, limit=2))
-        except ValueError as e:
-            logging.info(
-                f"[{collection_name}] Old format correctly fails with new code: {e}"
+            checkpoints_new = saver_new.list(config=None, limit=1)
+            sample_thread = next(checkpoints_new).config["configurable"]["thread_id"]
+            sample_checkpoint = saver_new.get_tuple(
+                config={"configurable": {"thread_id": sample_thread}}
             )
+
+            logging.debug(
+                f"[{collection_name}] Sample metadata: {sample_checkpoint.metadata}"
+            )
+
+    elapsed = time.time() - start_time
+    rate = total_migrated / elapsed if elapsed > 0 else 0
+
+    logging.info("=== Migration Summary ===")
+    logging.info(f"Collections processed: {len(args.collections)}")
+    logging.info(f"Documents scanned:    {total_scanned}")
+    logging.info(f"Documents migrated:   {total_migrated}")
+    logging.info(f"Elapsed time:         {elapsed:.2f}s")
+    logging.info(f"Throughput:           {rate:.2f} docs/sec")
+
+    if args.dry_run:
+        logging.info("Dry-run mode enabled: no data was written")
 
 
 if __name__ == "__main__":
