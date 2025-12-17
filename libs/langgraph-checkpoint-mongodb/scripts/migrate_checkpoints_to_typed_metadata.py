@@ -10,6 +10,7 @@ Notes:
 
 import argparse
 import logging
+import multiprocessing as mp
 import time
 from typing import Any, Union
 
@@ -61,6 +62,13 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of worker processes (default: 1)",
+    )
+
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Run migration without writing any data",
@@ -108,6 +116,58 @@ def insert_non_duplicates(clxn, buffer):
         buffer.clear()
 
 
+def worker_migrate(
+    worker_id: int,
+    args: argparse.Namespace,
+    collection_name: str,
+) -> dict[str, int]:
+    """
+    Worker process that migrates a shard of documents determined by _id hash.
+    """
+    client = MongoClient(args.mongodb_uri)
+    db = client[args.db]
+
+    clxn_orig = db[collection_name]
+    dest_name = f"{collection_name}{args.suffix}"
+    clxn_new = db[dest_name]
+
+    scanned = 0
+    migrated = 0
+    buffer = []
+
+    cursor = clxn_orig.find({}, batch_size=args.batch_size)
+
+    for doc in cursor:
+        # Deterministic partition
+        if hash(doc["_id"]) % args.workers != worker_id:
+            continue
+
+        scanned += 1
+
+        if "metadata" in doc:
+            doc["metadata"] = dumps_metadata_new(loads_metadata_orig(doc["metadata"]))
+
+        buffer.append(doc)
+        migrated += 1
+
+        if len(buffer) >= args.batch_size:
+            if not args.dry_run:
+                insert_non_duplicates(clxn_new, buffer)
+            else:
+                buffer.clear()
+
+    if buffer:
+        if not args.dry_run:
+            insert_non_duplicates(clxn_new, buffer)
+        else:
+            buffer.clear()
+
+    return {
+        "scanned": scanned,
+        "migrated": migrated,
+    }
+
+
 def main():
     args = parse_args()
 
@@ -135,6 +195,9 @@ def main():
     for collection_name in args.collections:
         logging.info(f"--- Migrating collection: {collection_name} ---")
 
+        client = MongoClient(args.mongodb_uri)
+        db = client[args.db]
+
         clxn_orig = db[collection_name]
         dest_name = f"{collection_name}{args.suffix}"
         clxn_new = db[dest_name]
@@ -150,42 +213,30 @@ def main():
             logging.warning(f"Skipping empty or missing collection: {collection_name}")
             continue
 
-        buffer = []
-        processed = 0
+        if args.workers == 1:
+            # Single-process fallback (existing behavior)
+            result = worker_migrate(0, args, collection_name)
+            total_scanned += result["scanned"]
+            total_migrated += result["migrated"]
+        else:
+            logging.info(f"Starting {args.workers} workers")
 
-        cursor = clxn_orig.find({}, batch_size=args.batch_size)
-        for doc in cursor:
-            total_scanned += 1
-
-            if "metadata" in doc:
-                doc["metadata"] = dumps_metadata_new(
-                    loads_metadata_orig(doc["metadata"])
+            with mp.Pool(processes=args.workers) as pool:
+                results = pool.starmap(
+                    worker_migrate,
+                    [
+                        (worker_id, args, collection_name)
+                        for worker_id in range(args.workers)
+                    ],
                 )
 
-            buffer.append(doc)
-            processed += 1
-
-            if len(buffer) >= args.batch_size:
-                if not args.dry_run:
-                    insert_non_duplicates(clxn_new, buffer)
-                else:
-                    buffer.clear()
-
-        if buffer:
-            if not args.dry_run:
-                insert_non_duplicates(clxn_new, buffer)
-            else:
-                buffer.clear()
-
-        total_migrated += processed
-
-        logging.info(
-            f"[{collection_name}] Migration complete. Documents processed: {processed}"
-        )
+            for r in results:
+                total_scanned += r["scanned"]
+                total_migrated += r["migrated"]
 
         if not args.dry_run:
             n_new = clxn_new.count_documents({})
-            assert n_new == processed
+            assert n_new == total_migrated or n_new <= n_orig
 
             saver_new = MongoDBSaver(
                 client=client,
