@@ -17,9 +17,8 @@ Notes:
     - Add batching
 """
 
+import argparse
 import logging
-import os
-import sys
 from typing import Any, Union
 
 from langgraph.checkpoint.base import CheckpointMetadata
@@ -32,6 +31,49 @@ from langgraph.checkpoint.mongodb import MongoDBSaver
 logging.basicConfig(level=logging.INFO)
 
 serde = JsonPlusSerializer()
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Migrate langgraph checkpoint metadata to typed format (>= v0.2.2)."
+    )
+
+    parser.add_argument(
+        "--mongodb-uri",
+        default="mongodb://localhost:27017/?directConnection=true",
+        help="MongoDB connection URI",
+    )
+
+    parser.add_argument(
+        "--db",
+        required=True,
+        help="Database name containing checkpoint collections",
+    )
+
+    parser.add_argument(
+        "--collections",
+        nargs="+",
+        required=True,
+        help=(
+            "One or more checkpoint collection names to migrate. "
+            "Each will be copied to <name>-new."
+        ),
+    )
+
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1000,
+        help="Number of documents per insert batch",
+    )
+
+    parser.add_argument(
+        "--clear-destination",
+        action="store_true",
+        help="Delete destination (<collection>-new) before migrating",
+    )
+
+    return parser.parse_args()
 
 
 def loads_metadata_orig(metadata: dict[str, Any]) -> CheckpointMetadata:
@@ -83,89 +125,98 @@ def insert_non_duplicates(clxn, buffer):
 
 
 def main():
-    MONGODB_URI = os.environ.get(
-        "MONGODB_URI", "mongodb://localhost:27017/?directConnection=true"
-    )
-    DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
-    COLLECTION_NAME = os.environ.get("CHECKPOINTS", "checkpoints")
+    args = parse_args()
 
-    client = MongoClient(MONGODB_URI)
-    db = client[DB_NAME]
-    clxn_orig = db[COLLECTION_NAME]
-    clxn_new = db[COLLECTION_NAME + "-new"]
-
-    clxn_new.delete_many({})  # todo - once complete. remove this or add to argparse
+    client = MongoClient(args.mongodb_uri)
+    db = client[args.db]
 
     logging.info("Beginning checkpoint data migration.")
-    logging.info(f"{MONGODB_URI=}")
-    logging.info(f"{DB_NAME=}")
-    logging.info(f"Original {COLLECTION_NAME=}")
-    logging.info(f"Migrated COLLECTION_NAME={clxn_new.name}")
+    logging.info(f"mongodb_uri={args.mongodb_uri}")
+    logging.info(f"db={args.db}")
+    logging.info(f"collections={args.collections}")
+    logging.info(f"batch_size={args.batch_size}")
 
-    n_orig = clxn_orig.count_documents({})
-    logging.info(f"The collection contains {n_orig} documents.")
+    for collection_name in args.collections:
+        logging.info(f"--- Migrating collection: {collection_name} ---")
 
-    if n_orig == 0:
-        logging.critical(f"The provided {COLLECTION_NAME=} was empty or did not exist.")
-        sys.exit(1)
+        clxn_orig = db[collection_name]
+        clxn_new = db[f"{collection_name}-new"]
 
-    BATCH_SIZE = os.environ.get("BATCH_SIZE", 1000)
-    buffer = []
-    processed = 0
+        if args.clear_destination:
+            logging.warning(f"Clearing destination collection {clxn_new.name}")
+            clxn_new.delete_many({})
 
-    cursor = clxn_orig.find({}, batch_size=BATCH_SIZE)
-    for doc in cursor:
-        if "metadata" in doc:
-            load_meta_orig = loads_metadata_orig(doc["metadata"])
-            doc["metadata"] = dumps_metadata_new(load_meta_orig)
+        n_orig = clxn_orig.count_documents({})
+        logging.info(f"Source collection contains {n_orig} documents")
 
-        buffer.append(doc)
-        processed += 1
+        if n_orig == 0:
+            logging.warning(f"Skipping empty or missing collection: {collection_name}")
+            continue
 
-        if len(buffer) >= BATCH_SIZE:
+        buffer = []
+        processed = 0
+
+        cursor = clxn_orig.find({}, batch_size=args.batch_size)
+        for doc in cursor:
+            if "metadata" in doc:
+                load_meta_orig = loads_metadata_orig(doc["metadata"])
+                doc["metadata"] = dumps_metadata_new(load_meta_orig)
+
+            buffer.append(doc)
+            processed += 1
+
+            if len(buffer) >= args.batch_size:
+                insert_non_duplicates(clxn_new, buffer)
+
+                if processed % (10 * args.batch_size) == 0:
+                    logging.info(
+                        f"[{collection_name}] Migrated {processed}/{n_orig} documents"
+                    )
+
+        if buffer:
             insert_non_duplicates(clxn_new, buffer)
 
-            if processed % (10 * BATCH_SIZE) == 0:
-                logging.info(f"Migrated {processed}/{n_orig} documents")
-
-    if buffer:
-        insert_non_duplicates(clxn_new, buffer)
-
-    logging.info(f"Migration complete. Total documents migrated: {processed}")
-
-    n_new = clxn_new.count_documents({})
-    assert n_orig == n_new == processed
-
-    saver_orig = MongoDBSaver(
-        client=client, db_name=DB_NAME, checkpoint_collection_name=COLLECTION_NAME
-    )
-    saver_new = MongoDBSaver(
-        client=client,
-        db_name=DB_NAME,
-        checkpoint_collection_name=COLLECTION_NAME + "-new",
-    )
-
-    # Demonstrate that the latest code version works on the new data.
-    checkpoints_new = saver_new.list(config=None, limit=2)
-    sample_thread = next(checkpoints_new).config["configurable"]["thread_id"]
-    sample_checkpoint = saver_new.get_tuple(
-        config={"configurable": {"thread_id": sample_thread}}
-    )
-    try:
-        import json
-
-        logging.info(f"{json.dumps(sample_checkpoint.metadata)=}")
-    except Exception as e:
-        logging.error(
-            f"Unable to json dump sample checkpoint metadata. This reveal an issue in the script. Error:{e}"
-        )
-    # Demonstrate that the old data, as expected, cannot be read with the latest langgraph-checkpoint-mongodb
-    try:
-        list(saver_orig.list(config=None, limit=2))
-    except ValueError as e:
         logging.info(
-            f"Attempts to read OLD data format with NEW code (saver_orig.list(None) raise ValueError {e}"
+            f"[{collection_name}] Migration complete. Total documents migrated: {processed}"
         )
+
+        n_new = clxn_new.count_documents({})
+        assert n_new == processed
+
+        # Validation via MongoDBSaver
+        saver_new = MongoDBSaver(
+            client=client,
+            db_name=args.db,
+            checkpoint_collection_name=f"{collection_name}-new",
+        )
+
+        checkpoints_new = saver_new.list(config=None, limit=2)
+        sample_thread = next(checkpoints_new).config["configurable"]["thread_id"]
+        sample_checkpoint = saver_new.get_tuple(
+            config={"configurable": {"thread_id": sample_thread}}
+        )
+
+        try:
+            import json
+
+            logging.info(
+                f"[{collection_name}] sample metadata={json.dumps(sample_checkpoint.metadata)}"
+            )
+        except Exception as e:
+            logging.error(f"[{collection_name}] Unable to json dump metadata: {e}")
+
+        # Demonstrate expected failure on old data
+        saver_orig = MongoDBSaver(
+            client=client,
+            db_name=args.db,
+            checkpoint_collection_name=collection_name,
+        )
+        try:
+            list(saver_orig.list(config=None, limit=2))
+        except ValueError as e:
+            logging.info(
+                f"[{collection_name}] Old format correctly fails with new code: {e}"
+            )
 
 
 if __name__ == "__main__":
