@@ -14,10 +14,13 @@ import multiprocessing as mp
 import time
 from typing import Any, Union
 
+from bson.raw_bson import RawBSONDocument
 from langgraph.checkpoint.base import CheckpointMetadata
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from pymongo import MongoClient
+from pymongo.collection import Collection
 from pymongo.errors import BulkWriteError
+from pymongo.typings import _DocumentType
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
@@ -104,7 +107,9 @@ def dumps_metadata_new(
     return serde.dumps_typed(metadata)
 
 
-def insert_non_duplicates(clxn, buffer):
+def insert_non_duplicates(
+    clxn: Collection, buffer: list[Union[_DocumentType, RawBSONDocument]]
+) -> None:
     try:
         clxn.insert_many(buffer, ordered=False)
     except BulkWriteError as e:
@@ -124,7 +129,7 @@ def worker_migrate(
     """
     Worker process that migrates a shard of documents determined by _id hash.
     """
-    client = MongoClient(args.mongodb_uri)
+    client: MongoClient = MongoClient(args.mongodb_uri)
     db = client[args.db]
 
     clxn_orig = db[collection_name]
@@ -168,7 +173,7 @@ def worker_migrate(
     }
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     logging.basicConfig(
@@ -177,9 +182,6 @@ def main():
     )
 
     start_time = time.time()
-
-    client = MongoClient(args.mongodb_uri)
-    db = client[args.db]
 
     logging.info("Beginning checkpoint data migration")
     logging.info(f"mongodb_uri={args.mongodb_uri}")
@@ -195,7 +197,7 @@ def main():
     for collection_name in args.collections:
         logging.info(f"--- Migrating collection: {collection_name} ---")
 
-        client = MongoClient(args.mongodb_uri)
+        client: MongoClient = MongoClient(args.mongodb_uri)
         db = client[args.db]
 
         clxn_orig = db[collection_name]
@@ -249,10 +251,10 @@ def main():
             sample_checkpoint = saver_new.get_tuple(
                 config={"configurable": {"thread_id": sample_thread}}
             )
-
-            logging.debug(
-                f"[{collection_name}] Sample metadata: {sample_checkpoint.metadata}"
-            )
+            if sample_checkpoint is not None:
+                logging.debug(
+                    f"[{collection_name}] Sample metadata: {sample_checkpoint.metadata}"
+                )
 
     elapsed = time.time() - start_time
     rate = total_migrated / elapsed if elapsed > 0 else 0
