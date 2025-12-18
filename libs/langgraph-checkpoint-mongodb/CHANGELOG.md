@@ -2,6 +2,9 @@
 
 ---
 
+## Changes in version 0.3.1 (DATE ???)
+- Fixes issue #287 to migrate checkpoint data created with v<0.2.2 with a migration script: [migrate_checkpoints_to_typed_metadata.py](./scripts/migrate_checkpoints_to_typed_metadata.py).
+
 ## Changes in version 0.3.0 (2025/11/19)
 - Allow custom serde objects to be passed to MongoDBSaver for serialization/deserialization.
 - Remove the deprecated AsyncMongoDBSaver class, which has been replaced by MongoDBSaver's async methods.
