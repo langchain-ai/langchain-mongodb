@@ -1,11 +1,23 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "pymongo>=4.6,<5",
+#   "langgraph-checkpoint-mongodb>=0.2.2",
+# ]
+# ///
+
 """Script to migrate metadata of checkpoint collections
 - from <=v0.2.1 which is json
 - to >=v0.2.2 which is typed (defaulting to msgpack)
 
 Data that was created on <v0.2.2 cannot be read by newer langgraph-checkpoint-mongodb.
 
+Invoke using PEP 723 (Inline Script Metadata):
+`$ uv run scripts/migrate_checkpoints_to_typed_metadata.py -h`
+
 Notes:
     - writes_collections is not in scope as it has always used serde.dumps_typed / serde.loads_typed
+
 """
 
 import argparse
