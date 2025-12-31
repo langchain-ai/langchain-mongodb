@@ -15,7 +15,7 @@ dev = [
     "sphinx>=7.4.7",
     "sphinx-copybutton>=0.5.2",
     "toml>=0.10.2",
-    "langchain-core>=1.0.0",
+    "langchain-core>=1.2.5",
     "sphinxcontrib-googleanalytics>=0.4",
     "langchain-mongodb",
     "langgraph-checkpoint-mongodb",
