@@ -2,6 +2,12 @@
 
 ---
 
+## Changes in version 0.10.0 (2026/01/05)
+
+- Bump langchain-core dependency for CVE-2025-68664.
+- Add script to migrate checkpoint collections created before v0.2.2.
+- Remove dependency of mongomock package.
+
 ## Changes in version 0.9.0 (2025/12/03)
 
 - Add visualization support to `MongoDBGraphStore` with optional `langchain_mongodb[viz]`.
