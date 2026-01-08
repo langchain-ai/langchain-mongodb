@@ -1,4 +1,3 @@
-import os
 from typing import Generator, List, Optional
 
 import pytest
@@ -15,12 +14,6 @@ VECTOR_INDEX_NAME = "vector_index"
 
 TIMEOUT = 120
 DIMENSIONS = 10
-
-if os.getenv("COMMUNITY_WITH_SEARCH"):
-    pytest.skip(
-        "COMMUNITY_WITH_SEARCH set. Skipping unit_tests/test_index as this community has search available",
-        allow_module_level=True,
-    )
 
 
 @pytest.fixture
@@ -74,7 +67,6 @@ def test_search_index_drop_add_delete_commands(collection: Collection) -> None:
     assert len(indexes) == 0
 
 
-@pytest.mark.skip("collection.update_vector_search_index requires [CLOUDP-275518]")
 def test_search_index_update_vector_search_index(collection: Collection) -> None:
     index_name = "INDEX_TO_UPDATE"
     similarity_orig = "cosine"
