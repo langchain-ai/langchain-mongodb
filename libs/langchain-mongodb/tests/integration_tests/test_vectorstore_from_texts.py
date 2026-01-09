@@ -10,14 +10,16 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.embeddings import AutoEmbedding
 from langchain_mongodb.index import (
-    create_vector_search_index,
+    create_vector_search_index, create_autoembedded_vector_search_index
 )
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_from_texts"
 INDEX_NAME = "langchain-test-index-from-texts"
+AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 DIMENSIONS = 5
 
 
@@ -36,6 +38,18 @@ def collection(client: MongoClient) -> Collection:
             index_name=INDEX_NAME,
             dimensions=DIMENSIONS,
             path="embedding",
+            filters=["c"],
+            similarity="cosine",
+            wait_until_complete=60,
+        )
+
+    if not any([AUTOEMBED_IDX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
+        create_autoembedded_vector_search_index(
+            collection=clxn,
+            index_name=AUTOEMBED_IDX_NAME,
+            dimensions=DIMENSIONS,
+            path="embedding",
+            embedding=AutoEmbedding(model_name = "voyage-4"),
             filters=["c"],
             similarity="cosine",
             wait_until_complete=60,
@@ -62,7 +76,7 @@ def metadatas() -> List[Dict]:
 @pytest.fixture(scope="module")
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
-
+    # return AutoEmbedding(model_name="voyage-4")
 
 @pytest.fixture(scope="module")
 def vectorstore(
@@ -77,6 +91,9 @@ def vectorstore(
     but one important feature. It waits until all documents are fully indexed
     before returning control to the caller.
     """
+    print("DROPPING")
+    collection.drop_search_index(INDEX_NAME)
+    collection.drop_search_index(AUTOEMBED_IDX_NAME)
     vectorstore_from_texts = PatchedMongoDBAtlasVectorSearch.from_texts(
         texts=texts,
         embedding=embeddings,
@@ -131,6 +148,7 @@ def test_similarity_search_by_vector(
 
     # Perform search by vector
     output = vectorstore.similarity_search_by_vector(query_vector, k=2)
+    print(output)
 
     # Should return results
     assert len(output) == 2
@@ -155,3 +173,21 @@ def test_similarity_search_by_vector_with_filter(
     # Should only return documents matching the filter
     assert len(filtered_output) == 1
     assert "c" in filtered_output[0].metadata
+
+def test_auto_embedded_similarity_search(
+    vectorstore: PatchedMongoDBAtlasVectorSearch,
+    embeddings: Embeddings,
+    texts: List[str],
+) -> None:
+    # Test similarity_search_with_score method
+    # First, embed a query text to get a vector
+    query_text = "Sandwich"
+
+    # Perform search by vector
+    output = vectorstore.similarity_search_with_score(query_text, k=2)
+
+    # Should return results
+    assert len(output) == 2
+    # Results should be Document objects
+    assert all(hasattr(doc, "page_content") for doc, _ in output)
+    assert all(hasattr(doc, "metadata") for doc, _ in output)
