@@ -74,6 +74,7 @@ def test_search_index_drop_add_delete_commands(collection: Collection) -> None:
     assert len(indexes) == 0
 
 
+@pytest.mark.skip("collection.update_vector_search_index requires [CLOUDP-275518]")
 def test_search_index_update_vector_search_index(collection: Collection) -> None:
     index_name = "INDEX_TO_UPDATE"
     similarity_orig = "cosine"
