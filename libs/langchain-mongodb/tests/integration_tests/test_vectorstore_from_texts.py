@@ -11,7 +11,7 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import (
-    create_vector_search_index, create_autoembedded_vector_search_index
+    create_vector_search_index,
 )
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch

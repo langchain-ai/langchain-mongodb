@@ -86,7 +86,6 @@ def autoembedded_vector_search_stage(
     Returns:
         Dictionary defining the $vectorSearch
     """
-    # TODO: wait i think this is basically the same as the normal? the path just means something different?
     stage = {
         "index": index_name,
         "path": search_field,
