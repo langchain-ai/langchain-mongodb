@@ -105,31 +105,3 @@ def test_auto_embedded_similarity_search(
     # Results should be Document objects
     assert all(hasattr(doc, "page_content") for doc, _ in output)
     assert all(hasattr(doc, "metadata") for doc, _ in output)
-
-def test_test(
-    collection: Collection,
-    autoembeddings: AutoEmbedding,
-    texts: list[str],
-    metadatas: list[Dict]
-):
-    query_text = "Sandwich"
-    store = PatchedMongoDBAtlasVectorSearch(
-        collection=collection,
-        embedding=autoembeddings,
-        index_name=AUTOEMBED_IDX_NAME
-    )
-    # store.add_texts(texts=texts, metadatas=metadatas)
-
-    print("find and index")
-    print(list(store._collection.find({})))
-    print(len(list(store._collection.find({}))))
-    print(list(store._collection.list_search_indexes()))
-
-    output = store.similarity_search_with_score(query_text, k=2)
-    print(f"{output=}")
-
-    # Should return results
-    # assert len(output) == 2
-    # # Results should be Document objects
-    # assert all(hasattr(doc, "page_content") for doc, _ in output)
-    # assert all(hasattr(doc, "metadata") for doc, _ in output)
