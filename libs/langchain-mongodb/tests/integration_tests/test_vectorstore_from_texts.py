@@ -48,7 +48,7 @@ def collection(client: MongoClient) -> Collection:
             collection=clxn,
             index_name=AUTOEMBED_IDX_NAME,
             dimensions=DIMENSIONS,
-            path="embedding",
+            path="text",
             embedding=AutoEmbedding(model_name = "voyage-4"),
             filters=["c"],
             similarity="cosine",
@@ -76,7 +76,10 @@ def metadatas() -> List[Dict]:
 @pytest.fixture(scope="module")
 def embeddings() -> Embeddings:
     return ConsistentFakeEmbeddings(DIMENSIONS)
-    # return AutoEmbedding(model_name="voyage-4")
+
+@pytest.fixture(scope="module")
+def autoembeddings() -> Embeddings:
+    return AutoEmbedding(model_name="voyage-4")
 
 @pytest.fixture(scope="module")
 def vectorstore(
@@ -91,15 +94,36 @@ def vectorstore(
     but one important feature. It waits until all documents are fully indexed
     before returning control to the caller.
     """
-    print("DROPPING")
-    collection.drop_search_index(INDEX_NAME)
-    collection.drop_search_index(AUTOEMBED_IDX_NAME)
     vectorstore_from_texts = PatchedMongoDBAtlasVectorSearch.from_texts(
         texts=texts,
         embedding=embeddings,
         metadatas=metadatas,
         collection=collection,
         index_name=INDEX_NAME,
+    )
+    yield vectorstore_from_texts
+
+    vectorstore_from_texts.collection.delete_many({})
+
+@pytest.fixture(scope="module")
+def autoembedded_vectorstore(
+    collection: Collection,
+    texts: List[str],
+    autoembeddings: AutoEmbedding,
+    metadatas: List[dict],
+) -> Generator[MongoDBAtlasVectorSearch]:
+    """VectorStore created with a few documents and a trivial embedding model.
+
+    Note: PatchedMongoDBAtlasVectorSearch is MongoDBAtlasVectorSearch in all
+    but one important feature. It waits until all documents are fully indexed
+    before returning control to the caller.
+    """
+    vectorstore_from_texts = PatchedMongoDBAtlasVectorSearch.from_texts(
+        texts=texts,
+        embedding=autoembeddings,
+        metadatas=metadatas,
+        collection=collection,
+        index_name=AUTOEMBED_IDX_NAME,
     )
     yield vectorstore_from_texts
 
@@ -175,16 +199,16 @@ def test_similarity_search_by_vector_with_filter(
     assert "c" in filtered_output[0].metadata
 
 def test_auto_embedded_similarity_search(
-    vectorstore: PatchedMongoDBAtlasVectorSearch,
-    embeddings: Embeddings,
+    autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch,
     texts: List[str],
 ) -> None:
-    # Test similarity_search_with_score method
+    # Test similarity_search method for autoembedding
     # First, embed a query text to get a vector
     query_text = "Sandwich"
 
     # Perform search by vector
-    output = vectorstore.similarity_search_with_score(query_text, k=2)
+    output = autoembedded_vectorstore.similarity_search_with_score(query_text, k=2)
+    print(output)
 
     # Should return results
     assert len(output) == 2

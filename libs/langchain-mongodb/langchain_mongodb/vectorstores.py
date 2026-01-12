@@ -900,11 +900,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
         # Post-processing
         if post_filter_pipeline is not None:
             pipeline.extend(post_filter_pipeline)
-
         # Execution
         cursor = self._collection.aggregate(pipeline)  # type: ignore[arg-type]
         docs = []
-
         # Format
         missing_text_key = False
         for res in cursor:

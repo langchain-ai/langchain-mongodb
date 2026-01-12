@@ -106,7 +106,6 @@ def create_autoembedded_vector_search_index(
         vector_index_options=vector_index_options,
         **kwargs,
     )
-    print(definition)
 
     if update:
         collection.update_search_index(
@@ -125,9 +124,9 @@ def create_autoembedded_vector_search_index(
 
         result = collection.create_search_index(
             SearchIndexModel(
-                definition=definition,
                 name=index_name,
                 type="vectorSearch",
+                definition=definition,
             )
         )
 
