@@ -131,7 +131,6 @@ def test_similarity_search_by_vector(
 
     # Perform search by vector
     output = vectorstore.similarity_search_by_vector(query_vector, k=2)
-    print(output)
 
     # Should return results
     assert len(output) == 2
