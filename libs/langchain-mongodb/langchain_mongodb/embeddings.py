@@ -12,14 +12,14 @@ SUPPORTED_VOYAGE_MODELS = [
 
 
 class AutoEmbedding(Embeddings):
-    def __init__(self, model_name: str):
-        if model_name not in SUPPORTED_VOYAGE_MODELS:
+    def __init__(self, model: str):
+        if model not in SUPPORTED_VOYAGE_MODELS:
             # TODO: double check that this should be a CondifurationError and not something else?
             raise ConfigurationError(
-                f"The following embedding model is not supported: {model_name}. Supported models are: {', '.join(SUPPORTED_VOYAGE_MODELS)}."
+                f"The following embedding model is not supported: {model}. Supported models are: {', '.join(SUPPORTED_VOYAGE_MODELS)}."
             )
 
-        self.model_name = model_name
+        self.model = model
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         # """Embed search docs."""

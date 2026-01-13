@@ -209,7 +209,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def __init__(
         self,
         collection: Collection[Dict[str, Any]],
-        embedding: Embeddings = AutoEmbedding(model_name="voyage-4"),
+        embedding: Embeddings = AutoEmbedding(model="voyage-4"),
         # embedding: Embeddings,
         index_name: str = "vector_index",
         text_key: Union[str, List[str]] = "text",
@@ -270,7 +270,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             if self._is_autoembedding:
                 dimensions = -1
-                embedding_model = self._embedding.model_name
+                embedding_model = self._embedding.model
             else:
                 embedding_model = None
 
@@ -642,7 +642,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        # embedding: Embeddings = AutoEmbedding(model_name="voyage-4"),
+        # embedding: Embeddings = AutoEmbedding(model="voyage-4"),
         embedding: Embeddings,
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
@@ -812,7 +812,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     query_vector,
                     self._text_key,
                     self._index_name,
-                    self._embedding.model_name,
+                    self._embedding.model,
                     k,
                     pre_filter,
                     oversampling_factor,
@@ -908,7 +908,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         )
         if self._is_autoembedding:
             dimensions = -1
-            embedding_model = self._embedding.model_name
+            embedding_model = self._embedding.model
         else:
             embedding_model = None
 

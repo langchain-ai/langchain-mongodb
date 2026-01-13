@@ -70,7 +70,7 @@ def metadatas() -> List[Dict]:
 
 @pytest.fixture(scope="module")
 def autoembeddings() -> Embeddings:
-    return AutoEmbedding(model_name="voyage-4")
+    return AutoEmbedding(model="voyage-4")
 
 
 @pytest.fixture(scope="module")

@@ -61,7 +61,7 @@ def autoembedded_vector_search_stage(
     query: str,
     search_field: str,
     index_name: str,
-    model_name: str,
+    model: str,
     top_k: int = 4,
     filter: dict[str, Any] | None = None,
     oversampling_factor: int = 10,
@@ -93,7 +93,7 @@ def autoembedded_vector_search_stage(
         "query": {"text": query},
         "numCandidates": top_k * oversampling_factor,
         "limit": top_k,
-        "model": model_name,  # this won't always be the same so there will be index model name vs query model name
+        "model": model,  # this won't always be the same so there will be index model name vs query model name
     }
     if filter:
         stage["filter"] = filter
