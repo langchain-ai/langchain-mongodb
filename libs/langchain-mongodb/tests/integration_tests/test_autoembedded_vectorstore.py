@@ -14,15 +14,19 @@ from langchain_mongodb.embeddings import AutoEmbedding
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
+import os
 
-from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 DIMENSIONS = 5
 
-# add pytest mark for only run with commmunity with search as an env var
+COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
 
+pytestmark = pytest.mark.skipif(
+    COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
+)
 
 @pytest.fixture(scope="module")
 def collection(client: MongoClient) -> Collection:
@@ -37,14 +41,12 @@ def collection(client: MongoClient) -> Collection:
         create_vector_search_index(
             collection=clxn,
             index_name=AUTOEMBED_IDX_NAME,
-            dimensions=DIMENSIONS,
+            dimensions=-1,
             path="text",
-            embedding=AutoEmbedding(model_name = "voyage-4"),
             filters=["c"],
-            similarity="cosine",
+            similarity=None,
             wait_until_complete=60,
-            autoembedded=True,
-            embedding_model="voyage-4"
+            auto_embedding_model="voyage-4"
         )
 
     return clxn

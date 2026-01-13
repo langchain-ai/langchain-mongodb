@@ -42,8 +42,6 @@ from langchain_mongodb.utils import (
     str_to_oid,
 )
 from langchain_mongodb.embeddings import AutoEmbedding
-from pymongo_search_utils.index import vector_search_index_definition, \
-    wait_for_predicate, is_index_ready
 
 VST = TypeVar("VST", bound=VectorStore)
 
@@ -282,8 +280,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 similarity= self._relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
                 vector_index_options=vector_index_options,
-                autoembedded=self._is_autoembedding,
-                embedding_model=embedding_model
+                auto_embedding_model=embedding_model
             )
 
     @property
@@ -390,23 +387,13 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 metadatas_batch.append(metadata)
                 if (j + 1) % batch_size == 0 or size >= 47_000_000:
                     if ids:
-                        if self._is_autoembedding:
-                            batch_res = self.bulk_insert_autoembedded_texts(
-                                texts_batch, metadatas_batch, ids[i : j + 1]
-                            )
-                        else:
-                            batch_res = self.bulk_embed_and_insert_texts(
-                                texts_batch, metadatas_batch, ids[i : j + 1]
-                            )
+                        batch_res = self.bulk_embed_and_insert_texts(
+                            texts_batch, metadatas_batch, ids[i : j + 1]
+                        )
                     else:
-                        if self._is_autoembedding:
-                            batch_res = self.bulk_insert_autoembedded_texts(
-                                texts_batch, metadatas_batch
-                            )
-                        else:
-                            batch_res = self.bulk_embed_and_insert_texts(
-                                texts_batch, metadatas_batch
-                            )
+                        batch_res = self.bulk_embed_and_insert_texts(
+                            texts_batch, metadatas_batch
+                        )
                     result_ids.extend(batch_res)
                     texts_batch = []
                     metadatas_batch = []
@@ -414,23 +401,13 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     i = j + 1
         if texts_batch:
             if ids:
-                if self._is_autoembedding:
-                    batch_res = self.bulk_insert_autoembedded_texts(
-                        texts_batch, metadatas_batch, ids[i : j + 1]
-                    )
-                else:
-                    batch_res = self.bulk_embed_and_insert_texts(
-                        texts_batch, metadatas_batch, ids[i : j + 1]
-                    )
+                batch_res = self.bulk_embed_and_insert_texts(
+                    texts_batch, metadatas_batch, ids[i : j + 1]
+                )
             else:
-                if self._is_autoembedding:
-                    batch_res = self.bulk_insert_autoembedded_texts(
-                        texts_batch, metadatas_batch
-                    )
-                else:
-                    batch_res = self.bulk_embed_and_insert_texts(
-                        texts_batch, metadatas_batch
-                    )
+                batch_res = self.bulk_embed_and_insert_texts(
+                    texts_batch, metadatas_batch
+                )
             result_ids.extend(batch_res)
         return result_ids
 
@@ -485,34 +462,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key=self._text_key,
             embedding_key=self._embedding_key,
             ids=ids,
+            autoembedding=self._is_autoembedding
         )
-
-    def bulk_insert_autoembedded_texts(
-        self,
-        texts: Union[List[str], Iterable[str]],
-        metadatas: Union[List[dict], Generator[dict, Any, Any]],
-        ids: Optional[List[str]] = None,
-    ) -> List[str]:
-        if not texts:
-            return []
-        # Generate the documents
-        if not ids:
-            ids = [str(ObjectId()) for _ in range(len(list(texts)))]
-        docs = [
-            {
-                "_id": str_to_oid(i),
-                self._text_key: t,
-                **m,
-            }
-            for i, t, m, in
-            zip(ids, texts, metadatas, strict=False)
-        ]
-        operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc
-                      in docs]
-        # insert the documents in MongoDB Atlas
-        result = self._collection.bulk_write(operations)
-        assert result.upserted_ids is not None
-        return [oid_to_str(_id) for _id in result.upserted_ids.values()]
 
     def add_documents(
         self,
@@ -545,18 +496,11 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 *[(doc.page_content, doc.metadata) for doc in documents[start:end]],
                 strict=True,
             )
-            if self._is_autoembedding:
-                result_ids.extend(
-                    self.bulk_insert_autoembedded_texts(
-                        texts=texts, metadatas=metadatas, ids=ids[start:end]
-                    )
+            result_ids.extend(
+                self.bulk_embed_and_insert_texts(
+                    texts=texts, metadatas=metadatas, ids=ids[start:end]
                 )
-            else:
-                result_ids.extend(
-                    self.bulk_embed_and_insert_texts(
-                        texts=texts, metadatas=metadatas, ids=ids[start:end]
-                    )
-                )
+            )
             start = end
         return result_ids
 
@@ -975,8 +919,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             filters=filters or [],
             vector_index_options=vector_index_options,
             wait_until_complete=wait_until_complete,
-            autoembedded=self._is_autoembedding,
-            embedding_model=embedding_model,
+            auto_embedding_model=embedding_model,
             **kwargs,
         )  # type: ignore [operator]
 

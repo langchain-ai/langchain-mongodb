@@ -66,32 +66,25 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         ids_inserted = super().bulk_embed_and_insert_texts(texts, metadatas, ids)
         n_docs = self.collection.count_documents({})
         start = monotonic()
-        while monotonic() - start <= TIMEOUT:
-            if (
-                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
-                == n_docs
-            ):
-                return ids_inserted
-            else:
-                sleep(INTERVAL)
-        raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
 
-    def bulk_insert_autoembedded_texts(
-        self,
-        texts: Union[List[str], Iterable[str]],
-        metadatas: Union[List[dict], Generator[dict, Any, Any]],
-        ids: Optional[List[str]] = None,
-    ) -> List:
-        """Patched insert_texts that waits for data to be indexed before returning"""
-        ids_inserted = super().bulk_insert_autoembedded_texts(texts, metadatas, ids)
-        n_docs = self.collection.count_documents({})
-        start = monotonic()
-        while monotonic() - start <= TIMEOUT:
-            for idx in list(self.collection.list_search_indexes()):
-                if idx["name"] == "langchain-test-index-from-texts-autoEmbed":
-                    if idx["numDocs"] == n_docs:
-                        return ids_inserted
-            sleep(INTERVAL)
+        if self._is_autoembedding:
+            while monotonic() - start <= TIMEOUT:
+                for idx in list(self.collection.list_search_indexes()):
+                    if idx[
+                        "name"] == "langchain-test-index-from-texts-autoEmbed":
+                        if idx["numDocs"] == n_docs:
+                            return ids_inserted
+                sleep(INTERVAL)
+        else:
+            while monotonic() - start <= TIMEOUT:
+                if (
+                    len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                    == n_docs
+                ):
+                    return ids_inserted
+                else:
+                    sleep(INTERVAL)
+
         raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
 
     def _similarity_search_with_score(self, query_vector, **kwargs):
