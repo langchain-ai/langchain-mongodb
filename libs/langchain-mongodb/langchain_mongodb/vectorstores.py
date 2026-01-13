@@ -259,7 +259,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         coll = self._collection
         if self._is_autoembedding:
             if embedding_key is not None:
-                print("auto-embeddings cant have embedding key.")
+                print("auto-embeddings can't have embedding key.")
                 self._embedding_key = None
             if dimensions != -1:
                 print("dimensions can't be specified for auto-embeddings.")
