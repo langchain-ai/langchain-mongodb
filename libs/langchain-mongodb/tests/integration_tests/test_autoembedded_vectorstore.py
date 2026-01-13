@@ -11,12 +11,17 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.embeddings import AutoEmbedding
+from langchain_mongodb.index import (
+    create_vector_search_index,
+)
 
 from ..utils import DB_NAME, ConsistentFakeEmbeddings, PatchedMongoDBAtlasVectorSearch
 
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 DIMENSIONS = 5
+
+# add pytest mark for only run with commmunity with search as an env var
 
 
 @pytest.fixture(scope="module")
@@ -29,7 +34,7 @@ def collection(client: MongoClient) -> Collection:
     clxn.delete_many({})
 
     if not any([AUTOEMBED_IDX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
-        create_autoembedded_vector_search_index(
+        create_vector_search_index(
             collection=clxn,
             index_name=AUTOEMBED_IDX_NAME,
             dimensions=DIMENSIONS,
@@ -38,6 +43,8 @@ def collection(client: MongoClient) -> Collection:
             filters=["c"],
             similarity="cosine",
             wait_until_complete=60,
+            autoembedded=True,
+            embedding_model="voyage-4"
         )
 
     return clxn
@@ -87,8 +94,36 @@ def autoembedded_vectorstore(
 
     vectorstore_from_texts.collection.delete_many({})
 
+def test_search_with_metadatas_and_pre_filter(
+    autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch, metadatas: List[Dict]
+) -> None:
+    # Confirm the presence of metadata in output
+    output = autoembedded_vectorstore.similarity_search("Sandwich", k=1)
+    assert len(output) == 1
+    metakeys = [list(d.keys())[0] for d in metadatas]
+    assert any([key in output[0].metadata for key in metakeys])
 
-def test_auto_embedded_similarity_search(
+
+def test_search_filters_all(
+    autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch, metadatas: List[Dict]
+) -> None:
+    # Test filtering out
+    does_not_match_filter = autoembedded_vectorstore.similarity_search(
+        "Sandwich", k=1, pre_filter={"c": {"$lte": 0}}
+    )
+    assert does_not_match_filter == []
+
+
+def test_search_pre_filter(
+    autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch, metadatas: List[Dict]
+) -> None:
+    # Test filtering with expected output
+    matches_filter = autoembedded_vectorstore.similarity_search(
+        "Sandwich", k=3, pre_filter={"c": {"$gt": 0}}
+    )
+    assert len(matches_filter) == 1
+
+def test_similarity_search(
     autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
     # Test similarity_search method for autoembedding
