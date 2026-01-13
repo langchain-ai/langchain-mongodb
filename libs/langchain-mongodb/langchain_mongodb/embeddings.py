@@ -24,11 +24,11 @@ class AutoEmbedding(Embeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         # """Embed search docs."""
         raise NotImplementedError(
-            "One must choose a model. We recommend VoyageAIEmbeddings"
+            "With AutoEmbeddings, all embeddings and keys are handled in the vector search index."
         )
 
     def embed_query(self, text: str) -> list[float]:
         # """Embed query text."""
         raise NotImplementedError(
-            "One must choose a model. We recommend VoyageAIEmbeddings"
+            "With AutoEmbeddings, all embeddings and keys are handled in the vector search index."
         )

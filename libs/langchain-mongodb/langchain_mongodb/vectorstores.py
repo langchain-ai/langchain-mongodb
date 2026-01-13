@@ -251,8 +251,12 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         if auto_create_index is False:
             return
-        # if auto_create_index is None and dimensions == -1:
-        #     return
+        if (
+            auto_create_index is None
+            and dimensions == -1
+            and not self._is_autoembedding
+        ):
+            return
         if dimensions == -1 and not self._is_autoembedding:
             dimensions = len(embedding.embed_query("foo"))
 
