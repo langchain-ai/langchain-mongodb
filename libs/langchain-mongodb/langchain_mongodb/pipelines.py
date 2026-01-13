@@ -56,6 +56,7 @@ def text_search_stage(
 
     return pipeline  # type: ignore
 
+
 def autoembedded_vector_search_stage(
     query: str,
     search_field: str,

@@ -70,15 +70,18 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         if self._is_autoembedding:
             while monotonic() - start <= TIMEOUT:
                 for idx in list(self.collection.list_search_indexes()):
-                    if idx[
-                        "name"] == "langchain-test-index-from-texts-autoEmbed":
+                    if idx["name"] == "langchain-test-index-from-texts-autoEmbed":
                         if idx["numDocs"] == n_docs:
                             return ids_inserted
                 sleep(INTERVAL)
         else:
             while monotonic() - start <= TIMEOUT:
                 if (
-                    len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                    len(
+                        self.similarity_search(
+                            "sandwich", k=n_docs, oversampling_factor=1
+                        )
+                    )
                     == n_docs
                 ):
                     return ids_inserted

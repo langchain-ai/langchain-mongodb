@@ -22,17 +22,20 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
-from pymongo import MongoClient, ReplaceOne
+from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid
-from pymongo.operations import SearchIndexModel
 from pymongo_search_utils import bulk_embed_and_insert_texts
 
+from langchain_mongodb.embeddings import AutoEmbedding
 from langchain_mongodb.index import (
     create_vector_search_index,
     update_vector_search_index,
 )
-from langchain_mongodb.pipelines import vector_search_stage, autoembedded_vector_search_stage
+from langchain_mongodb.pipelines import (
+    autoembedded_vector_search_stage,
+    vector_search_stage,
+)
 from langchain_mongodb.utils import (
     DRIVER_METADATA,
     _append_client_metadata,
@@ -41,7 +44,6 @@ from langchain_mongodb.utils import (
     oid_to_str,
     str_to_oid,
 )
-from langchain_mongodb.embeddings import AutoEmbedding
 
 VST = TypeVar("VST", bound=VectorStore)
 
@@ -277,10 +279,10 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 index_name=index_name,
                 dimensions=dimensions,
                 path=embedding_key,
-                similarity= self._relevance_score_fn,
+                similarity=self._relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
                 vector_index_options=vector_index_options,
-                auto_embedding_model=embedding_model
+                auto_embedding_model=embedding_model,
             )
 
     @property
@@ -462,7 +464,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key=self._text_key,
             embedding_key=self._embedding_key,
             ids=ids,
-            autoembedding=self._is_autoembedding
+            autoembedding=self._is_autoembedding,
         )
 
     def add_documents(

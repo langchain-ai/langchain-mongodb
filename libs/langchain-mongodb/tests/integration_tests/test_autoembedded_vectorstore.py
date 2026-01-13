@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, Generator, List
 
 import pytest  # type: ignore[import-not-found]
@@ -14,7 +15,6 @@ from langchain_mongodb.embeddings import AutoEmbedding
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
-import os
 
 from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
@@ -27,6 +27,7 @@ COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
 pytestmark = pytest.mark.skipif(
     COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
 )
+
 
 @pytest.fixture(scope="module")
 def collection(client: MongoClient) -> Collection:
@@ -46,7 +47,7 @@ def collection(client: MongoClient) -> Collection:
             filters=["c"],
             similarity=None,
             wait_until_complete=60,
-            auto_embedding_model="voyage-4"
+            auto_embedding_model="voyage-4",
         )
 
     return clxn
@@ -70,6 +71,7 @@ def metadatas() -> List[Dict]:
 @pytest.fixture(scope="module")
 def autoembeddings() -> Embeddings:
     return AutoEmbedding(model_name="voyage-4")
+
 
 @pytest.fixture(scope="module")
 def autoembedded_vectorstore(
@@ -95,6 +97,7 @@ def autoembedded_vectorstore(
     yield vectorstore_from_texts
 
     vectorstore_from_texts.collection.delete_many({})
+
 
 def test_search_with_metadatas_and_pre_filter(
     autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch, metadatas: List[Dict]
@@ -124,6 +127,7 @@ def test_search_pre_filter(
         "Sandwich", k=3, pre_filter={"c": {"$gt": 0}}
     )
     assert len(matches_filter) == 1
+
 
 def test_similarity_search(
     autoembedded_vectorstore: PatchedMongoDBAtlasVectorSearch,
