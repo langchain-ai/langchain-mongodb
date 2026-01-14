@@ -543,11 +543,12 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Returns:
             List of documents most similar to the query and their scores.
         """
+        query_input: list[float] | str = query
         if not self._is_autoembedding:
-            query: list[float] | str = self._embedding.embed_query(query)
+            query_input = self._embedding.embed_query(query)
 
         docs = self._similarity_search_with_score(
-            query,
+            query_input,
             k=k,
             pre_filter=pre_filter,
             post_filter_pipeline=post_filter_pipeline,
