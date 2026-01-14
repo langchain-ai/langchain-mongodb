@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain_mongodb.embeddings import AutoEmbedding
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.index import (
     create_vector_search_index,
 )
@@ -70,14 +70,14 @@ def metadatas() -> List[Dict]:
 
 @pytest.fixture(scope="module")
 def autoembeddings() -> Embeddings:
-    return AutoEmbedding(model="voyage-4")
+    return AutoEmbeddings(model="voyage-4")
 
 
 @pytest.fixture(scope="module")
 def autoembedded_vectorstore(
     collection: Collection,
     texts: List[str],
-    autoembeddings: AutoEmbedding,
+    autoembeddings: AutoEmbeddings,
     metadatas: List[dict],
 ) -> Generator[MongoDBAtlasVectorSearch]:
     """VectorStore created with a few documents and a trivial embedding model.

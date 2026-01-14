@@ -3,9 +3,9 @@ from __future__ import annotations
 from langchain_core.embeddings import Embeddings
 
 
-class AutoEmbedding(Embeddings):
+class AutoEmbeddings(Embeddings):
     def __init__(self, model: str):
-        """MongoDB AutoEmbedding
+        """MongoDB AutoEmbeddings
 
         AutoEmbedding enables MongoDB to automatically generate and manage embedding vectors.
         Since the embedding happens on the server, this class doesn't implement embed_documents

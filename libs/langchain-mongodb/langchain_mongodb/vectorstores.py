@@ -27,7 +27,7 @@ from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid, ConfigurationError
 from pymongo_search_utils import bulk_embed_and_insert_texts
 
-from langchain_mongodb.embeddings import AutoEmbedding
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.index import (
     create_vector_search_index,
     update_vector_search_index,
@@ -243,7 +243,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._text_key = text_key if isinstance(text_key, str) else text_key[0]
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
-        self._is_autoembedding = isinstance(embedding, AutoEmbedding)
+        self._is_autoembedding = isinstance(embedding, AutoEmbeddings)
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
         _append_client_metadata(self._collection.database.client)
@@ -648,7 +648,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        embedding: Embeddings = AutoEmbedding(model="voyage-4"),
+        embedding: Embeddings = AutoEmbeddings(model="voyage-4"),
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
         ids: Optional[List[str]] = None,
