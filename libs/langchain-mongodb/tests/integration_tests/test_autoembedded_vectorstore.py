@@ -92,6 +92,8 @@ def autoembedded_vectorstore(
         metadatas=metadatas,
         collection=collection,
         index_name=AUTOEMBED_IDX_NAME,
+        embedding_key=None,
+        relevance_score_fn=None,
     )
 
     yield vectorstore_from_texts

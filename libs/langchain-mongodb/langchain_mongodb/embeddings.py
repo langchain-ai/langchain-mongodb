@@ -1,23 +1,17 @@
 from __future__ import annotations
 
 from langchain_core.embeddings import Embeddings
-from pymongo.errors import ConfigurationError
-
-SUPPORTED_VOYAGE_MODELS = [
-    "voyage-4",
-    "voyage-code-3",
-    "voyage-4-large",
-    "voyage-4-lite",
-]
 
 
 class AutoEmbedding(Embeddings):
     def __init__(self, model: str):
-        if model not in SUPPORTED_VOYAGE_MODELS:
-            # TODO: double check that this should be a CondifurationError and not something else?
-            raise ConfigurationError(
-                f"The following embedding model is not supported: {model}. Supported models are: {', '.join(SUPPORTED_VOYAGE_MODELS)}."
-            )
+        """MongoDB AutoEmbedding
+
+        AutoEmbedding enables MongoDB to automatically generate and manage embedding vectors.
+        Since the embedding happens on the server, this class doesn't implement embed_documents
+        or embed_query and simply requires a model name.
+        For supported models, see https://www.mongodb.com/docs/atlas/atlas-vector-search/crud-embeddings/create-embeddings-automatic/?interface=driver&language=python&deployment-type=self#supported-embedding-models
+        """
 
         self.model = model
 
