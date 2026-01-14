@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, Generator, List
 
 import pytest  # type: ignore[import-not-found]
@@ -21,11 +22,11 @@ AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 DIMENSIONS = 5
 
-# COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
-#
-# pytestmark = pytest.mark.skipif(
-#     COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
-# )
+COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
+
+pytestmark = pytest.mark.skipif(
+    COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
+)
 
 
 @pytest.fixture(scope="module")
