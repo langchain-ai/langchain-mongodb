@@ -33,7 +33,7 @@ from langchain_mongodb.index import (
     update_vector_search_index,
 )
 from langchain_mongodb.pipelines import (
-    autoembedded_vector_search_stage,
+    autoembedding_vector_search_stage,
     vector_search_stage,
 )
 from langchain_mongodb.utils import (
@@ -812,7 +812,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         # Atlas Vector Search, potentially with filter
         if self._is_autoembedding:
             pipeline = [
-                autoembedded_vector_search_stage(
+                autoembedding_vector_search_stage(
                     query_vector,
                     self._text_key,
                     self._index_name,

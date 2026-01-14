@@ -10,6 +10,7 @@ See the following for more:
 from typing import Any, Dict, List, Optional, Union
 
 from pymongo_search_utils import (
+    autoembedding_vector_search_stage,  # noqa: F401
     combine_pipelines,  # noqa: F401
     final_hybrid_stage,  # noqa: F401
     reciprocal_rank_stage,  # noqa: F401
@@ -55,46 +56,3 @@ def text_search_stage(
         pipeline.append({"$limit": limit})  # type: ignore
 
     return pipeline  # type: ignore
-
-
-def autoembedded_vector_search_stage(
-    query: str,
-    search_field: str,
-    index_name: str,
-    model: str,
-    top_k: int = 4,
-    filter: dict[str, Any] | None = None,
-    oversampling_factor: int = 10,
-    **kwargs: Any,
-) -> dict[str, Any]:  # noqa: E501
-    """Vector Search Stage without Scores.
-
-    Scoring is applied later depending on strategy.
-    vector search includes a vectorSearchScore that is typically used.
-    hybrid uses Reciprocal Rank Fusion.
-
-    Args:
-        query: the non embedded query
-        search_field: Field in Collection containing text
-        index_name: Name of Atlas Vector Search Index tied to Collection
-        top_k: Number of documents to return
-        oversampling_factor: this times limit is the number of candidates
-        filter: MQL match expression comparing an indexed field.
-            Some operators are not supported.
-            See `vectorSearch filter docs <https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#atlas-vector-search-pre-filter>`_
-
-
-    Returns:
-        Dictionary defining the $vectorSearch
-    """
-    stage = {
-        "index": index_name,
-        "path": search_field,
-        "query": {"text": query},
-        "numCandidates": top_k * oversampling_factor,
-        "limit": top_k,
-        "model": model,  # this won't always be the same so there will be index model name vs query model name
-    }
-    if filter:
-        stage["filter"] = filter
-    return {"$vectorSearch": stage}
