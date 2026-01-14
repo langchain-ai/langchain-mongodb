@@ -276,6 +276,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             if self._is_autoembedding:
+                assert isinstance(self._embedding, AutoEmbeddings)
                 embedding_model = self._embedding.model
             else:
                 embedding_model = None
@@ -543,7 +544,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             List of documents most similar to the query and their scores.
         """
         if not self._is_autoembedding:
-            query = self._embedding.embed_query(query)
+            query: list[float] | str = self._embedding.embed_query(query)
 
         docs = self._similarity_search_with_score(
             query,
@@ -812,6 +813,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
         # Atlas Vector Search, potentially with filter
         if self._is_autoembedding:
+            assert isinstance(self._embedding, AutoEmbeddings)
             pipeline = [
                 autoembedding_vector_search_stage(
                     query_vector,
@@ -912,6 +914,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             update_vector_search_index if update else create_vector_search_index
         )
         if self._is_autoembedding:
+            assert isinstance(self._embedding, AutoEmbeddings)
             dimensions = -1
             embedding_model = self._embedding.model
         else:
