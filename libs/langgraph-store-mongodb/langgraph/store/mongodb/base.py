@@ -63,9 +63,6 @@ class VectorIndexConfig(IndexConfig, total=False):
     For ANN, Atlas uses HNSW (Hierarchical Navigable Small World).
     """
 
-    dims: int | None
-    """Number of dimensions in the embedding vectors."""
-
     name: str
     """Name of the index attached to the Collection in the Atlas Database."""
 
@@ -211,8 +208,11 @@ class MongoDBStore(BaseStore):
                 "relevance_score_fn", "cosine"
             )
             self._embedding_key = self.index_config.get("embedding_key", "embedding")
-            self._is_autoembedding = isinstance(self.embeddings, AutoEmbedding)
-            if self._is_autoembedding:
+            auto_embedding_model = None
+            self._is_autoembedding = False
+            if isinstance(self.embeddings, AutoEmbedding):
+                self._is_autoembedding = True
+                auto_embedding_model = self.embeddings.model
                 self.query_model = (
                     self.embeddings.model if query_model is None else query_model
                 )
@@ -222,7 +222,7 @@ class MongoDBStore(BaseStore):
             # Create the vector index if it does not yet exist
             if not any(
                 [
-                    ix["name"] == self._index_namee
+                    ix["name"] == self._index_name
                     for ix in collection.list_search_indexes()
                 ]
             ):
@@ -234,9 +234,7 @@ class MongoDBStore(BaseStore):
                     similarity=self._relevance_score_fn,
                     filters=self.index_filters,
                     wait_until_complete=auto_index_timeout,
-                    auto_embedding_model=self.embeddings.model
-                    if self._is_autoembedding
-                    else None,
+                    auto_embedding_model=auto_embedding_model,
                 )
 
     @classmethod
@@ -529,9 +527,8 @@ class MongoDBStore(BaseStore):
                     "updated_at": datetime.now(tz=timezone.utc),
                 }
                 if self.index_config:
-                    to_set[self._embedding_key] = (
-                        texts[v] if self._is_autoembedding else vectors[v]
-                    )
+                    embed = texts[v] if self._is_autoembedding else vectors[v]
+                    to_set[self._embedding_key] = embed  # type: ignore
                     to_set["namespace_prefix"] = self._denormalize_path(op.namespace)
                     v += 1
 
