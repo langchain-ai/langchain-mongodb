@@ -227,7 +227,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
             The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
-            embedding_key: Field that will contain the embedding for each document, should be `None` if embedding is an AutoEmbedding.
+            embedding_key: Field that will contain the embedding for each document, should be `None` if embedding is an instance of `AutoEmbeddings`.
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
                 Should be `None` if embedding is an AutoEmbedding.
