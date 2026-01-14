@@ -233,7 +233,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 Should be `None` if embedding is an AutoEmbedding.
             auto_create_index: Whether to automatically create an index if it does not exist.
             dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
-                is `true`, the value will be inferred. Should be `-1` if embedding is an AutoEmbedding.
+                is `true`, the value will be inferred. Should be `-1` if embedding is an instance of `AutoEmbeddings`.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
                to be ready.
         """
