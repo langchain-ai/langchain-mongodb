@@ -648,7 +648,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        embedding: Embeddings = AutoEmbeddings(model="voyage-4"),
+        embedding: Embeddings,
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
         ids: Optional[List[str]] = None,
