@@ -4,7 +4,7 @@
 
 ## Changes in version 0.2.0 (2026/01/14)
 
-- Adds support for semantic search with Auto-embedding indexes (for public preview on Community).
+- Adds support for semantic search with Automated embedding in Vector search (for public preview on MongoDB Community).
 
 ## Changes in version 0.1.1 (2025/11/13)
 
