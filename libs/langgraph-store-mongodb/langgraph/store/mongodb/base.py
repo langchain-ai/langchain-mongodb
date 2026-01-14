@@ -35,8 +35,9 @@ from pymongo import (
     UpdateOne,
 )
 from pymongo.collection import Collection, ReturnDocument
+from pymongo_search_utils import append_client_metadata
 
-from langgraph.store.mongodb.utils import DRIVER_METADATA, _append_client_metadata
+from langgraph.store.mongodb.utils import DRIVER_METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,9 @@ class MongoDBStore(BaseStore):
         self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
         self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
-        _append_client_metadata(self.collection.database.client)
+        append_client_metadata(
+            client=self.collection.database.client, driver_info=DRIVER_METADATA
+        )
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
