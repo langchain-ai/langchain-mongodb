@@ -210,11 +210,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self,
         collection: Collection[Dict[str, Any]],
         embedding: Embeddings = AutoEmbedding(model="voyage-4"),
-        # embedding: Embeddings,
         index_name: str = "vector_index",
         text_key: Union[str, List[str]] = "text",
-        # embedding_key: Optional[str] = None,
-        embedding_key: str = "embedding",
+        embedding_key: str | None = "embedding",
         relevance_score_fn: str | None = "cosine",
         dimensions: int = -1,
         auto_create_index: bool | None = None,
@@ -229,12 +227,13 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
             The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
-            embedding_key: Field that will contain the embedding for each document
+            embedding_key: Field that will contain the embedding for each document, ignored if embedding is an AutoEmbedding.
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
+                Ignored if embedding is an AutoEmbedding.
             auto_create_index: Whether to automatically create an index if it does not exist.
             dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
-                is `true`, the value will be inferred.
+                is `true`, the value will be inferred. Ignored if embedding is an AutoEmbedding.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
                to be ready.
         """
@@ -263,17 +262,14 @@ class MongoDBAtlasVectorSearch(VectorStore):
         coll = self._collection
         if self._is_autoembedding:
             if embedding_key is not None:
-                print("auto-embeddings can't have embedding key.")
                 self._embedding_key = None
             if dimensions != -1:
-                print("dimensions can't be specified for auto-embeddings.")
+                dimensions = -1
             if relevance_score_fn is not None:
-                print("relevance score can't be configured for auto-embeddings.")
                 self._relevance_score_fn = None
 
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             if self._is_autoembedding:
-                dimensions = -1
                 embedding_model = self._embedding.model
             else:
                 embedding_model = None
@@ -646,8 +642,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        # embedding: Embeddings = AutoEmbedding(model="voyage-4"),
-        embedding: Embeddings,
+        embedding: Embeddings = AutoEmbedding(model="voyage-4"),
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
         ids: Optional[List[str]] = None,
