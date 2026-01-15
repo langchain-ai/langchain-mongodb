@@ -1,18 +1,26 @@
+import os
 from typing import List
 
+import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
 
 from langchain_mongodb.docstores import MongoDBDocStore
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.index import create_vector_search_index
 from langchain_mongodb.retrievers import (
     MongoDBAtlasParentDocumentRetriever,
 )
 from langchain_mongodb.utils import DRIVER_METADATA
 
-from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import (
+    AUTO_EMBEDDING_MODEL,
+    CONNECTION_STRING,
+    DB_NAME,
+    PatchedMongoDBAtlasVectorSearch,
+)
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
 VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
@@ -22,11 +30,22 @@ SIMILARITY = "cosine"
 TIMEOUT = 60.0
 
 
+@pytest.fixture
+def embedding_param(request, embedding):
+    if request.param == "auto":
+        if not os.environ.get("COMMUNITY_WITH_SEARCH", ""):
+            raise pytest.skip("Only run in COMMUNITY_WITH_SEARCH is set")
+        return AutoEmbeddings(model=AUTO_EMBEDDING_MODEL)
+    return embedding
+
+
+@pytest.mark.parametrize("embedding_param", ["auto", "manual"], indirect=True)
 def test_1clxn_retriever(
     technical_report_pages: List[Document],
-    embedding: Embeddings,
+    embedding_param: Embeddings,
     dimensions: int,
 ) -> None:
+    embedding = embedding_param
     # Setup
     client: MongoClient = MongoClient(
         CONNECTION_STRING,
@@ -40,13 +59,27 @@ def test_1clxn_retriever(
     combined_clxn.delete_many({})
     # Create Search Index if it doesn't exist
     sixs = list(combined_clxn.list_search_indexes())
+    if isinstance(embedding, AutoEmbeddings):
+        dimensions = -1
+        auto_embedding_model = AUTO_EMBEDDING_MODEL
+        embedding_key = None
+        relevance_score_fn = None
+        path = "text"
+        similarity = None
+    else:
+        auto_embedding_model = None
+        embedding_key = EMBEDDING_FIELD
+        relevance_score_fn = SIMILARITY
+        path = EMBEDDING_FIELD
+        similarity = SIMILARITY
     if len(sixs) == 0:
         create_vector_search_index(
             collection=combined_clxn,
             index_name=VECTOR_INDEX_NAME,
             dimensions=dimensions,
-            path=EMBEDDING_FIELD,
-            similarity=SIMILARITY,
+            auto_embedding_model=auto_embedding_model,
+            path=path,
+            similarity=similarity,
             wait_until_complete=TIMEOUT,
         )
     # Create Vector and Doc Stores
@@ -55,8 +88,8 @@ def test_1clxn_retriever(
         embedding=embedding,
         index_name=VECTOR_INDEX_NAME,
         text_key=TEXT_FIELD,
-        embedding_key=EMBEDDING_FIELD,
-        relevance_score_fn=SIMILARITY,
+        embedding_key=embedding_key,
+        relevance_score_fn=relevance_score_fn,
     )
     docstore = MongoDBDocStore(collection=combined_clxn, text_key=TEXT_FIELD)
     #  Combine into a ParentDocumentRetriever
