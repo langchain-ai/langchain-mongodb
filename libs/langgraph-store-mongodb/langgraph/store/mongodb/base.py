@@ -69,7 +69,7 @@ class VectorIndexConfig(IndexConfig, total=False):
     relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None]
     """Similarity scoring function used to compare vectors."""
 
-    embedding_key: str | None
+    embedding_key: str
     """This key will contain the embedding vector for the value in fields[0].
 
     MongoDB does not require a separate Vector Store.
@@ -528,7 +528,7 @@ class MongoDBStore(BaseStore):
                 }
                 if self.index_config:
                     embed = texts[v] if self._is_autoembedding else vectors[v]
-                    to_set[self._embedding_key] = embed  # type: ignore
+                    to_set[self._embedding_key] = embed
                     to_set["namespace_prefix"] = self._denormalize_path(op.namespace)
                     v += 1
 
