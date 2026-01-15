@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.2.0 (2026/01/15)
+
+- Adds support for semantic search with Automated embedding in Vector search (for public preview on MongoDB Community).
+
 ## Changes in version 0.1.1 (2025/11/13)
 
 - Bumps minimum version of langgraph-checkpoint to 3.0 to address the Remode Code Execution CVE in JsonPlusSerializer's "json" mode, described [here](https://osv.dev/vulnerability/GHSA-wwqv-p2pp-99h5).

@@ -7,8 +7,7 @@ from typing import Any, Literal, Optional, Union
 from bson import SON
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
-from langchain_mongodb.index import create_vector_search_index
-from langchain_mongodb.pipelines import vector_search_stage
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langgraph.store.base import (
     BaseStore,
     GetOp,
@@ -35,8 +34,14 @@ from pymongo import (
     UpdateOne,
 )
 from pymongo.collection import Collection, ReturnDocument
+from pymongo_search_utils import (
+    append_client_metadata,
+    autoembedding_vector_search_stage,
+    create_vector_search_index,
+    vector_search_stage,
+)
 
-from langgraph.store.mongodb.utils import DRIVER_METADATA, _append_client_metadata
+from langgraph.store.mongodb.utils import DRIVER_METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +64,7 @@ class VectorIndexConfig(IndexConfig, total=False):
     name: str
     """Name of the index attached to the Collection in the Atlas Database."""
 
-    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct"]
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None]
     """Similarity scoring function used to compare vectors."""
 
     embedding_key: str
@@ -67,6 +72,10 @@ class VectorIndexConfig(IndexConfig, total=False):
 
     MongoDB does not require a separate Vector Store.
     It is designed to have one vector per document.
+
+    NOTE: If using AutoEmbeddings, the vectors are not explicitly stored in the Collection.
+    Set dims to -1, relevance_score_fn to None.
+    The embedding_key will not store vectors. Instead, it will be the texts to be embedded.
     """
 
     filters: list[str]
@@ -85,12 +94,12 @@ class VectorIndexConfig(IndexConfig, total=False):
 
 
 def create_vector_index_config(
-    dims: int,
+    dims: int | None,
     embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
     fields: Optional[list[str]] = None,
     name: str = "vector_index",
-    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct"] = "cosine",
-    embedding_key: str = "embedding",
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = "cosine",
+    embedding_key: str | None = "embedding",
     filters: Optional[list[str]] = None,
 ) -> VectorIndexConfig:
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
@@ -142,6 +151,7 @@ class MongoDBStore(BaseStore):
         ttl_config: Optional[TTLConfig] = None,
         index_config: Optional[VectorIndexConfig] = None,
         auto_index_timeout: int = 15,
+        query_model: str | None = None,
         **kwargs: Any,
     ):
         """Construct store and its indexes.
@@ -154,6 +164,7 @@ class MongoDBStore(BaseStore):
             ttl_config: Optionally define a TTL and whether to update on reads(get/search).
             index_config: Optionally define a VectorIndexConfig for semantic search.
             auto_index_timeout: Optional timeout for creation of indexes.
+            query_model: For semantic search, optionally provide a different model for search than indexing.
 
         Returns:
             Instance of MongoDBStore.
@@ -162,11 +173,10 @@ class MongoDBStore(BaseStore):
         self.collection = collection
         self.ttl_config = {} if ttl_config is None else ttl_config
         self.index_config = {} if index_config is None else index_config
-        self._index_name = self.index_config.get("name", "vector_index")
-        self._relevance_score_fn = self.index_config.get("relevance_score_fn", "cosine")
-        self._embedding_key = self.index_config.get("embedding_key", "embedding")
 
-        _append_client_metadata(self.collection.database.client)
+        append_client_metadata(
+            client=self.collection.database.client, driver_info=DRIVER_METADATA
+        )
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
@@ -193,6 +203,20 @@ class MongoDBStore(BaseStore):
             self.embeddings: Embeddings = ensure_embeddings(
                 self.index_config.get("embed"),
             )
+            self._index_name = self.index_config.get("name", "vector_index")
+            self._relevance_score_fn = self.index_config.get(
+                "relevance_score_fn", "cosine"
+            )
+            self._embedding_key = self.index_config.get("embedding_key", "embedding")
+            auto_embedding_model = None
+            self._is_autoembedding = False
+            if isinstance(self.embeddings, AutoEmbeddings):
+                self._is_autoembedding = True
+                auto_embedding_model = self.embeddings.model
+                self.query_model = (
+                    self.embeddings.model if query_model is None else query_model
+                )
+
             self.sep = kwargs.get("sep", "/")  # used for prefix denormalization/search
 
             # Create the vector index if it does not yet exist
@@ -210,6 +234,7 @@ class MongoDBStore(BaseStore):
                     similarity=self._relevance_score_fn,
                     filters=self.index_filters,
                     wait_until_complete=auto_index_timeout,
+                    auto_embedding_model=auto_embedding_model,
                 )
 
     @classmethod
@@ -486,7 +511,8 @@ class MongoDBStore(BaseStore):
         # Extract texts to embed for each op
         if self.index_config:
             texts = self._extract_texts(list(dedupped_putops.values()))
-            vectors = self.embeddings.embed_documents(texts)
+            if not self._is_autoembedding:
+                vectors = self.embeddings.embed_documents(texts)
             v = 0
         for op in dedupped_putops.values():
             if op.value is None:
@@ -501,7 +527,8 @@ class MongoDBStore(BaseStore):
                     "updated_at": datetime.now(tz=timezone.utc),
                 }
                 if self.index_config:
-                    to_set[self._embedding_key] = vectors[v]
+                    embed = texts[v] if self._is_autoembedding else vectors[v]
+                    to_set[self._embedding_key] = embed
                     to_set["namespace_prefix"] = self._denormalize_path(op.namespace)
                     v += 1
 
@@ -610,28 +637,41 @@ class MongoDBStore(BaseStore):
             if limit:
                 pipeline.append({"$limit": limit})
 
-        else:
+        elif query:
             # Case 2. $vectorSearch on query filtered on namespace and optional filters
 
-            # Compute embedding
-            query_vector = self.embeddings.embed_query(query)
             # Form filter condition for namespace_prefix
             filter_vec = {"namespace_prefix": self.sep.join(namespace_prefix)}
             if filter:  # and add any specified
                 filter_cond = [{f"value.{k}": v} for k, v in filter.items()]
                 filter_vec = {"$and": [filter_vec] + filter_cond}
 
-            pipeline = [
-                vector_search_stage(
-                    query_vector=query_vector,
-                    search_field=self._embedding_key,
-                    index_name=self._index_name,
-                    top_k=limit,
-                    filter=filter_vec,
-                ),
-                {"$set": {"score": {"$meta": "vectorSearchScore"}}},
-                {"$project": {self._embedding_key: 0}},
-            ]
+            if not self._is_autoembedding:
+                query_vector = self.embeddings.embed_query(query)
+                pipeline = [
+                    vector_search_stage(
+                        query_vector=query_vector,
+                        search_field=self._embedding_key,
+                        index_name=self._index_name,
+                        top_k=limit,
+                        filter=filter_vec,
+                    ),
+                    {"$set": {"score": {"$meta": "vectorSearchScore"}}},
+                    {"$project": {self._embedding_key: 0}},
+                ]
+            else:
+                # Case 2b.  $vectorSearch uses autoEmbed index.
+                pipeline = [
+                    autoembedding_vector_search_stage(
+                        query=query,
+                        search_field=self._embedding_key,
+                        index_name=self._index_name,
+                        model=self.query_model,
+                        top_k=limit,
+                        filter=filter_vec,
+                    ),
+                    {"$set": {"score": {"$meta": "vectorSearchScore"}}},
+                ]
 
         results = self.collection.aggregate(pipeline)
 
