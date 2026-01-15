@@ -16,7 +16,7 @@ from langgraph.store.mongodb import (
     create_vector_index_config,
 )
 
-if "COMMUNITY_WITH_SEARCH" not in os.environ:
+if not os.environ.get("COMMUNITY_WITH_SEARCH"):
     pytest.skip(
         "AutoEmbedded Vector Search Index is only available in MongoDB Community with Search.",
         allow_module_level=True,
@@ -125,7 +125,7 @@ def test_filters(collection: Collection) -> None:
     assert len(result_mdb) == len(products) - 1
     assert result_mdb[0].value["product"] == "pears"
 
-    # Case 3: Empty  namespace_prefix
+    # Case 3: Empty namespace_prefix
     namespace_prefix = ("",)
     result_mdb = store_mdb.search(namespace_prefix, query=query)
     assert len(result_mdb) == 0
