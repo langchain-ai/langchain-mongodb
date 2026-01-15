@@ -35,15 +35,13 @@ from pymongo import (
 )
 from pymongo.collection import Collection, ReturnDocument
 from pymongo_search_utils import (
+    append_client_metadata,
     autoembedding_vector_search_stage,
     create_vector_search_index,
     vector_search_stage,
 )
 
-from langgraph.store.mongodb.utils import (
-    DRIVER_METADATA,
-    _append_client_metadata,
-)
+from langgraph.store.mongodb.utils import DRIVER_METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +174,9 @@ class MongoDBStore(BaseStore):
         self.ttl_config = {} if ttl_config is None else ttl_config
         self.index_config = {} if index_config is None else index_config
 
-        _append_client_metadata(self.collection.database.client)
+        append_client_metadata(
+            client=self.collection.database.client, driver_info=DRIVER_METADATA
+        )
 
         # Create indexes if not present
         # Create a unique index, akin to primary key, on namespace + key
