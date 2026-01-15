@@ -10,6 +10,7 @@ See the following for more:
 from typing import Any, Dict, List, Optional, Union
 
 from pymongo_search_utils import (
+    autoembedding_vector_search_stage,  # noqa: F401
     combine_pipelines,  # noqa: F401
     final_hybrid_stage,  # noqa: F401
     reciprocal_rank_stage,  # noqa: F401

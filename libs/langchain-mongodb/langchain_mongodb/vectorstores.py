@@ -24,14 +24,18 @@ from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.errors import CollectionInvalid
+from pymongo.errors import CollectionInvalid, ConfigurationError
 from pymongo_search_utils import bulk_embed_and_insert_texts
 
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.index import (
     create_vector_search_index,
     update_vector_search_index,
 )
-from langchain_mongodb.pipelines import vector_search_stage
+from langchain_mongodb.pipelines import (
+    autoembedding_vector_search_stage,
+    vector_search_stage,
+)
 from langchain_mongodb.utils import (
     DRIVER_METADATA,
     _append_client_metadata,
@@ -208,8 +212,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         embedding: Embeddings,
         index_name: str = "vector_index",
         text_key: Union[str, List[str]] = "text",
-        embedding_key: str = "embedding",
-        relevance_score_fn: str = "cosine",
+        embedding_key: str | None = "embedding",
+        relevance_score_fn: str | None = "cosine",
         dimensions: int = -1,
         auto_create_index: bool | None = None,
         auto_index_timeout: int = 15,
@@ -223,12 +227,13 @@ class MongoDBAtlasVectorSearch(VectorStore):
             text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
             The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
-            embedding_key: Field that will contain the embedding for each document
+            embedding_key: Field that will contain the embedding for each document, should be `None` if embedding is an instance of `AutoEmbeddings`.
             relevance_score_fn: The similarity score used for the index
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
+                Should be `None` if embedding is an AutoEmbedding.
             auto_create_index: Whether to automatically create an index if it does not exist.
             dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
-                is `true`, the value will be inferred.
+                is `true`, the value will be inferred. Should be `-1` if embedding is an instance of `AutoEmbeddings`.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
                to be ready.
         """
@@ -238,27 +243,56 @@ class MongoDBAtlasVectorSearch(VectorStore):
         self._text_key = text_key if isinstance(text_key, str) else text_key[0]
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
+        self._is_autoembedding = isinstance(embedding, AutoEmbeddings)
 
         # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
         _append_client_metadata(self._collection.database.client)
 
         if auto_create_index is False:
             return
-        if auto_create_index is None and dimensions == -1:
+        if (
+            auto_create_index is None
+            and dimensions == -1
+            and not self._is_autoembedding
+        ):
             return
-        if dimensions == -1:
+        if dimensions == -1 and not self._is_autoembedding:
             dimensions = len(embedding.embed_query("foo"))
 
         coll = self._collection
+        if self._is_autoembedding:
+            if embedding_key is not None:
+                raise ConfigurationError(
+                    "Auto-embeddings cannot have embedding key, please set to `None` if using AutoEmbeddings."
+                )
+            if dimensions != -1:
+                raise ConfigurationError(
+                    "dimensions can't be specified for auto-embeddings, please set to `-1` if using AutoEmbeddings."
+                )
+            if relevance_score_fn is not None:
+                raise ConfigurationError(
+                    "relevance score cannot be configured for auto-embeddings, please set to `None` if using AutoEmbeddings."
+                )
+
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
+            if self._is_autoembedding:
+                assert isinstance(self._embedding, AutoEmbeddings)
+                path = self._text_key
+                embedding_model = self._embedding.model
+            else:
+                assert self._embedding_key is not None
+                path = self._embedding_key
+                embedding_model = None
+
             create_vector_search_index(
                 collection=coll,
                 index_name=index_name,
                 dimensions=dimensions,
-                path=embedding_key,
-                similarity=relevance_score_fn,
+                path=path,
+                similarity=self._relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
                 vector_index_options=vector_index_options,
+                auto_embedding_model=embedding_model,
             )
 
     @property
@@ -438,8 +472,9 @@ class MongoDBAtlasVectorSearch(VectorStore):
             embedding_func=self._embedding.embed_documents,
             collection=self._collection,
             text_key=self._text_key,
-            embedding_key=self._embedding_key,
+            embedding_key="" if self._embedding_key is None else self._embedding_key,
             ids=ids,
+            autoembedding=self._is_autoembedding,
         )
 
     def add_documents(
@@ -511,9 +546,12 @@ class MongoDBAtlasVectorSearch(VectorStore):
         Returns:
             List of documents most similar to the query and their scores.
         """
-        embedding = self._embedding.embed_query(query)
+        query_input: list[float] | str = query
+        if not self._is_autoembedding:
+            query_input = self._embedding.embed_query(query)
+
         docs = self._similarity_search_with_score(
-            embedding,
+            query_input,
             k=k,
             pre_filter=pre_filter,
             post_filter_pipeline=post_filter_pipeline,
@@ -521,6 +559,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             include_embeddings=include_embeddings,
             **kwargs,
         )
+
         return docs
 
     def similarity_search(
@@ -766,7 +805,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
     def _similarity_search_with_score(
         self,
-        query_vector: List[float],
+        query_vector: Union[List[float], str],
         k: int = 4,
         pre_filter: Optional[Dict[str, Any]] = None,
         post_filter_pipeline: Optional[List[Dict]] = None,
@@ -777,21 +816,40 @@ class MongoDBAtlasVectorSearch(VectorStore):
         """Core search routine. See external methods for details."""
 
         # Atlas Vector Search, potentially with filter
-        pipeline = [
-            vector_search_stage(
-                query_vector,
-                self._embedding_key,
-                self._index_name,
-                k,
-                pre_filter,
-                oversampling_factor,
-                **kwargs,
-            ),
-            {"$set": {"score": {"$meta": "vectorSearchScore"}}},
-        ]
+        if self._is_autoembedding:
+            assert isinstance(self._embedding, AutoEmbeddings)
+            assert isinstance(query_vector, str)
+            pipeline = [
+                autoembedding_vector_search_stage(
+                    query_vector,
+                    self._text_key,
+                    self._index_name,
+                    self._embedding.model,
+                    k,
+                    pre_filter,
+                    oversampling_factor,
+                    **kwargs,
+                ),
+                {"$set": {"score": {"$meta": "vectorSearchScore"}}},
+            ]
+        else:
+            assert isinstance(query_vector, list)
+            assert self._embedding_key is not None
+            pipeline = [
+                vector_search_stage(
+                    query_vector,
+                    self._embedding_key,
+                    self._index_name,
+                    k,
+                    pre_filter,
+                    oversampling_factor,
+                    **kwargs,
+                ),
+                {"$set": {"score": {"$meta": "vectorSearchScore"}}},
+            ]
 
         # Remove embeddings unless requested.
-        if not include_embeddings:
+        if not include_embeddings and not self._is_autoembedding:
             pipeline.append({"$project": {self._embedding_key: 0}})
         # Post-processing
         if post_filter_pipeline is not None:
@@ -862,16 +920,26 @@ class MongoDBAtlasVectorSearch(VectorStore):
         index_operation = (
             update_vector_search_index if update else create_vector_search_index
         )
+        if self._is_autoembedding:
+            assert isinstance(self._embedding, AutoEmbeddings)
+            dimensions = -1
+            embedding_model = self._embedding.model
+            path = self._text_key
+        else:
+            embedding_model = None
+            assert self._embedding_key is not None
+            path = self._embedding_key
 
         index_operation(
             collection=self._collection,
             index_name=self._index_name,
             dimensions=dimensions,
-            path=self._embedding_key,
+            path=path,
             similarity=self._relevance_score_fn,
             filters=filters or [],
             vector_index_options=vector_index_options,
             wait_until_complete=wait_until_complete,
+            auto_embedding_model=embedding_model,
             **kwargs,
         )  # type: ignore [operator]
 
