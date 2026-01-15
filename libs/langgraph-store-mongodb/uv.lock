@@ -411,8 +411,8 @@ wheels = [
 
 [[package]]
 name = "langchain-mongodb"
-version = "0.10.0"
-source = { git = "https://github.com/sleepyStick/langchain-mongodb.git?subdirectory=libs%2Flangchain-mongodb&rev=autoembedding#2691606a739f86c0b276001a676b36ecbe6a1cad" }
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain" },
     { name = "langchain-classic" },
@@ -422,6 +422,10 @@ dependencies = [
     { name = "numpy" },
     { name = "pymongo" },
     { name = "pymongo-search-utils" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/0e/03027bbf0ae3ee71d00e32f5c64395cbee05393e6e5dc56e2d88320db542/langchain_mongodb-0.11.0.tar.gz", hash = "sha256:db483f12e8a4fdbbcfb0594881962fd1f0afcb38a3d42ee0d5fe8a2be20e1e86", size = 356447, upload-time = "2026-01-15T17:00:37.102Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/a1/a4ef0c7027166540a4aced056b1fd7194e4519932d2a846fd2cfd9f057cb/langchain_mongodb-0.11.0-py3-none-any.whl", hash = "sha256:7e1f43684c907d1f1fee4dbc480dd4909b3ebf03b5d3dad105ed9f4a4280d49f", size = 62037, upload-time = "2026-01-15T17:00:36.258Z" },
 ]
 
 [[package]]
@@ -512,7 +516,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-mongodb", git = "https://github.com/sleepyStick/langchain-mongodb.git?subdirectory=libs%2Flangchain-mongodb&rev=autoembedding" },
+    { name = "langchain-mongodb", specifier = ">=0.11.0" },
     { name = "langgraph-checkpoint", specifier = ">=3.0.0" },
     { name = "pymongo-search-utils", specifier = ">=0.2.1" },
 ]

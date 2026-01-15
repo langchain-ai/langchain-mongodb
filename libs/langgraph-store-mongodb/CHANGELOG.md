@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.2.0 (2026/01/14)
+## Changes in version 0.2.0 (2026/01/15)
 
 - Adds support for semantic search with Automated embedding in Vector search (for public preview on MongoDB Community).
 
