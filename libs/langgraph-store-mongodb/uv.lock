@@ -514,7 +514,7 @@ dev = [
 requires-dist = [
     { name = "langchain-mongodb", git = "https://github.com/sleepyStick/langchain-mongodb.git?subdirectory=libs%2Flangchain-mongodb&rev=autoembedding" },
     { name = "langgraph-checkpoint", specifier = ">=3.0.0" },
-    { name = "pymongo-search-utils", specifier = ">=0.2.0" },
+    { name = "pymongo-search-utils", specifier = ">=0.2.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1019,14 +1019,14 @@ wheels = [
 
 [[package]]
 name = "pymongo-search-utils"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pymongo" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/59/fb6fd530912c7ff853c975f06c4b87c545b9f9d6a5eb1560ee58ae0df8e9/pymongo_search_utils-0.2.0.tar.gz", hash = "sha256:2285b31b703edf7d8a38d428a0dc8ecbf9d4b32b16f13f33d6e7ce62b38bb4b8", size = 12416, upload-time = "2026-01-14T20:17:59.153Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/e1/619f60f3fa4845d0d6e5f0debbc7c5cf319311e0a53ddf9250ae7fd6a942/pymongo_search_utils-0.2.1.tar.gz", hash = "sha256:06c52a8f97a1dab2b9ab176c11d355c750bedbf0a5f2a8c32e72f1d98d7b2527", size = 12433, upload-time = "2026-01-14T23:54:35.875Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/d7/cefbb1a5c1d08285fc9fd7f0647e5f6e946c0b74bb85b529dfb52de790ed/pymongo_search_utils-0.2.0-py3-none-any.whl", hash = "sha256:ab42754e01c0be3a04f0fc0f65f4dc33aa7339b2c319b6d3abaa55807185dae0", size = 17617, upload-time = "2026-01-14T20:17:57.719Z" },
+    { url = "https://files.pythonhosted.org/packages/84/21/483d4c9ff0e5c33432441e797c48260a975797cca58d3f1e57b664a1f0e1/pymongo_search_utils-0.2.1-py3-none-any.whl", hash = "sha256:f1c666a9ce19c80d496567d8ab61a3d21e2e0a212df45625c9f8d9b8ef2cce33", size = 17797, upload-time = "2026-01-14T23:54:34.726Z" },
 ]
 
 [[package]]
