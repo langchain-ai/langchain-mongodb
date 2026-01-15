@@ -277,11 +277,11 @@ class MongoDBAtlasVectorSearch(VectorStore):
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             if self._is_autoembedding:
                 assert isinstance(self._embedding, AutoEmbeddings)
-                path = text_key
+                path = self._text_key
                 embedding_model = self._embedding.model
             else:
-                assert embedding_key is not None
-                path = embedding_key
+                assert self._embedding_key is not None
+                path = self._embedding_key
                 embedding_model = None
 
             create_vector_search_index(
