@@ -16,7 +16,7 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import AUTO_EMBEDDING_MODEL, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
@@ -47,7 +47,7 @@ def collection(client: MongoClient) -> Collection:
             filters=["c"],
             similarity=None,
             wait_until_complete=60,
-            auto_embedding_model="voyage-4",
+            auto_embedding_model=AUTO_EMBEDDING_MODEL,
         )
 
     return clxn
