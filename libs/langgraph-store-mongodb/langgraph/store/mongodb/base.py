@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional, Union
 from bson import SON
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
-from langchain_mongodb.embeddings import AutoEmbedding
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langgraph.store.base import (
     BaseStore,
     GetOp,
@@ -210,7 +210,7 @@ class MongoDBStore(BaseStore):
             self._embedding_key = self.index_config.get("embedding_key", "embedding")
             auto_embedding_model = None
             self._is_autoembedding = False
-            if isinstance(self.embeddings, AutoEmbedding):
+            if isinstance(self.embeddings, AutoEmbeddings):
                 self._is_autoembedding = True
                 auto_embedding_model = self.embeddings.model
                 self.query_model = (

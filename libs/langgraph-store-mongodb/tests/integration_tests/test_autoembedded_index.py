@@ -5,7 +5,7 @@ from collections.abc import Callable, Generator
 from time import monotonic, sleep
 
 import pytest
-from langchain_mongodb.embeddings import AutoEmbedding
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langgraph.store.base import PutOp
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -74,7 +74,7 @@ def test_filters(collection: Collection) -> None:
         dims=DIMENSIONS,
         relevance_score_fn=None,
         fields=["product"],
-        embed=AutoEmbedding(model="voyage-4"),  # embedding
+        embed=AutoEmbeddings(model="voyage-4"),  # embedding
         filters=["metadata.available"],
     )
     store_mdb = MongoDBStore(
