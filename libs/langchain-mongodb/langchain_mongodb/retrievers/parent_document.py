@@ -81,6 +81,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     ) -> List[Document]:
         query_vector = self.vectorstore._embedding.embed_query(query)
 
+        assert self.vectorstore._embedding_key is not None
         pipeline = [
             vector_search_stage(
                 query_vector,

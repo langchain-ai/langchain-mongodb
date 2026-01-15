@@ -277,15 +277,17 @@ class MongoDBAtlasVectorSearch(VectorStore):
         if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
             if self._is_autoembedding:
                 assert isinstance(self._embedding, AutoEmbeddings)
+                path = embedding_key
                 embedding_model = self._embedding.model
             else:
+                path = text_key
                 embedding_model = None
 
             create_vector_search_index(
                 collection=coll,
                 index_name=index_name,
                 dimensions=dimensions,
-                path=embedding_key,
+                path=path,
                 similarity=self._relevance_score_fn,
                 wait_until_complete=auto_index_timeout,
                 vector_index_options=vector_index_options,
@@ -469,7 +471,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             embedding_func=self._embedding.embed_documents,
             collection=self._collection,
             text_key=self._text_key,
-            embedding_key=self._embedding_key,
+            embedding_key="" if self._embedding_key is None else self._embedding_key,
             ids=ids,
             autoembedding=self._is_autoembedding,
         )
@@ -815,6 +817,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
         # Atlas Vector Search, potentially with filter
         if self._is_autoembedding:
             assert isinstance(self._embedding, AutoEmbeddings)
+            assert isinstance(query_vector, str)
             pipeline = [
                 autoembedding_vector_search_stage(
                     query_vector,
@@ -829,6 +832,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 {"$set": {"score": {"$meta": "vectorSearchScore"}}},
             ]
         else:
+            assert isinstance(query_vector, list)
+            assert self._embedding_key is not None
             pipeline = [
                 vector_search_stage(
                     query_vector,
@@ -918,14 +923,16 @@ class MongoDBAtlasVectorSearch(VectorStore):
             assert isinstance(self._embedding, AutoEmbeddings)
             dimensions = -1
             embedding_model = self._embedding.model
+            path = self._text_key
         else:
             embedding_model = None
+            path = self._embedding_key
 
         index_operation(
             collection=self._collection,
             index_name=self._index_name,
             dimensions=dimensions,
-            path=self._embedding_key,
+            path=path,
             similarity=self._relevance_score_fn,
             filters=filters or [],
             vector_index_options=vector_index_options,

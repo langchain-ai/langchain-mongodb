@@ -96,6 +96,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         # First we build up the aggregation pipeline,
         # then it is passed to the server to execute
         # Vector Search stage
+        assert self.vectorstore._embedding_key is not None
         vector_pipeline = [
             vector_search_stage(
                 query_vector=query_vector,
