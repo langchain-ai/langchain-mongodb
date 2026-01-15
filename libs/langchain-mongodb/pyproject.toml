@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-mongodb"
-version = "0.10.0"
+version = "0.11.0"
 description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,7 +17,7 @@ dependencies = [
     "langchain-text-splitters>=1.0",
     "numpy>=1.26",
     "lark<2.0.0,>=1.1.9",
-    "pymongo-search-utils>=0.1.0",
+    "pymongo-search-utils>=0.2.1",
 ]
 
 [dependency-groups]

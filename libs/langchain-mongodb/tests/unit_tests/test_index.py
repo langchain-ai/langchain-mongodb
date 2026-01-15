@@ -32,10 +32,10 @@ def test_create_vector_search_index(collection: Collection) -> None:
         index.create_vector_search_index(
             collection,
             "index_name",
-            DIMENSION,
-            "embedding",
-            "cosine",
-            [],
+            path="embedding",
+            dimensions=DIMENSION,
+            similarity="cosine",
+            filters=[],
             wait_until_complete=TIMEOUT,
         )
 
@@ -52,8 +52,8 @@ def test_update_vector_search_index(collection: Collection) -> None:
         index.update_vector_search_index(
             collection,
             "index_name",
-            DIMENSION,
             "embedding",
+            DIMENSION,
             "cosine",
             [],
             wait_until_complete=TIMEOUT,

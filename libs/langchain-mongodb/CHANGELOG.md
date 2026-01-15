@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.11.0 (2026/01/15)
+
+- Add support for auto-embeddings in `MongoDBAtlasVectorSearch`.
+
 ## Changes in version 0.10.0 (2026/01/05)
 
 - Bump langchain-core dependency for [CVE-2025-68664](https://nvd.nist.gov/vuln/detail/CVE-2025-68664).
