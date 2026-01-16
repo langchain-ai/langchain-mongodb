@@ -9,11 +9,13 @@ from typing import (
     Generator,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
 import numpy as np
@@ -204,14 +206,38 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
             [Document(metadata={'_id': '2', 'embedding': [-0.01850726455450058, -0.0014740974875167012, -0.009762819856405258, ...], 'baz': 'baz'}, page_content='thud')]
 
-    """  # noqa: E501
+    """
 
+      # noqa: E501
+    # --- Overload: AutoEmbeddings configuration --------------------------------
+
+    @overload
+    def __init__(
+        self,
+        collection: Collection[Dict[str, Any]],
+        embedding: AutoEmbeddings | str,
+        index_name: str = "vector_index",
+        text_key: str | List[str] = "text",
+        *,
+        embedding_key: None,  # must be None
+        relevance_score_fn: None,  # must be None
+        dimensions: Literal[-1],  # must be -1
+        auto_create_index: bool | None = None,
+        auto_index_timeout: int = 15,
+        vector_index_options: dict | None = None,
+        **kwargs: Any,
+    ) -> None: ...
+
+    # --- Overload: Regular Embeddings configuration ----------------------------
+
+    @overload
     def __init__(
         self,
         collection: Collection[Dict[str, Any]],
         embedding: Embeddings,
         index_name: str = "vector_index",
-        text_key: Union[str, List[str]] = "text",
+        text_key: str | List[str] = "text",
+        *,
         embedding_key: str | None = "embedding",
         relevance_score_fn: str | None = "cosine",
         dimensions: int = -1,
@@ -219,11 +245,29 @@ class MongoDBAtlasVectorSearch(VectorStore):
         auto_index_timeout: int = 15,
         vector_index_options: dict | None = None,
         **kwargs: Any,
-    ):
+    ) -> None: ...
+
+    # --- Implementation --------------------------------------------------------
+
+    def __init__(
+        self,
+        collection: Collection[Dict[str, Any]],
+        embedding: Embeddings | str,
+        index_name: str = "vector_index",
+        text_key: str | List[str] = "text",
+        embedding_key: str | None = "embedding",
+        relevance_score_fn: str | None = "cosine",
+        dimensions: int = -1,
+        auto_create_index: bool | None = None,
+        auto_index_timeout: int = 15,
+        vector_index_options: dict | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Args:
             collection: MongoDB collection to add the texts to
-            embedding: Text embedding model to use
+            embedding: Text embedding model to use.  If a string is passed, it will be used to create an AutoEmbeddings class
+               with the given model name.
             text_key: MongoDB field that will contain the text for each document. It is possible to parse a list of fields.\
             The first one will be used as text key. Default: 'text'
             index_name: Existing Atlas Vector Search Index
@@ -238,28 +282,16 @@ class MongoDBAtlasVectorSearch(VectorStore):
                to be ready.
         """
         self._collection = collection
-        self._embedding = embedding
         self._index_name = index_name
         self._text_key = text_key if isinstance(text_key, str) else text_key[0]
         self._embedding_key = embedding_key
         self._relevance_score_fn = relevance_score_fn
+        if isinstance(embedding, str):
+            embedding = AutoEmbeddings(embedding)
+        self._embedding = embedding
         self._is_autoembedding = isinstance(embedding, AutoEmbeddings)
 
-        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
-        _append_client_metadata(self._collection.database.client)
-
-        if auto_create_index is False:
-            return
-        if (
-            auto_create_index is None
-            and dimensions == -1
-            and not self._is_autoembedding
-        ):
-            return
-        if dimensions == -1 and not self._is_autoembedding:
-            dimensions = len(embedding.embed_query("foo"))
-
-        coll = self._collection
+        # Validate the inputs.
         if self._is_autoembedding:
             if embedding_key is not None:
                 raise ConfigurationError(
@@ -274,26 +306,27 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     "relevance score cannot be configured for auto-embeddings, please set to `None` if using AutoEmbeddings."
                 )
 
-        if not any([ix["name"] == index_name for ix in coll.list_search_indexes()]):
-            if self._is_autoembedding:
-                assert isinstance(self._embedding, AutoEmbeddings)
-                path = self._text_key
-                embedding_model = self._embedding.model
-            else:
-                assert self._embedding_key is not None
-                path = self._embedding_key
-                embedding_model = None
+        # append_metadata was added in PyMongo 4.14.0, but is a valid database name on earlier versions
+        _append_client_metadata(self._collection.database.client)
 
-            create_vector_search_index(
-                collection=coll,
-                index_name=index_name,
-                dimensions=dimensions,
-                path=path,
-                similarity=self._relevance_score_fn,
-                wait_until_complete=auto_index_timeout,
-                vector_index_options=vector_index_options,
-                auto_embedding_model=embedding_model,
-            )
+        if auto_create_index is False:
+            return
+        if (
+            auto_create_index is None
+            and dimensions == -1
+            and not self._is_autoembedding
+        ):
+            return
+        # Bail if the index is already created.
+        if any(
+            [ix["name"] == index_name for ix in self._collection.list_search_indexes()]
+        ):
+            return
+        self.create_vector_search_index(
+            dimensions,
+            wait_until_complete=auto_index_timeout,
+            vector_index_options=vector_index_options,
+        )
 
     @property
     def embeddings(self) -> Embeddings:
@@ -653,7 +686,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
     def from_texts(
         cls,
         texts: List[str],
-        embedding: Embeddings,
+        embedding: Embeddings | str,
         metadatas: Optional[List[Dict]] = None,
         collection: Optional[Collection] = None,
         ids: Optional[List[str]] = None,
@@ -885,7 +918,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
     def create_vector_search_index(
         self,
-        dimensions: int,
+        dimensions: int = -1,
         filters: Optional[List[str]] = None,
         update: bool = False,
         wait_until_complete: Optional[float] = None,
@@ -900,7 +933,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
         performed manually on the Atlas UI for shared M0 clusters.
 
         Args:
-            dimensions (int): Number of dimensions in embedding
+            dimensions (Optional[int]): Number of dimensions in embedding. Should be `-1` if embedding is an instance of `AutoEmbeddings`.
+                Otherwise if the value is not provided, it will be inferred using the embedding model.
             filters (Optional[List[Dict[str, str]]], optional): additional filters
             for index definition.
                 Defaults to None.
@@ -929,6 +963,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
             embedding_model = None
             assert self._embedding_key is not None
             path = self._embedding_key
+            if dimensions == -1:
+                dimensions = len(self._embedding.embed_query("foo"))
 
         index_operation(
             collection=self._collection,

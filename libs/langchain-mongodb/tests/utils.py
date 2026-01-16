@@ -34,6 +34,7 @@ from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 TIMEOUT = 120
 INTERVAL = 0.5
 CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
+AUTOEMBED_MODEL = "voyage-4"
 
 
 DB_NAME = "langchain_test_db"
