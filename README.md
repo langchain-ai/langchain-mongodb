@@ -7,6 +7,7 @@ It contains the following packages.
 
 - `langchain-mongodb` ([PyPI](https://pypi.org/project/langchain-mongodb/))
 - `langgraph-checkpoint-mongodb` ([PyPI](https://pypi.org/project/langgraph-checkpoint-mongodb/))
+- `langgraph-store-mongodb` ([PyPI](https://pypi.org/project/langgraph-store-mongodb/))
 
 **Note**: This repository replaces all MongoDB integrations currently present in the `langchain-community` package. Users are encouraged to migrate to this repository as soon as possible.
 
