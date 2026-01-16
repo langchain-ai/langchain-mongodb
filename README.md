@@ -7,6 +7,7 @@ It contains the following packages.
 
 - `langchain-mongodb` ([PyPI](https://pypi.org/project/langchain-mongodb/))
 - `langgraph-checkpoint-mongodb` ([PyPI](https://pypi.org/project/langgraph-checkpoint-mongodb/))
+- `langgraph-store-mongodb` ([PyPI](https://pypi.org/project/langgraph-store-mongodb/))
 
 **Note**: This repository replaces all MongoDB integrations currently present in the `langchain-community` package. Users are encouraged to migrate to this repository as soon as possible.
 
@@ -44,21 +45,17 @@ It contains the following packages.
 
 ## Installation
 
-You can install the `langchain-mongodb` package from PyPI.
+You can install `langchain-mongodb`, `langgraph-checkpoint-mongodb` and `langgraph-store-mongodb` from PyPI.
 
 ```bash
-pip install langchain-mongodb
+pip install langchain-mongodb langgraph-checkpoint-mongodb langgraph-store-mongodb
 ```
 
-You can install the `langgraph-checkpoint-mongodb` package from PyPI as well:
 
-```bash
-pip install langgraph-checkpoint-mongodb
-```
 
 ## Usage
 
-See [langchain-mongodb usage](libs/langchain-mongodb/README.md#usage) and [langgraph-checkpoint-mongodb usage](libs/langgraph-checkpoint-mongodb/README.md#usage).
+See [langchain-mongodb usage](libs/langchain-mongodb/README.md#usage), [langgraph-checkpoint-mongodb usage](libs/langgraph-checkpoint-mongodb/README.md#usage) and [langgraph-store-mongodb usage](libs/langgraph-store-mongodb/README.md#usage).
 
 For more detailed usage examples and documentation, please refer to the [LangChain documentation](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/).
 
