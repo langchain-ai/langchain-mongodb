@@ -34,6 +34,7 @@ from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 TIMEOUT = 120
 INTERVAL = 0.5
 CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
+AUTOEMBED_MODEL = "voyage-4"
 
 
 DB_NAME = "langchain_test_db"
@@ -251,6 +252,9 @@ class MockDatabase:
 
     def __init__(self, client=None):
         self.client = client or MockClient()
+
+    def create_collection(self, name: str) -> None:
+        pass
 
     def list_collection_names(self, authorizedCollections: bool = True) -> list[str]:
         return ["test"]
