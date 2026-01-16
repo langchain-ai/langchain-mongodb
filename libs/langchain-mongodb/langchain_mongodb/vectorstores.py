@@ -206,9 +206,8 @@ class MongoDBAtlasVectorSearch(VectorStore):
 
             [Document(metadata={'_id': '2', 'embedding': [-0.01850726455450058, -0.0014740974875167012, -0.009762819856405258, ...], 'baz': 'baz'}, page_content='thud')]
 
-    """
+    """  # noqa: E501
 
-      # noqa: E501
     # --- Overload: AutoEmbeddings configuration --------------------------------
 
     @overload
