@@ -173,4 +173,4 @@ def test_create_with_str(
     assert all(hasattr(doc, "page_content") for doc, _ in output)
     assert all(hasattr(doc, "metadata") for doc, _ in output)
 
-    vs.delete_many({})
+    vs.collection.delete_many({})
