@@ -42,19 +42,19 @@ def _create_saver_indexes(
         ttl (int, optional): Time to live in seconds for the TTL index. Defaults to None.
     """
 
-    def index_key_tuple(index):
-        return tuple((k, v) for k, v in index["key"].items())
+    def index_key_list(index):
+        return list((k, v) for k, v in index["key"].items())
 
     indexes = list(collection.list_indexes())
-    index_keys = [index_key_tuple(idx) for idx in indexes]
-    if tuple(compound_index) not in index_keys:
+    index_keys = [index_key_list(idx) for idx in indexes]
+    if compound_index not in index_keys:
         collection.create_index(compound_index, unique=True)
     if ttl is not None:
         ttl_index = [("created_at", ASCENDING)]
         found = False
         for idx in indexes:
             if (
-                index_key_tuple(idx) == tuple(ttl_index)
+                index_key_list(idx) == tuple(ttl_index)
                 and idx.get("expireAfterSeconds") == ttl
             ):
                 found = True
