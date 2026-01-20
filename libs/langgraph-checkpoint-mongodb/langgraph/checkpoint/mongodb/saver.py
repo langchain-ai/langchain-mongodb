@@ -42,7 +42,7 @@ def _create_saver_indexes(
         ttl (int, optional): Time to live in seconds for the TTL index. Defaults to None.
     """
 
-    def index_key_list(index):
+    def index_key_list(index: Any) -> list[tuple[str, int]]:
         return list((k, v) for k, v in index["key"].items())
 
     indexes = list(collection.list_indexes())
