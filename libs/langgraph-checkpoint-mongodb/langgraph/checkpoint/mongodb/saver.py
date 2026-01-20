@@ -20,9 +20,48 @@ from langgraph.checkpoint.base import (
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from pymongo import ASCENDING, MongoClient, UpdateOne
+from pymongo.collection import Collection
 from pymongo.database import Database as MongoDatabase
 
 from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
+
+
+def _create_saver_indexes(
+    collection: Collection,
+    compound_index: list[tuple[str, int]],
+    ttl: Optional[int] = None,
+) -> None:
+    """Create indexes for the saver collections.
+
+    This helper function creates the given compound index and TTL index (if required)
+    for the given collection.
+
+    Args:
+        collection (Collection): The MongoDB collection to create indexes on.
+        compound_index (list[tuple[str, int]]): The compound index to create.
+        ttl (int, optional): Time to live in seconds for the TTL index. Defaults to None.
+    """
+
+    # Helper to compare index key patterns
+    def index_key_tuple(index):
+        return tuple((k, v) for k, v in index["key"].items())
+
+    indexes = list(collection.list_indexes())
+    index_keys = [index_key_tuple(idx) for idx in indexes]
+    compound_dict = {k: v for k, v in compound_index}
+    if index_key_tuple(compound_dict) not in index_keys:
+        collection.create_index(compound_index, unique=True)
+    if ttl is not None:
+        ttl_key = [("created_at", ASCENDING)]
+        ttl_dict = {k: v for k, v in ttl_key}
+        found = False
+        for idx in indexes:
+            if index_key_tuple(idx) == index_key_tuple(ttl_dict):
+                if idx.get("expireAfterSeconds") == ttl:
+                    found = True
+                    break
+        if not found:
+            collection.create_index(ttl_key, expireAfterSeconds=ttl)
 
 
 class MongoDBSaver(BaseCheckpointSaver):
@@ -97,34 +136,22 @@ class MongoDBSaver(BaseCheckpointSaver):
         else:
             self.serde = JsonPlusSerializer()
 
-        # Create indexes if not present
-        if len(self.checkpoint_collection.list_indexes().to_list()) < 2:
-            self.checkpoint_collection.create_index(
-                keys=[("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
-                unique=True,
-            )
-            if self.ttl:
-                self.checkpoint_collection.create_index(
-                    keys=[("created_at", ASCENDING)],
-                    expireAfterSeconds=self.ttl,
-                )
-
-        if len(self.writes_collection.list_indexes().to_list()) < 2:
-            self.writes_collection.create_index(
-                keys=[
-                    ("thread_id", 1),
-                    ("checkpoint_ns", 1),
-                    ("checkpoint_id", -1),
-                    ("task_id", 1),
-                    ("idx", 1),
-                ],
-                unique=True,
-            )
-            if self.ttl:
-                self.writes_collection.create_index(
-                    keys=[("created_at", ASCENDING)],
-                    expireAfterSeconds=self.ttl,
-                )
+        _create_saver_indexes(
+            self.checkpoint_collection,
+            [("thread_id", 1), ("checkpoint_ns", 1), ("checkpoint_id", -1)],
+            self.ttl,
+        )
+        _create_saver_indexes(
+            self.writes_collection,
+            [
+                ("thread_id", 1),
+                ("checkpoint_ns", 1),
+                ("checkpoint_id", -1),
+                ("task_id", 1),
+                ("idx", 1),
+            ],
+            self.ttl,
+        )
 
     @classmethod
     @contextmanager
