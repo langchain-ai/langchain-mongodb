@@ -275,7 +275,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 Currently supported: 'euclidean', 'cosine', and 'dotProduct'
                 Should be `None` if embedding is an AutoEmbedding.
             auto_create_index: Whether to automatically create an index if it does not exist.  By default, if no search index of `index_name`
-                exists, one willl be created.
+                exists, one will be created.
             dimensions: Number of dimensions in embedding.  If the value is not provided, and `auto_create_index`
                 is `true`, the value will be inferred. Should be `-1` if embedding is an instance of `AutoEmbeddings`.
             auto_index_timeout: Timeout in seconds to wait for an auto-created index
