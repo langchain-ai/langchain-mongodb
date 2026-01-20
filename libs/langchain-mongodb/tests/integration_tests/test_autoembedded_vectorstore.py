@@ -16,7 +16,7 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import AUTOEMBED_MODEL, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
@@ -47,7 +47,7 @@ def collection(client: MongoClient) -> Collection:
             filters=["c"],
             similarity=None,
             wait_until_complete=60,
-            auto_embedding_model="voyage-4",
+            auto_embedding_model=AUTOEMBED_MODEL,
         )
 
     return clxn
@@ -70,7 +70,7 @@ def metadatas() -> List[Dict]:
 
 @pytest.fixture(scope="module")
 def autoembeddings() -> Embeddings:
-    return AutoEmbeddings(model="voyage-4")
+    return AutoEmbeddings(model=AUTOEMBED_MODEL)
 
 
 @pytest.fixture(scope="module")
@@ -145,3 +145,32 @@ def test_similarity_search(
     # Results should be Document objects
     assert all(hasattr(doc, "page_content") for doc, _ in output)
     assert all(hasattr(doc, "metadata") for doc, _ in output)
+
+
+def test_create_with_str(
+    collection: Collection,
+    texts: List[str],
+    metadatas: List[dict],
+) -> None:
+    vs = PatchedMongoDBAtlasVectorSearch.from_texts(
+        texts=texts,
+        embedding=AUTOEMBED_MODEL,
+        metadatas=metadatas,
+        collection=collection,
+        index_name=AUTOEMBED_IDX_NAME,
+        embedding_key=None,
+        relevance_score_fn=None,
+    )
+    # Test similarity_search method for autoembedding
+    query_text = "Sandwich"
+
+    # Perform search
+    output = vs.similarity_search_with_score(query_text, k=2)
+
+    # Should return results
+    assert len(output) == 2
+    # Results should be Document objects
+    assert all(hasattr(doc, "page_content") for doc, _ in output)
+    assert all(hasattr(doc, "metadata") for doc, _ in output)
+
+    vs.collection.delete_many({})
