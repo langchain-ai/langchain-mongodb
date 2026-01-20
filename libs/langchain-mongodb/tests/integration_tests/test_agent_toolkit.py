@@ -55,9 +55,9 @@ def test_toolkit_response(db):
         CONNECTION_STRING, database=DB_NAME
     )
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
-        llm = AzureChatOpenAI(model="gpt-4o-mini", timeout=60, seed=12345)
+        llm = AzureChatOpenAI(model="gpt-5-mini", timeout=60, seed=12345)
     else:
-        llm = ChatOpenAI(model="gpt-4o-mini", timeout=60, seed=12345)
+        llm = ChatOpenAI(model="gpt-5-mini", timeout=60, seed=12345)
 
     toolkit = MongoDBDatabaseToolkit(db=db_wrapper, llm=llm)
 

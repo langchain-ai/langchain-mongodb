@@ -51,7 +51,7 @@ def create_llm() -> BaseChatModel:
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return AzureChatOpenAI(model="o4-mini", timeout=60, cache=False, seed=12345)
     if os.environ.get("OPENAI_API_KEY"):
-        return ChatOpenAI(model="gpt-4o-mini", timeout=60, cache=False, seed=12345)
+        return ChatOpenAI(model="gpt-5-mini", timeout=60, cache=False, seed=12345)
     return ChatOllama(model="llama3:8b", cache=False, seed=12345)
 
 
