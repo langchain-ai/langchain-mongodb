@@ -42,26 +42,25 @@ def _create_saver_indexes(
         ttl (int, optional): Time to live in seconds for the TTL index. Defaults to None.
     """
 
-    # Helper to compare index key patterns
     def index_key_tuple(index):
         return tuple((k, v) for k, v in index["key"].items())
 
     indexes = list(collection.list_indexes())
     index_keys = [index_key_tuple(idx) for idx in indexes]
-    compound_dict = {k: v for k, v in compound_index}
-    if index_key_tuple(compound_dict) not in index_keys:
+    if tuple(compound_index) not in index_keys:
         collection.create_index(compound_index, unique=True)
     if ttl is not None:
-        ttl_key = [("created_at", ASCENDING)]
-        ttl_dict = {k: v for k, v in ttl_key}
+        ttl_index = [("created_at", ASCENDING)]
         found = False
         for idx in indexes:
-            if index_key_tuple(idx) == index_key_tuple(ttl_dict):
-                if idx.get("expireAfterSeconds") == ttl:
-                    found = True
-                    break
+            if (
+                index_key_tuple(idx) == tuple(ttl_index)
+                and idx.get("expireAfterSeconds") == ttl
+            ):
+                found = True
+                break
         if not found:
-            collection.create_index(ttl_key, expireAfterSeconds=ttl)
+            collection.create_index(ttl_index, expireAfterSeconds=ttl)
 
 
 class MongoDBSaver(BaseCheckpointSaver):
