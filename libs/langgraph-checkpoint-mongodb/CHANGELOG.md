@@ -2,8 +2,10 @@
 
 ---
 
-## Changes in version 0.3.1 (DATE ???)
+## Changes in version 0.3.1 (2026/01/22)
 - Fixes issue #287 to migrate checkpoint data created with v<0.2.2 with a migration script: [migrate_checkpoints_to_typed_metadata.py](./scripts/migrate_checkpoints_to_typed_metadata.py).
+- Fixes issue #299 to ensure TTL indexes are always created on initialization of MongoDBSaver if enabled.
+- Addresses a separate concern in issue #299 to ensure that all timestamps are stored in UTC format.
 
 ## Changes in version 0.3.0 (2025/11/19)
 - Allow custom serde objects to be passed to MongoDBSaver for serialization/deserialization.
