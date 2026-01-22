@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import (
     Any,
     Optional,
@@ -422,7 +422,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "checkpoint_id": checkpoint_id,
         }
         if self.ttl:
-            doc["created_at"] = datetime.now()
+            doc["created_at"] = datetime.now(tz=timezone.utc)
 
         self.checkpoint_collection.update_one(upsert_query, {"$set": doc}, upsert=True)
         return {
@@ -457,7 +457,7 @@ class MongoDBSaver(BaseCheckpointSaver):
             "$set" if all(w[0] in WRITES_IDX_MAP for w in writes) else "$setOnInsert"
         )
         operations = []
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
         for idx, (channel, value) in enumerate(writes):
             upsert_query = {
                 "thread_id": thread_id,
