@@ -2,7 +2,15 @@
 
 Implementation of LangGraph CheckpointSaver that uses MongoDB.
 
+# Installation
+
+```bash
+pip install -U langgraph-checkpoint-mongodb
+```
+
 ## Usage
+
+For more detailed usage examples and documentation, please refer to the [MongoDB LangGraph documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/).
 
 ```python
 from langgraph.checkpoint.mongodb import MongoDBSaver
