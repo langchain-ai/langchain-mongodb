@@ -1,16 +1,19 @@
-from libs.community.tests.unit_tests.chains.test_pebblo_retrieval import retriever
-
 # langchain-mongodb
 
 # Installation
-```
+
+```bash
 pip install -U langchain-mongodb
 ```
 
 # Usage
+
+For more detailed usage examples and documentation, please refer to the [MongoDB LangChain documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/).
+
 - [Integrate Atlas Vector Search with LangChain](https://www.mongodb.com/docs/atlas/atlas-vector-search/ai-integrations/langchain/#get-started-with-the-langchain-integration) for a walkthrough on using your first LangChain implementation with MongoDB Atlas.
 
 ## Using MongoDBAtlasVectorSearch
+
 ```python
 import os
 from langchain_mongodb import MongoDBAtlasVectorSearch

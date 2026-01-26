@@ -17,12 +17,12 @@ It contains the following packages.
 
 #### Components
 
-- [MongoDBAtlasFullTextSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#full-text-search-retriever)
-- [MongoDBAtlasHybridSearchRetriever](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#hybrid-search-retriever)
-- [MongoDBAtlasSemanticCache](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#mongodbatlassemanticcache)
-- [MongoDBAtlasVectorSearch](https://docs.langchain.com/oss/python/integrations/vectorstores/mongodb_atlas)
-- [MongoDBCache](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/#mongodbcache)
-- [MongoDBChatMessageHistory](https://python.langchain.com/docs/integrations/memory/mongodb_chat_message_history/)
+- [MongoDBAtlasFullTextSearchRetriever](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#full-text-retriever)
+- [MongoDBAtlasHybridSearchRetriever](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#hybrid-search-retriever)
+- [MongoDBAtlasSemanticCache](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#semantic-cache)
+- [MongoDBAtlasVectorSearch](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#vector-store)
+- [MongoDBCache](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#mongodb-cache)
+- [MongoDBChatMessageHistory](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/#chat-history)
 
 #### API Reference
 
@@ -57,7 +57,7 @@ pip install langchain-mongodb langgraph-checkpoint-mongodb langgraph-store-mongo
 
 See [langchain-mongodb usage](libs/langchain-mongodb/README.md#usage), [langgraph-checkpoint-mongodb usage](libs/langgraph-checkpoint-mongodb/README.md#usage) and [langgraph-store-mongodb usage](libs/langgraph-store-mongodb/README.md#usage).
 
-For more detailed usage examples and documentation, please refer to the [LangChain documentation](https://python.langchain.com/docs/integrations/providers/mongodb_atlas/).
+For more detailed usage examples and documentation, please refer to the [MongoDB LangChain documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/).
 
 API docs can be found on [ReadTheDocs](https://langchain-mongodb.readthedocs.io/en/latest/index.html).
 
