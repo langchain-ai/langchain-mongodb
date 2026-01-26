@@ -41,7 +41,7 @@ It contains the following packages.
     - [MongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/saver/langgraph.checkpoint.mongodb.saver.MongoDBSaver.html#mongodbsaver)
 
 - Long-term memory (BaseStore)
-   - [MongoDBStore](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_store_mongodb/base/langgraph.store.mongodb.base.MongoDBStore.html#langgraph.store.mongodb.base.MongoDBStore)
+   - [MongoDBStore](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/#mongodb-langgraph-store--long-term-memory-)
 
 ## Installation
 
@@ -57,7 +57,7 @@ pip install langchain-mongodb langgraph-checkpoint-mongodb langgraph-store-mongo
 
 See [langchain-mongodb usage](libs/langchain-mongodb/README.md#usage), [langgraph-checkpoint-mongodb usage](libs/langgraph-checkpoint-mongodb/README.md#usage) and [langgraph-store-mongodb usage](libs/langgraph-store-mongodb/README.md#usage).
 
-For more detailed usage examples and documentation, please refer to the [MongoDB LangChain documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/).
+For more detailed usage examples and documentation, please refer to the [MongoDB LangChain documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langchain/) and the [MongoDB LangGraph documentation](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/).
 
 API docs can be found on [ReadTheDocs](https://langchain-mongodb.readthedocs.io/en/latest/index.html).
 
