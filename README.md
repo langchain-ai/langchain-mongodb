@@ -38,10 +38,10 @@ It contains the following packages.
 ### LangGraph
 
 - Checkpointing (BaseCheckpointSaver)
-    - [MongoDBSaver](https://langchain-mongodb.readthedocs.io/en/latest/langgraph_checkpoint_mongodb/saver/langgraph.checkpoint.mongodb.saver.MongoDBSaver.html#mongodbsaver)
+  - [MongoDBSaver](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/#mongodb-langgraph-checkpointer--short-term-memory-)
 
 - Long-term memory (BaseStore)
-   - [MongoDBStore](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/#mongodb-langgraph-store--long-term-memory-)
+  - [MongoDBStore](https://www.mongodb.com/docs/atlas/ai-integrations/langgraph/#mongodb-langgraph-store--long-term-memory-)
 
 ## Installation
 
@@ -50,8 +50,6 @@ You can install `langchain-mongodb`, `langgraph-checkpoint-mongodb` and `langgra
 ```bash
 pip install langchain-mongodb langgraph-checkpoint-mongodb langgraph-store-mongodb
 ```
-
-
 
 ## Usage
 
