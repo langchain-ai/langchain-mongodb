@@ -16,7 +16,7 @@ from langchain_mongodb.retrievers import (
 from langchain_mongodb.utils import DRIVER_METADATA
 
 from ..utils import (
-    AUTO_EMBEDDING_MODEL,
+    AUTOEMBED_MODEL,
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
@@ -35,7 +35,7 @@ def embedding_param(request, embedding):
     if request.param == "auto":
         if not os.environ.get("COMMUNITY_WITH_SEARCH", ""):
             raise pytest.skip("Only run in COMMUNITY_WITH_SEARCH is set")
-        return AutoEmbeddings(model=AUTO_EMBEDDING_MODEL)
+        return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding
 
 
@@ -61,7 +61,7 @@ def test_1clxn_retriever(
     sixs = list(combined_clxn.list_search_indexes())
     if isinstance(embedding, AutoEmbeddings):
         dimensions = -1
-        auto_embedding_model = AUTO_EMBEDDING_MODEL
+        auto_embedding_model = AUTOEMBED_MODEL
         embedding_key = None
         relevance_score_fn = None
         path = "text"

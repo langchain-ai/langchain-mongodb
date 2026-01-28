@@ -19,7 +19,7 @@ from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
 from ..utils import (
-    AUTO_EMBEDDING_MODEL,
+    AUTOEMBED_MODEL,
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
@@ -185,7 +185,7 @@ def vectorstore_autoembed(
     vs = PatchedMongoDBAtlasVectorSearch.from_connection_string(
         CONNECTION_STRING,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
-        embedding=AutoEmbeddings(AUTO_EMBEDDING_MODEL),
+        embedding=AutoEmbeddings(AUTOEMBED_MODEL),
     )
     # Delete search indexes
     [
@@ -199,7 +199,7 @@ def vectorstore_autoembed(
 
     # Create search index with filters
     vs.create_vector_search_index(
-        auto_embedding_model=AUTO_EMBEDDING_MODEL,
+        auto_embedding_model=AUTOEMBED_MODEL,
         filters=[f.name for f in field_info],
         wait_until_complete=TIMEOUT,
     )
