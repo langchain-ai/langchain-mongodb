@@ -19,7 +19,7 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import AUTO_EMBEDDING_MODEL, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import AUTOEMBED_MODEL, DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_retrievers"
 COLLECTION_NAME_NESTED = "langchain_test_retrievers_nested"
@@ -125,7 +125,7 @@ def collection_autoembed(client: MongoClient) -> Collection:
             path="text",
             similarity=None,
             wait_until_complete=TIMEOUT,
-            auto_embedding_model=AUTO_EMBEDDING_MODEL,
+            auto_embedding_model=AUTOEMBED_MODEL,
         )
 
     if not any([SEARCH_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
@@ -170,7 +170,7 @@ def indexed_vectorstore_autoembed(
 
     vectorstore = PatchedMongoDBAtlasVectorSearch(
         collection=collection,
-        embedding=AutoEmbeddings(AUTO_EMBEDDING_MODEL),
+        embedding=AutoEmbeddings(AUTOEMBED_MODEL),
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
     )
