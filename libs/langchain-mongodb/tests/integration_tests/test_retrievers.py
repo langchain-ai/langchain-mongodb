@@ -173,6 +173,9 @@ def indexed_vectorstore_autoembed(
         embedding=AutoEmbeddings(AUTOEMBED_MODEL),
         index_name=VECTOR_INDEX_NAME,
         text_key=PAGE_CONTENT_FIELD,
+        embedding_key=None,
+        relevance_score_fn=None,
+        dimensions=-1,
     )
 
     vectorstore.add_documents(example_documents)

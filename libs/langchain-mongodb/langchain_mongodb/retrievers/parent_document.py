@@ -18,7 +18,11 @@ from pymongo import MongoClient
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.docstores import MongoDBDocStore
-from langchain_mongodb.pipelines import vector_search_stage
+from langchain_mongodb.embeddings import AutoEmbeddings
+from langchain_mongodb.pipelines import (
+    autoembedding_vector_search_stage,
+    vector_search_stage,
+)
 from langchain_mongodb.utils import DRIVER_METADATA, make_serializable
 
 
@@ -79,16 +83,37 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         *,
         run_manager: Optional[CallbackManagerForRetrieverRun] = None,
     ) -> List[Document]:
-        query_vector = self.vectorstore._embedding.embed_query(query)
+        # Check if using auto embeddings
+        is_autoembedding = isinstance(self.vectorstore._embedding, AutoEmbeddings)
 
-        assert self.vectorstore._embedding_key is not None
-        pipeline = [
-            vector_search_stage(
-                query_vector,
-                self.vectorstore._embedding_key,
-                self.vectorstore._index_name,
+        # Only embed query if not using auto embeddings
+        if is_autoembedding:
+            query_input = query
+        else:
+            query_input = self.vectorstore._embedding.embed_query(query)
+
+        # Build the vector search stage based on embedding type
+        if is_autoembedding:
+            assert isinstance(query_input, str)
+            vector_stage = autoembedding_vector_search_stage(
+                query=query_input,
+                search_field=self.vectorstore._text_key,
+                index_name=self.vectorstore._index_name,
+                model=self.vectorstore._embedding.model,
                 **self.search_kwargs,  # See MongoDBAtlasVectorSearch
-            ),
+            )
+        else:
+            assert self.vectorstore._embedding_key is not None
+            assert isinstance(query_input, list)
+            vector_stage = vector_search_stage(
+                query_vector=query_input,
+                search_field=self.vectorstore._embedding_key,
+                index_name=self.vectorstore._index_name,
+                **self.search_kwargs,  # See MongoDBAtlasVectorSearch
+            )
+
+        pipeline = [
+            vector_stage,
             {"$set": {"score": {"$meta": "vectorSearchScore"}}},
             {"$project": {"embedding": 0}},
             {  # Find corresponding parent doc
