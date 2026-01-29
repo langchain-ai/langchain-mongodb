@@ -84,6 +84,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         is_autoembedding = isinstance(self.vectorstore._embedding, AutoEmbeddings)
 
         # Only embed query if not using auto embeddings
+        query_input: str | list[float]
         if is_autoembedding:
             query_input = query
         else:
@@ -107,6 +108,8 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         # Vector Search stage
         if is_autoembedding:
             assert isinstance(query_input, str)
+            # Type narrowing: we know _embedding is AutoEmbeddings here
+            assert isinstance(self.vectorstore._embedding, AutoEmbeddings)
             vector_pipeline = [
                 autoembedding_vector_search_stage(
                     query=query_input,

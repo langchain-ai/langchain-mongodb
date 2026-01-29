@@ -87,6 +87,7 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         is_autoembedding = isinstance(self.vectorstore._embedding, AutoEmbeddings)
 
         # Only embed query if not using auto embeddings
+        query_input: str | list[float]
         if is_autoembedding:
             query_input = query
         else:
@@ -95,6 +96,8 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         # Build the vector search stage based on embedding type
         if is_autoembedding:
             assert isinstance(query_input, str)
+            # Type narrowing: we know _embedding is AutoEmbeddings here
+            assert isinstance(self.vectorstore._embedding, AutoEmbeddings)
             vector_stage = autoembedding_vector_search_stage(
                 query=query_input,
                 search_field=self.vectorstore._text_key,
