@@ -31,7 +31,7 @@ from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
 from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 
-TIMEOUT = 240
+TIMEOUT = 120
 INTERVAL = 0.5
 CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
 AUTOEMBED_MODEL = "voyage-4"
@@ -70,17 +70,10 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         start = monotonic()
 
         if self._is_autoembedding:
-            last_num_docs = 0
             while monotonic() - start <= TIMEOUT:
                 for idx in list(self.collection.list_search_indexes()):
                     if idx["name"] == "langchain-test-index-from-texts-autoEmbed":
-                        current_num_docs = idx.get("numDocs", 0)
-                        if current_num_docs != last_num_docs:
-                            print(
-                                f"Auto-embedding progress: {current_num_docs}/{n_docs} docs indexed"
-                            )
-                            last_num_docs = current_num_docs
-                        if current_num_docs == n_docs:
+                        if idx["numDocs"] == n_docs:
                             return ids_inserted
                 sleep(INTERVAL)
         else:

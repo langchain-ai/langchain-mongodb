@@ -344,10 +344,6 @@ class MongoDBDatabase:
         def _handle_id_key(match: Any) -> str:
             return f'"{match.group(1)}"'
 
-        def _quote_field_name(match: Any) -> str:
-            """Quote unquoted field names in MongoDB operators."""
-            return f'"{match.group(1)}"'
-
         patterns = [
             (r'ISODate\(\s*["\']([^"\']*)["\']\s*\)', _handle_iso_date),
             (r'new\s+Date\(\s*["\']([^"\']*)["\']\s*\)', _handle_new_date),
@@ -358,14 +354,5 @@ class MongoDBDatabase:
 
         for pattern, replacer in patterns:
             code = re.sub(pattern, replacer, code)
-
-        # Quote unquoted field names in MongoDB aggregation operators
-        # This handles cases like: $group: {_id: "$country", totalSpent: {$sum: "$amount"}}
-        # Match field names that are not already quoted and are followed by a colon
-        code = re.sub(
-            r'(?<=[{,\s])([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*:)(?!["\'])',
-            _quote_field_name,
-            code,
-        )
 
         return code
