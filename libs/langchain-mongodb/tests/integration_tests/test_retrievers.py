@@ -1,3 +1,4 @@
+import os
 from time import sleep, time
 from typing import Generator, List
 
@@ -246,6 +247,10 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     assert "New Orleans" in results[0].page_content
 
 
+@pytest.mark.skipif(
+    os.environ.get("COMMUNITY_WITH_SEARCH", "") == "",
+    reason="Auto-embedding requires COMMUNITY_WITH_SEARCH environment variable",
+)
 def test_hybrid_retriever_autoembed(
     indexed_vectorstore_autoembed: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
