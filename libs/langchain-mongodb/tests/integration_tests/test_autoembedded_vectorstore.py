@@ -25,6 +25,7 @@ from ..utils import (
 )
 
 DIMENSIONS = 5
+AUTOEMBED_TIMEOUT = 180.0  # Auto-embedding indexes need more time to initialize
 
 COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
 
@@ -50,7 +51,7 @@ def collection(client: MongoClient) -> Collection:
             path="text",
             filters=["c"],
             similarity=None,
-            wait_until_complete=60,
+            wait_until_complete=AUTOEMBED_TIMEOUT,
             auto_embedding_model=AUTOEMBED_MODEL,
         )
 

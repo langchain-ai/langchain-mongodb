@@ -27,6 +27,7 @@ from ..utils import (
 
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120
+AUTOEMBED_TIMEOUT = 180.0  # Auto-embedding indexes need more time to initialize
 
 if "OPENAI_API_KEY" not in os.environ and "AZURE_OPENAI_ENDPOINT" not in os.environ:
     pytest.skip("Requires OpenAI for chat responses.", allow_module_level=True)
@@ -201,7 +202,7 @@ def vectorstore_autoembed(
     vs.create_vector_search_index(
         auto_embedding_model=AUTOEMBED_MODEL,
         filters=[f.name for f in field_info],
-        wait_until_complete=TIMEOUT,
+        wait_until_complete=AUTOEMBED_TIMEOUT,
     )
 
     # Add documents, including embeddings

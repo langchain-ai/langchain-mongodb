@@ -28,6 +28,7 @@ EMBEDDING_FIELD = "embedding"
 TEXT_FIELD = "page_content"
 SIMILARITY = "cosine"
 TIMEOUT = 60.0
+AUTOEMBED_TIMEOUT = 180.0  # Auto-embedding indexes need more time to initialize
 
 
 @pytest.fixture
@@ -73,6 +74,8 @@ def test_1clxn_retriever(
         path = EMBEDDING_FIELD
         similarity = SIMILARITY
     if len(sixs) == 0:
+        # Use longer timeout for auto-embedding indexes
+        timeout = AUTOEMBED_TIMEOUT if auto_embedding_model else TIMEOUT
         create_vector_search_index(
             collection=combined_clxn,
             index_name=VECTOR_INDEX_NAME,
@@ -80,7 +83,7 @@ def test_1clxn_retriever(
             auto_embedding_model=auto_embedding_model,
             path=path,
             similarity=similarity,
-            wait_until_complete=TIMEOUT,
+            wait_until_complete=timeout,
         )
     # Create Vector and Doc Stores
     vectorstore = PatchedMongoDBAtlasVectorSearch(

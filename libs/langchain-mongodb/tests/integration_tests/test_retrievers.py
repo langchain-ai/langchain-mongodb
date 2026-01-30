@@ -37,6 +37,7 @@ SEARCH_INDEX_NAME = "text_index"
 SEARCH_INDEX_NAME_NESTED = "text_index_nested"
 
 TIMEOUT = 60.0
+AUTOEMBED_TIMEOUT = 180.0  # Auto-embedding indexes need more time to initialize
 INTERVAL = 0.5
 
 
@@ -130,7 +131,7 @@ def collection_autoembed(client: MongoClient) -> Collection:
             dimensions=-1,
             path="text",
             similarity=None,
-            wait_until_complete=TIMEOUT,
+            wait_until_complete=AUTOEMBED_TIMEOUT,
             auto_embedding_model=AUTOEMBED_MODEL,
         )
 
