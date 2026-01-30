@@ -186,6 +186,7 @@ def vectorstore_autoembed(
         CONNECTION_STRING,
         namespace=f"{DB_NAME}.{COLLECTION_NAME}",
         embedding=AutoEmbeddings(AUTOEMBED_MODEL),
+        embedding_key=None,
     )
     # Delete search indexes
     [
