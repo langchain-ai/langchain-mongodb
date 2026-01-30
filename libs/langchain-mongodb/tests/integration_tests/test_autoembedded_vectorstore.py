@@ -21,11 +21,11 @@ from ..utils import (
     AUTOEMBED_IDX_NAME,
     AUTOEMBED_MODEL,
     DB_NAME,
+    TIMEOUT,
     PatchedMongoDBAtlasVectorSearch,
 )
 
 DIMENSIONS = 5
-AUTOEMBED_TIMEOUT = 180.0  # Auto-embedding indexes need more time to initialize
 
 COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
 
@@ -51,7 +51,7 @@ def collection(client: MongoClient) -> Collection:
             path="text",
             filters=["c"],
             similarity=None,
-            wait_until_complete=AUTOEMBED_TIMEOUT,
+            wait_until_complete=TIMEOUT,
             auto_embedding_model=AUTOEMBED_MODEL,
         )
 
