@@ -4,7 +4,11 @@
 
 ## Changes in version 0.12.0 (XXXX/XX/XX)
 
-- Add support for auto-embeddings in `hybrid_search` and `parent_document` retrievers.
+- Add support for auto-embeddings in retrievers:
+
+  - `MongoDBAtlasHybridSearchRetriever`
+  - `MongoDBAtlasParentDocumentRetriever`
+  - `MongoDBAtlasSelfQueryRetriever`
 
 ## Changes in version 0.11.0 (2026/01/15)
 

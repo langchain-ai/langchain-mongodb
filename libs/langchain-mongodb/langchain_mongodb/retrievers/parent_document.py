@@ -14,16 +14,20 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.runnables import run_in_executor
 from langchain_text_splitters import TextSplitter
+from pydantic import Field
 from pymongo import MongoClient
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.docstores import MongoDBDocStore
-from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
     vector_search_stage,
 )
-from langchain_mongodb.utils import DRIVER_METADATA, make_serializable
+from langchain_mongodb.utils import (
+    DRIVER_METADATA,
+    make_serializable,
+    prepare_query_for_vector_search,
+)
 
 
 class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
@@ -35,6 +39,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     embed each one, and store them in a vector database.
     Using such small chunks (a sentence or a couple of sentences)
     helps the embedding models to better reflect their meaning.
+    If two high scoring chunks are contained in the same document,
+    the query response will include the parent document just once.
+    One can control the number of chunks found in the vector_search_stage by setting
+    search_kwargs == {'top_k': n}. The number of query responses will be <= top_k.
 
     In this implementation, we can store both parent and child documents in a single
     collection while only having to compute and index embedding vectors for the chunks!
@@ -77,32 +85,29 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
     id_key: str = "doc_id"
     """Key stored in metadata pointing to parent document"""
 
+    search_kwargs: dict = Field(default_factory=dict)
+    """Kwargs to be passed to vector_search_stage. e.g. {'top_k': 5}. """
+
     def _get_relevant_documents(
         self,
         query: str,
         *,
         run_manager: Optional[CallbackManagerForRetrieverRun] = None,
     ) -> List[Document]:
-        # Check if using auto embeddings
-        is_autoembedding = isinstance(self.vectorstore._embedding, AutoEmbeddings)
-
-        # Only embed query if not using auto embeddings
-        query_input: str | list[float]
-        if is_autoembedding:
-            query_input = query
-        else:
-            query_input = self.vectorstore._embedding.embed_query(query)
+        # Prepare query for vector search (handles auto embeddings check)
+        query_input, is_autoembedding = prepare_query_for_vector_search(
+            query, self.vectorstore._embedding
+        )
 
         # Build the vector search stage based on embedding type
         if is_autoembedding:
             assert isinstance(query_input, str)
-            # Type narrowing: we know _embedding is AutoEmbeddings here
-            assert isinstance(self.vectorstore._embedding, AutoEmbeddings)
+            auto_embedding = self.vectorstore._embedding
             vector_stage = autoembedding_vector_search_stage(
                 query=query_input,
                 search_field=self.vectorstore._text_key,
                 index_name=self.vectorstore._index_name,
-                model=self.vectorstore._embedding.model,
+                model=auto_embedding.model,  # type: ignore[attr-defined]
                 **self.search_kwargs,  # See MongoDBAtlasVectorSearch
             )
         else:

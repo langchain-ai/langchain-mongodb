@@ -8,7 +8,6 @@ from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
     combine_pipelines,
@@ -17,7 +16,7 @@ from langchain_mongodb.pipelines import (
     text_search_stage,
     vector_search_stage,
 )
-from langchain_mongodb.utils import make_serializable
+from langchain_mongodb.utils import make_serializable, prepare_query_for_vector_search
 
 
 class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
@@ -80,15 +79,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             List of relevant documents
         """
 
-        # Check if using auto embeddings
-        is_autoembedding = isinstance(self.vectorstore._embedding, AutoEmbeddings)
-
-        # Only embed query if not using auto embeddings
-        query_input: str | list[float]
-        if is_autoembedding:
-            query_input = query
-        else:
-            query_input = self.vectorstore._embedding.embed_query(query)
+        # Prepare query for vector search (handles auto embeddings check)
+        query_input, is_autoembedding = prepare_query_for_vector_search(
+            query, self.vectorstore._embedding
+        )
 
         scores_fields = ["vector_score", "fulltext_score"]
         pipeline: List[Any] = []
@@ -108,14 +102,13 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         # Vector Search stage
         if is_autoembedding:
             assert isinstance(query_input, str)
-            # Type narrowing: we know _embedding is AutoEmbeddings here
-            assert isinstance(self.vectorstore._embedding, AutoEmbeddings)
+            auto_embedding = self.vectorstore._embedding  # type: ignore[attr-defined]
             vector_pipeline = [
                 autoembedding_vector_search_stage(
                     query=query_input,
                     search_field=self.vectorstore._text_key,
                     index_name=self.vectorstore._index_name,
-                    model=self.vectorstore._embedding.model,
+                    model=auto_embedding.model,  # type: ignore[attr-defined]
                     top_k=k,
                     filter=self.pre_filter,
                     oversampling_factor=self.oversampling_factor,

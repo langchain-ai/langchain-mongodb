@@ -291,8 +291,7 @@ def test_selfquerying(retriever, fictitious_movies):
     assert len(res_limit) == 3
 
 
-def test_selfquerying_autoembed(retriever_autoembed, fictitious_movies):
-    retriever = retriever_autoembed
+def test_selfquerying_autoembed(retriever, fictitious_movies):
     """Confirm that the retriever was initialized."""
     assert isinstance(retriever, SelfQueryRetriever)
 
