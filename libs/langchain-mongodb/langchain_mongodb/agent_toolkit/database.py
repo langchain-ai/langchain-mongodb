@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from bson import ObjectId
@@ -14,6 +13,7 @@ from bson.json_util import dumps
 from pymongo import MongoClient
 from pymongo.cursor import Cursor
 from pymongo.errors import PyMongoError
+from pymongo_search_utils.parsing import parse_command, parse_doc_schema
 
 from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 
@@ -142,34 +142,7 @@ class MongoDBDatabase:
     def _get_collection_schema(self, collection: str) -> str:
         coll = self._db[collection]
         doc = coll.find_one({}) or dict()
-        return "\n".join(self._parse_doc(doc, ""))
-
-    def _parse_doc(self, doc: dict[str, Any], prefix: str) -> list[str]:
-        sub_schema = []
-        for key, value in doc.items():
-            if prefix:
-                full_key = f"{prefix}.{key}"
-            else:
-                full_key = key
-            if isinstance(value, dict):
-                sub_schema.extend(self._parse_doc(value, full_key))
-            elif isinstance(value, list):
-                if not len(value):
-                    sub_schema.append(f"{full_key}: Array")
-                elif isinstance(value[0], dict):
-                    sub_schema.extend(self._parse_doc(value[0], f"{full_key}[]"))
-                else:
-                    if type(value[0]) in _BSON_LOOKUP:
-                        type_name = _BSON_LOOKUP[type(value[0])]
-                        sub_schema.append(f"{full_key}: Array<{type_name}>")
-                    else:
-                        sub_schema.append(f"{full_key}: Array")
-            elif type(value) in _BSON_LOOKUP:
-                type_name = _BSON_LOOKUP[type(value)]
-                sub_schema.append(f"{full_key}: {type_name}")
-        if not sub_schema:
-            sub_schema.append(f"{prefix}: Document")
-        return sub_schema
+        return "\n".join(parse_doc_schema(doc, ""))
 
     def _get_collection_indexes(self, collection: str) -> str:
         coll = self._db[collection]
@@ -210,36 +183,6 @@ class MongoDBDatabase:
             ):
                 doc[key] = value[: MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE + 1]
 
-    def _parse_command(self, command: str) -> Any:
-        """
-        Extracts and parses the aggregation pipeline from a JavaScript-style MongoDB command.
-        Handles ObjectId(), ISODate(), new Date() and converts them into Python constructs.
-        """
-        command = re.sub(r"\s+", " ", command.strip())
-        if command.endswith("]"):
-            command += ")"
-
-        try:
-            agg_str = command.split(".aggregate(", 1)[1].rsplit(")", 1)[0]
-        except Exception as e:
-            raise ValueError(f"Could not extract aggregation pipeline: {e}") from e
-
-        # Convert JavaScript-style constructs to Python syntax
-        agg_str = self._convert_mongo_js_to_python(agg_str)
-
-        try:
-            eval_globals = {
-                "ObjectId": ObjectId,
-                "datetime": datetime,
-                "timezone": timezone,
-            }
-            agg_pipeline = eval(agg_str, eval_globals)
-            if not isinstance(agg_pipeline, list):
-                raise ValueError("Aggregation pipeline must be a list.")
-            return agg_pipeline
-        except Exception as e:
-            raise ValueError(f"Failed to parse aggregation pipeline: {e}") from e
-
     def run(self, command: str) -> Union[str, Cursor]:
         """Execute a MongoDB aggregation command and return a string representing the results.
 
@@ -265,7 +208,7 @@ class MongoDBDatabase:
             raise ValueError("Only aggregate(...) queries are currently supported.")
 
         # Parse pipeline using helper
-        agg_pipeline = self._parse_command(command)
+        agg_pipeline = parse_command(command)
 
         try:
             coll = self._db[col_name]
@@ -315,44 +258,3 @@ class MongoDBDatabase:
             "collection_info": collection_info,
             "collection_names": ", ".join(collection_names),
         }
-
-    def _convert_mongo_js_to_python(self, code: str) -> str:
-        """Convert JavaScript-style MongoDB syntax into Python-safe code."""
-
-        def _handle_iso_date(match: Any) -> str:
-            date_str = match.group(1)
-            if not date_str:
-                raise ValueError("ISODate must contain a date string.")
-            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
-
-        def _handle_new_date(match: Any) -> str:
-            date_str = match.group(1)
-            if not date_str:
-                raise ValueError(
-                    "new Date() without arguments is not allowed. Please pass an explicit date string."
-                )
-            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            return f"datetime({dt.year}, {dt.month}, {dt.day}, {dt.hour}, {dt.minute}, {dt.second}, tzinfo=timezone.utc)"
-
-        def _handle_object_id(match: Any) -> str:
-            oid_str = match.group(1)
-            if not oid_str:
-                raise ValueError("ObjectId must contain a value.")
-            return f"ObjectId('{oid_str}')"
-
-        def _handle_id_key(match: Any) -> str:
-            return f'"{match.group(1)}"'
-
-        patterns = [
-            (r'ISODate\(\s*["\']([^"\']*)["\']\s*\)', _handle_iso_date),
-            (r'new\s+Date\(\s*["\']([^"\']*)["\']\s*\)', _handle_new_date),
-            (r'ObjectId\(\s*["\']([^"\']*)["\']\s*\)', _handle_object_id),
-            (r'ObjectId\(\s*["\']([^"\']*)["\']\s*\)', _handle_object_id),
-            (r'(?<!["\'])\b(_id)\b(?!["\'])', _handle_id_key),
-        ]
-
-        for pattern, replacer in patterns:
-            code = re.sub(pattern, replacer, code)
-
-        return code
