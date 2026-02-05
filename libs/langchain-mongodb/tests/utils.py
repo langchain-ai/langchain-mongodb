@@ -35,7 +35,8 @@ TIMEOUT = 120
 INTERVAL = 0.5
 CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
 AUTOEMBED_MODEL = "voyage-4"
-
+AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
+AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 
 DB_NAME = "langchain_test_db"
 
@@ -71,7 +72,7 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         if self._is_autoembedding:
             while monotonic() - start <= TIMEOUT:
                 for idx in list(self.collection.list_search_indexes()):
-                    if idx["name"] == "langchain-test-index-from-texts-autoEmbed":
+                    if idx["name"] == self._index_name:
                         if idx["numDocs"] == n_docs:
                             return ids_inserted
                 sleep(INTERVAL)

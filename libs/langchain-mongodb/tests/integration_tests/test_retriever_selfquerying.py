@@ -15,9 +15,15 @@ from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 
 from langchain_mongodb import MongoDBAtlasVectorSearch, index
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langchain_mongodb.retrievers import MongoDBAtlasSelfQueryRetriever
 
-from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import (
+    AUTOEMBED_MODEL,
+    CONNECTION_STRING,
+    DB_NAME,
+    PatchedMongoDBAtlasVectorSearch,
+)
 
 COLLECTION_NAME = "test_self_querying_retriever"
 TIMEOUT = 120
@@ -166,6 +172,48 @@ def vectorstore(
 
 
 @pytest.fixture
+def vectorstore_autoembed(
+    fictitious_movies,
+    field_info,
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
+    """Fully configured vector store.
+
+    Includes
+    - documents added, along with their embedding vectors
+    - search index with filters defined by the attributes provided
+    """
+    vs = PatchedMongoDBAtlasVectorSearch.from_connection_string(
+        CONNECTION_STRING,
+        namespace=f"{DB_NAME}.{COLLECTION_NAME}",
+        embedding=AutoEmbeddings(AUTOEMBED_MODEL),
+    )
+    # Delete search indexes
+    [
+        index.drop_vector_search_index(  # type:ignore[func-returns-value]
+            vs.collection, ix["name"], wait_until_complete=TIMEOUT
+        )
+        for ix in vs.collection.list_search_indexes()
+    ]
+    # Clean up existing documents
+    vs.collection.delete_many({})
+
+    # Create search index with filters
+    vs.create_vector_search_index(
+        auto_embedding_model=AUTOEMBED_MODEL,
+        filters=[f.name for f in field_info],
+        wait_until_complete=TIMEOUT,
+    )
+
+    # Add documents, including embeddings
+    vs.add_documents(fictitious_movies)
+
+    yield vs
+
+    vs.collection.delete_many({})
+    vs.close()
+
+
+@pytest.fixture
 def llm() -> BaseChatOpenAI:
     """Model used for interpreting query."""
     if "AZURE_OPENAI_ENDPOINT" in os.environ:
@@ -187,7 +235,63 @@ def retriever(vectorstore, llm, field_info) -> SelfQueryRetriever:
     )
 
 
-def test(retriever, fictitious_movies):
+@pytest.fixture
+def retriever_autoembed(vectorstore_autoembed, llm, field_info) -> SelfQueryRetriever:
+    """Create the retriever from the VectorStore, an LLM and info about the documents."""
+
+    return MongoDBAtlasSelfQueryRetriever.from_llm(
+        llm=llm,
+        vectorstore=vectorstore_autoembed,
+        metadata_field_info=field_info,
+        document_contents="Descriptions of movies",
+        enable_limit=True,
+        search_kwargs={"k": 12},
+    )
+
+
+def test_selfquerying(retriever, fictitious_movies):
+    """Confirm that the retriever was initialized."""
+    assert isinstance(retriever, SelfQueryRetriever)
+
+    """This example specifies a single filter."""
+    res_filter = retriever.invoke("I want to watch a movie rated higher than 8.5")
+    assert isinstance(res_filter, list)
+    assert isinstance(res_filter[0], Document)
+    assert len(res_filter) == 1
+    assert res_filter[0].metadata["title"] == "The Coda Paradox"
+
+    """This example specifies a composite AND filter."""
+    res_and = retriever.invoke(
+        "Provide movies made after 2030 that are rated lower than 8"
+    )
+    assert isinstance(res_and, list)
+    assert len(res_and) == 2
+    assert set(film.metadata["title"] for film in res_and) == {
+        "Manifesto Midnight",
+        "Neon Tide",
+    }
+
+    """This example specifies a composite OR filter."""
+    res_or = retriever.invoke("Provide movies made after 2030 or rated higher than 8.4")
+    assert isinstance(res_or, list)
+    assert len(res_or) == 4
+    assert set(film.metadata["title"] for film in res_or) == {
+        "Manifesto Midnight",
+        "Neon Tide",
+        "The Abyssal Crown",
+        "The Coda Paradox",
+    }
+
+    """This one does not have a filter."""
+    res_nofilter = retriever.invoke("Provide movies that take place underwater")
+    assert len(res_nofilter) == len(fictitious_movies)
+
+    """This example gives a limit."""
+    res_limit = retriever.invoke("Provide 3 movies")
+    assert len(res_limit) == 3
+
+
+def test_selfquerying_autoembed(retriever, fictitious_movies):
     """Confirm that the retriever was initialized."""
     assert isinstance(retriever, SelfQueryRetriever)
 

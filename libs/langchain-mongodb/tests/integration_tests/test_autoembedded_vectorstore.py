@@ -16,10 +16,15 @@ from langchain_mongodb.index import (
     create_vector_search_index,
 )
 
-from ..utils import AUTOEMBED_MODEL, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import (
+    AUTOEMBED_COLLECTION_NAME,
+    AUTOEMBED_IDX_NAME,
+    AUTOEMBED_MODEL,
+    DB_NAME,
+    TIMEOUT,
+    PatchedMongoDBAtlasVectorSearch,
+)
 
-AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
-AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 DIMENSIONS = 5
 
 COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
@@ -46,7 +51,7 @@ def collection(client: MongoClient) -> Collection:
             path="text",
             filters=["c"],
             similarity=None,
-            wait_until_complete=60,
+            wait_until_complete=TIMEOUT,
             auto_embedding_model=AUTOEMBED_MODEL,
         )
 

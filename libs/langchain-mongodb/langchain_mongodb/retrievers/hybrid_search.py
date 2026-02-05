@@ -9,13 +9,14 @@ from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.pipelines import (
+    autoembedding_vector_search_stage,
     combine_pipelines,
     final_hybrid_stage,
     reciprocal_rank_stage,
     text_search_stage,
     vector_search_stage,
 )
-from langchain_mongodb.utils import make_serializable
+from langchain_mongodb.utils import make_serializable, prepare_query_for_vector_search
 
 
 class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
@@ -78,7 +79,10 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             List of relevant documents
         """
 
-        query_vector = self.vectorstore._embedding.embed_query(query)
+        # Prepare query for vector search (handles auto embeddings check)
+        query_input, is_autoembedding = prepare_query_for_vector_search(
+            query, self.vectorstore._embedding
+        )
 
         scores_fields = ["vector_score", "fulltext_score"]
         pipeline: List[Any] = []
@@ -96,17 +100,34 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         # First we build up the aggregation pipeline,
         # then it is passed to the server to execute
         # Vector Search stage
-        assert self.vectorstore._embedding_key is not None
-        vector_pipeline = [
-            vector_search_stage(
-                query_vector=query_vector,
-                search_field=self.vectorstore._embedding_key,
-                index_name=self.vectorstore._index_name,
-                top_k=k,
-                filter=self.pre_filter,
-                oversampling_factor=self.oversampling_factor,
-            )
-        ]
+        if is_autoembedding:
+            assert isinstance(query_input, str)
+            auto_embedding = self.vectorstore._embedding  # type: ignore[attr-defined]
+            vector_pipeline = [
+                autoembedding_vector_search_stage(
+                    query=query_input,
+                    search_field=self.vectorstore._text_key,
+                    index_name=self.vectorstore._index_name,
+                    model=auto_embedding.model,  # type: ignore[attr-defined]
+                    top_k=k,
+                    filter=self.pre_filter,
+                    oversampling_factor=self.oversampling_factor,
+                )
+            ]
+        else:
+            assert self.vectorstore._embedding_key is not None
+            assert isinstance(query_input, list)
+            vector_pipeline = [
+                vector_search_stage(
+                    query_vector=query_input,
+                    search_field=self.vectorstore._embedding_key,
+                    index_name=self.vectorstore._index_name,
+                    top_k=k,
+                    filter=self.pre_filter,
+                    oversampling_factor=self.oversampling_factor,
+                )
+            ]
+
         vector_pipeline += reciprocal_rank_stage(
             score_field="vector_score",
             penalty=self.vector_penalty,
@@ -138,7 +159,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         pipeline.extend(final_hybrid_stage(scores_fields=scores_fields, limit=k))
 
         # Removal of embeddings unless requested.
-        if not self.show_embeddings:
+        if not self.show_embeddings and not is_autoembedding:
             pipeline.append({"$project": {self.vectorstore._embedding_key: 0}})
         # Post filtering
         if self.post_filter is not None:
