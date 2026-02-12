@@ -24,8 +24,11 @@ from ..utils import (
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
 COLLECTION_NAME_AUTO = "langchain_test_parent_document_combined_auto"
+COLLECTION_NAME_AUTOCREATE = "langchain_test_parent_document_autocreate"
+COLLECTION_NAME_FROM_CS_AUTOCREATE = "langchain_test_parent_document_from_cs_autocreate"
 VECTOR_INDEX_NAME = "langchain-test-parent-document-vector-index"
 VECTOR_INDEX_NAME_AUTO = "langchain-test-parent-document-vector-index-auto"
+SEARCH_INDEX_NAME = "text_index"
 EMBEDDING_FIELD = "embedding"
 TEXT_FIELD = "page_content"
 SIMILARITY = "cosine"
@@ -133,4 +136,69 @@ def test_1clxn_retriever(
     assert expected_pages.issubset(pages), (
         f"Expected pages {expected_pages} to be in {pages}"
     )
+    client.close()
+
+
+def test_parent_document_retriever_auto_create_index(
+    client: MongoClient,
+    embedding: Embeddings,
+    dimensions: int,
+) -> None:
+    db = client[DB_NAME]
+    combined_clxn = db[COLLECTION_NAME_AUTOCREATE]
+    combined_clxn.delete_many({})
+    combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
+    assert SEARCH_INDEX_NAME not in index_names_before
+
+    vectorstore = PatchedMongoDBAtlasVectorSearch(
+        collection=combined_clxn,
+        embedding=embedding,
+        index_name=VECTOR_INDEX_NAME,
+        text_key=TEXT_FIELD,
+        embedding_key=EMBEDDING_FIELD,
+        relevance_score_fn=SIMILARITY,
+        auto_create_index=False,
+    )
+    docstore = MongoDBDocStore(collection=combined_clxn, text_key=TEXT_FIELD)
+    _ = MongoDBAtlasParentDocumentRetriever(
+        vectorstore=vectorstore,
+        docstore=docstore,
+        child_splitter=RecursiveCharacterTextSplitter(chunk_size=400),
+        auto_create_index=True,
+        search_index_name=SEARCH_INDEX_NAME,
+    )
+    index_names_after = [ix["name"] for ix in combined_clxn.list_search_indexes()]
+    assert SEARCH_INDEX_NAME in index_names_after
+
+
+def test_parent_document_retriever_from_connection_string_auto_create_index(
+    embedding: Embeddings,
+) -> None:
+    client = MongoClient(CONNECTION_STRING, driver=DRIVER_METADATA)
+    db = client[DB_NAME]
+    combined_clxn = db[COLLECTION_NAME_FROM_CS_AUTOCREATE]
+    combined_clxn.delete_many({})
+    combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
+    assert SEARCH_INDEX_NAME not in index_names_before
+
+    retriever = MongoDBAtlasParentDocumentRetriever.from_connection_string(
+        CONNECTION_STRING,
+        embedding,
+        RecursiveCharacterTextSplitter(chunk_size=400),
+        DB_NAME,
+        collection_name=COLLECTION_NAME_FROM_CS_AUTOCREATE,
+        auto_create_index=True,
+        search_index_name=SEARCH_INDEX_NAME,
+    )
+    try:
+        index_names_after = [
+            ix["name"] for ix in retriever.vectorstore.collection.list_search_indexes()
+        ]
+        assert SEARCH_INDEX_NAME in index_names_after
+    finally:
+        retriever.close()
     client.close()

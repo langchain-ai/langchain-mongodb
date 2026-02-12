@@ -8,6 +8,7 @@ from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_mongodb.index import create_fulltext_search_index
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
     combine_pipelines,
@@ -55,6 +56,71 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         Optional[int], Field(deprecated='top_k is deprecated, use "k" instead')
     ] = None
     """Number of documents to return."""
+
+    def __init__(
+        self,
+        *,
+        vectorstore: MongoDBAtlasVectorSearch,
+        search_index_name: str,
+        k: int = 4,
+        oversampling_factor: int = 10,
+        pre_filter: Optional[Dict[str, Any]] = None,
+        post_filter: Optional[List[Dict[str, Any]]] = None,
+        vector_penalty: float = 60.0,
+        fulltext_penalty: float = 60.0,
+        vector_weight: float = 1.0,
+        fulltext_weight: float = 1.0,
+        show_embeddings: float = False,
+        top_k: Optional[int] = None,
+        auto_create_index: bool = True,
+        auto_index_timeout: int = 15,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the MongoDBAtlasHybridSearchRetriever.
+
+        Args:
+            vectorstore: MongoDBAtlasVectorSearch instance.
+            search_index_name: Atlas Search Index (full-text) name.
+            k: Number of documents to return. Defaults to 4.
+            oversampling_factor: This times k is the number of candidates chosen at each step. Defaults to 10.
+            pre_filter: (Optional) Any MQL match expression comparing an indexed field.
+            post_filter: (Optional) Pipeline of MongoDB aggregation stages for postprocessing.
+            vector_penalty: Penalty applied to vector search results in RRF: scores=1/(rank + penalty). Defaults to 60.0.
+            fulltext_penalty: Penalty applied to full-text search results in RRF: scores=1/(rank + penalty). Defaults to 60.0.
+            vector_weight: Weight applied to vector search results in RRF: score = weight * (1 / (rank + penalty + 1)). Defaults to 1.0.
+            fulltext_weight: Weight applied to full-text search results in RRF: score = weight * (1 / (rank + penalty + 1)). Defaults to 1.0.
+            show_embeddings: If true, returned Document metadata will include vectors. Defaults to False.
+            top_k: (Deprecated) Number of documents to return. Use k instead.
+            auto_create_index: Whether to automatically create the full-text search index if it does not exist. Defaults to True.
+            auto_index_timeout: How long to wait for the automatic index creation to complete, in seconds. Defaults to 15.
+            vector_index_options: Unused; kept for backward compatibility. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        """
+        super().__init__(
+            vectorstore=vectorstore,
+            search_index_name=search_index_name,
+            k=k,
+            oversampling_factor=oversampling_factor,
+            pre_filter=pre_filter,
+            post_filter=post_filter,
+            vector_penalty=vector_penalty,
+            fulltext_penalty=fulltext_penalty,
+            vector_weight=vector_weight,
+            fulltext_weight=fulltext_weight,
+            show_embeddings=show_embeddings,
+            top_k=top_k,
+            **kwargs,
+        )
+        if auto_create_index and not any(
+            ix["name"] == search_index_name
+            for ix in self.vectorstore._collection.list_search_indexes()
+        ):
+            create_fulltext_search_index(
+                collection=self.vectorstore._collection,
+                index_name=search_index_name,
+                field=self.vectorstore._text_key,
+                wait_until_complete=auto_index_timeout,
+            )
 
     @property
     def collection(self) -> Collection:
