@@ -47,7 +47,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
         auto_index_timeout: int = 15,
         **kwargs: Any,
     ) -> None:
-        super().__init__(
+        super().__init__(  # type: ignore[call-arg]
             collection=collection,
             search_index_name=search_index_name,
             search_field=search_field,

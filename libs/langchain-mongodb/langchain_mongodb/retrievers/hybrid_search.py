@@ -96,7 +96,7 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             vector_index_options: Unused; kept for backward compatibility. Defaults to None.
             **kwargs: Additional keyword arguments.
         """
-        super().__init__(
+        super().__init__(  # type: ignore[call-arg]
             vectorstore=vectorstore,
             search_index_name=search_index_name,
             k=k,
