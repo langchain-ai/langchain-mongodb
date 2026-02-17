@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
+from pymongo_search_utils import drop_vector_search_index
 
 from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.embeddings import AutoEmbeddings
@@ -151,7 +152,9 @@ def test_parent_document_retriever_auto_create_index(
     if any(
         ix["name"] == SEARCH_INDEX_NAME for ix in combined_clxn.list_search_indexes()
     ):
-        combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+        drop_vector_search_index(
+            combined_clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT
+        )
 
     index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
@@ -188,7 +191,9 @@ def test_parent_document_retriever_from_connection_string_auto_create_index(
     if any(
         ix["name"] == SEARCH_INDEX_NAME for ix in combined_clxn.list_search_indexes()
     ):
-        combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+        drop_vector_search_index(
+            combined_clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT
+        )
 
     index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before

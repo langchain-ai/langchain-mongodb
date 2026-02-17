@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo_search_utils import drop_vector_search_index
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.embeddings import AutoEmbeddings
@@ -430,7 +431,7 @@ def test_fulltext_retriever_auto_create_index(
     clxn.delete_many({})
 
     if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
-        clxn.drop_search_index(SEARCH_INDEX_NAME)
+        drop_vector_search_index(clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT)
 
     index_names_before = [ix["name"] for ix in clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
@@ -454,7 +455,7 @@ def test_hybrid_retriever_auto_create_index(
     clxn.delete_many({})
 
     if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
-        clxn.drop_search_index(SEARCH_INDEX_NAME)
+        drop_vector_search_index(clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT)
 
     # Vector index only (no full-text index yet)
     if not any([VECTOR_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
