@@ -428,7 +428,9 @@ def test_fulltext_retriever_auto_create_index(
 ) -> None:
     clxn = client[DB_NAME][COLLECTION_NAME_FULLTEXT_AUTOCREATE]
     clxn.delete_many({})
-    clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
+        clxn.drop_search_index(SEARCH_INDEX_NAME)
 
     index_names_before = [ix["name"] for ix in clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
@@ -450,7 +452,9 @@ def test_hybrid_retriever_auto_create_index(
 ) -> None:
     clxn = client[DB_NAME][COLLECTION_NAME_HYBRID_AUTOCREATE]
     clxn.delete_many({})
-    clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
+        clxn.drop_search_index(SEARCH_INDEX_NAME)
 
     # Vector index only (no full-text index yet)
     if not any([VECTOR_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):

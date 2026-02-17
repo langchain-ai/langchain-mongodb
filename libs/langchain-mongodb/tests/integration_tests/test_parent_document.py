@@ -147,7 +147,11 @@ def test_parent_document_retriever_auto_create_index(
     db = client[DB_NAME]
     combined_clxn = db[COLLECTION_NAME_AUTOCREATE]
     combined_clxn.delete_many({})
-    combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    if any(
+        ix["name"] == SEARCH_INDEX_NAME for ix in combined_clxn.list_search_indexes()
+    ):
+        combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
 
     index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
@@ -180,7 +184,11 @@ def test_parent_document_retriever_from_connection_string_auto_create_index(
     db = client[DB_NAME]
     combined_clxn = db[COLLECTION_NAME_FROM_CS_AUTOCREATE]
     combined_clxn.delete_many({})
-    combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
+
+    if any(
+        ix["name"] == SEARCH_INDEX_NAME for ix in combined_clxn.list_search_indexes()
+    ):
+        combined_clxn.drop_search_index(SEARCH_INDEX_NAME)
 
     index_names_before = [ix["name"] for ix in combined_clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
