@@ -175,6 +175,7 @@ def test_parent_document_retriever_auto_create_index(
         child_splitter=RecursiveCharacterTextSplitter(chunk_size=400),
         auto_create_index=True,
         search_index_name=SEARCH_INDEX_NAME,
+        auto_index_timeout=TIMEOUT,
     )
     index_names_after = [ix["name"] for ix in combined_clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME in index_names_after
@@ -206,6 +207,7 @@ def test_parent_document_retriever_from_connection_string_auto_create_index(
         collection_name=COLLECTION_NAME_FROM_CS_AUTOCREATE,
         auto_create_index=True,
         search_index_name=SEARCH_INDEX_NAME,
+        auto_index_timeout=TIMEOUT,  # type: ignore[arg-type]
     )
     try:
         index_names_after = [

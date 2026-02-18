@@ -441,6 +441,7 @@ def test_fulltext_retriever_auto_create_index(
         search_index_name=SEARCH_INDEX_NAME,
         search_field=PAGE_CONTENT_FIELD,
         auto_create_index=True,
+        auto_index_timeout=TIMEOUT,  # type: ignore[arg-type]
     )
     index_names_after = [ix["name"] for ix in clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME in index_names_after
@@ -481,6 +482,7 @@ def test_hybrid_retriever_auto_create_index(
         vectorstore=vectorstore,
         search_index_name=SEARCH_INDEX_NAME,
         auto_create_index=True,
+        auto_index_timeout=TIMEOUT,  # type: ignore[arg-type]
     )
     index_names_after = [ix["name"] for ix in clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME in index_names_after
