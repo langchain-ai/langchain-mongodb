@@ -19,6 +19,7 @@ from pymongo import MongoClient
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.docstores import MongoDBDocStore
+from langchain_mongodb.index import create_fulltext_search_index
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
     vector_search_stage,
@@ -87,6 +88,23 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
 
     search_kwargs: dict = Field(default_factory=dict)
     """Kwargs to be passed to vector_search_stage. e.g. {'top_k': 5}. """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        auto_create_index = kwargs.pop("auto_create_index", True)
+        auto_index_timeout = kwargs.pop("auto_index_timeout", 15)
+        search_index_name = kwargs.pop("search_index_name", "search_index")
+        search_field = kwargs.pop("search_field", None)
+        super().__init__(*args, **kwargs)
+        if auto_create_index and not any(
+            ix["name"] == search_index_name
+            for ix in self.vectorstore._collection.list_search_indexes()
+        ):
+            create_fulltext_search_index(
+                collection=self.vectorstore._collection,
+                index_name=search_index_name,
+                field=search_field or self.vectorstore._text_key,
+                wait_until_complete=auto_index_timeout,
+            )
 
     def _get_relevant_documents(
         self,
@@ -179,6 +197,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
         database_name: str,
         collection_name: str = "document_with_chunks",
         id_key: str = "doc_id",
+        auto_create_index: bool = True,
+        auto_index_timeout: int = 15,
+        search_index_name: str = "text_index",
+        search_field: Optional[str] = None,
         **kwargs: Any,
     ) -> MongoDBAtlasParentDocumentRetriever:
         """Construct Retriever using one Collection for VectorStore and one for DocStore
@@ -196,6 +218,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             collection_name: Name of collection to use.
                 It includes parent documents, sub-documents and their  embeddings.
             id_key: Key used to identify parent documents.
+            auto_create_index: Whether to automatically create the full-text search index if it does not exist. Defaults to True.
+            auto_index_timeout: How long to wait for the automatic index creation to complete, in seconds
+            search_index_name: Name of the full-text search index to create when auto_create_index is True. Defaults to "text_index".
+            search_field: Field to index for full-text search. Defaults to the vectorstore text key.
             **kwargs: Additional keyword arguments. See parent classes for more.
 
         Returns: A new MongoDBAtlasParentDocumentRetriever
@@ -217,6 +243,10 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             docstore=docstore,
             child_splitter=child_splitter,
             id_key=id_key,
+            auto_create_index=auto_create_index,
+            auto_index_timeout=auto_index_timeout,
+            search_index_name=search_index_name,
+            search_field=search_field,
             **kwargs,
         )
 

@@ -7,6 +7,7 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import Field
 from pymongo.collection import Collection
 
+from langchain_mongodb.index import create_fulltext_search_index
 from langchain_mongodb.pipelines import text_search_stage
 from langchain_mongodb.utils import _append_client_metadata, make_serializable
 
@@ -31,6 +32,46 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     ] = None
     _added_metadata: bool = False
     """Number of documents to return. Default is no limit"""
+
+    def __init__(
+        self,
+        *,
+        collection: Collection,
+        search_index_name: str,
+        search_field: Union[str, List[str]],
+        k: Optional[int] = None,
+        filter: Optional[Dict[str, Any]] = None,
+        include_scores: bool = True,
+        top_k: Optional[int] = None,
+        auto_create_index: bool = True,
+        auto_index_timeout: int = 15,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(  # type: ignore[call-arg]
+            collection=collection,
+            search_index_name=search_index_name,
+            search_field=search_field,
+            k=k,
+            filter=filter,
+            include_scores=include_scores,
+            top_k=top_k,
+            **kwargs,
+        )
+        if auto_create_index and not any(
+            ix["name"] == self.search_index_name
+            for ix in self.collection.list_search_indexes()
+        ):
+            field = (
+                self.search_field[0]
+                if isinstance(self.search_field, list)
+                else self.search_field
+            )
+            create_fulltext_search_index(
+                collection=self.collection,
+                index_name=self.search_index_name,
+                field=field,
+                wait_until_complete=auto_index_timeout,
+            )
 
     def close(self) -> None:
         """Close the resources used by the MongoDBAtlasFullTextSearchRetriever."""
