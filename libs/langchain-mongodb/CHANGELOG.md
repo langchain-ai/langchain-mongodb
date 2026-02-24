@@ -4,6 +4,12 @@
 
 ## Changes in version 0.12.0 (XXXX/XX/XX)
 
+- Fix MongoDBStructuredQueryTranslator to convert LangChain's internal ISO 8601
+  date/datetime representations ({"date": "YYYY-MM-DD", "type": "date"}) to
+  Python datetime objects before passing filter values to MongoDB Atlas Vector
+  Search. Previously, these dicts were passed through verbatim, causing an
+  OperationFailure when filtering on date fields.
+
 - Add support for auto-embeddings in retrievers:
 
   - `MongoDBAtlasHybridSearchRetriever`
