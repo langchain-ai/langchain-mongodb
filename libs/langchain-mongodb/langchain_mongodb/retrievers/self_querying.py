@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, Dict, Sequence, Tuple, Union
 
 from langchain_classic.chains.query_constructor.schema import (
@@ -69,6 +70,25 @@ class MongoDBStructuredQueryTranslator(Visitor):
         args = [arg.accept(self) for arg in operation.arguments]
         return {self._format_func(operation.operator): args}
 
+    def _convert_dict_to_datetime(self, value: Any) -> Any:
+        """Convert LangChain's internal ISO 8601 date/datetime dicts to Python datetimes.
+
+        The query constructor parser yields ``{"date": "YYYY-MM-DD", "type": "date"}``
+        and ``{"datetime": "YYYY-MM-DDTHH:MM:SS", "type": "datetime"}`` for date-typed
+        comparisons.  MongoDB Atlas Vector Search requires proper ``datetime`` objects;
+        passing the raw dict causes an ``OperationFailure`` because Atlas interprets the
+        ``"type"`` key as a GeoJSON geometry type.
+        """
+        if isinstance(value, dict):
+            if value.get("type") == "date" and "date" in value:
+                return datetime.datetime.strptime(value["date"], "%Y-%m-%d")
+            if value.get("type") == "datetime" and "datetime" in value:
+                dt_str = value["datetime"].replace("Z", "+00:00")
+                return datetime.datetime.fromisoformat(dt_str)
+        if isinstance(value, list):
+            return [self._convert_dict_to_datetime(v) for v in value]
+        return value
+
     def visit_comparison(self, comparison: Comparison) -> Dict:
         if comparison.comparator in [Comparator.IN, Comparator.NIN] and not isinstance(
             comparison.value, list
@@ -76,7 +96,15 @@ class MongoDBStructuredQueryTranslator(Visitor):
             comparison.value = [comparison.value]
         comparator = self._format_func(comparison.comparator)
         attribute = comparison.attribute
-        return {attribute: {comparator: comparison.value}}
+        value = comparison.value
+        # Only convert dicts whose "type" key marks them as date/datetime values;
+        # other dicts (e.g. GeoJSON) are left untouched. Lists are always passed
+        # through so that any date/datetime dicts nested inside are converted too.
+        if isinstance(value, dict) and value.get("type") in ("date", "datetime"):
+            value = self._convert_dict_to_datetime(value)
+        elif isinstance(value, list):
+            value = self._convert_dict_to_datetime(value)
+        return {attribute: {comparator: value}}
 
     def visit_structured_query(
         self, structured_query: StructuredQuery
