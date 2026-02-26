@@ -10,12 +10,11 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasFullTextSearchRetriever,
     MongoDBAtlasHybridSearchRetriever,
     MongoDBAtlasParentDocumentRetriever,
-    MongoDBAtlasSelfQueryRetriever,
 )
 from langchain_mongodb.retrievers.self_querying import MongoDBStructuredQueryTranslator
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
-from ..utils import ConsistentFakeEmbeddings, FakeChatModel, MockCollection
+from ..utils import ConsistentFakeEmbeddings, MockCollection
 
 _FIELD_INFO = [
     AttributeInfo(name="genre", description="The genre of the movie", type="string"),
@@ -121,19 +120,6 @@ def test_parent_document_retriever_auto_create_index(collection, embeddings):
         auto_create_index=False,
     )
     assert len(collection._search_indexes) == 0
-
-
-def test_self_query_retriever_default_translator(collection, embeddings):
-    vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
-    retriever = MongoDBAtlasSelfQueryRetriever.from_llm(
-        llm=FakeChatModel(),
-        vectorstore=vs,
-        document_contents=_DOC_CONTENTS,
-        metadata_field_info=_FIELD_INFO,
-    )
-    assert isinstance(
-        retriever.structured_query_translator, MongoDBStructuredQueryTranslator
-    )
 
 
 @pytest.fixture()

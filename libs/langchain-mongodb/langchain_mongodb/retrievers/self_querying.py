@@ -96,9 +96,15 @@ class MongoDBStructuredQueryTranslator(Visitor):
             comparison.value = [comparison.value]
         comparator = self._format_func(comparison.comparator)
         attribute = comparison.attribute
-        return {
-            attribute: {comparator: self._convert_dict_to_datetime(comparison.value)}
-        }
+        value = comparison.value
+        # Only convert dicts whose "type" key marks them as date/datetime values;
+        # other dicts (e.g. GeoJSON) are left untouched. Lists are always passed
+        # through so that any date/datetime dicts nested inside are converted too.
+        if isinstance(value, dict) and value.get("type") in ("date", "datetime"):
+            value = self._convert_dict_to_datetime(value)
+        elif isinstance(value, list):
+            value = self._convert_dict_to_datetime(value)
+        return {attribute: {comparator: value}}
 
     def visit_structured_query(
         self, structured_query: StructuredQuery
@@ -190,7 +196,7 @@ class MongoDBAtlasSelfQueryRetriever(SelfQueryRetriever):
 
     vectorstore: MongoDBAtlasVectorSearch
     """The underlying vector store from which documents will be retrieved."""
-    structured_query_translator: Visitor
+    structured_query_translator: MongoDBStructuredQueryTranslator
     """Translator for turning LangChain internal query language into Atlas search params."""
     query_constructor: Runnable[dict, StructuredQuery] = Field(alias="llm_chain")
     """The query constructor chain for generating the vector store queries."""
