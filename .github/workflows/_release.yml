@@ -19,6 +19,9 @@ on:
         default: libs/langchain-mongodb
         description: "From which folder this pipeline executes"
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.11"
 
@@ -77,7 +80,8 @@ jobs:
       - build
     uses:
       ./.github/workflows/_test_release.yml
-    permissions: write-all
+    permissions:
+      id-token: write
     with:
       working-directory: ${{ inputs.working-directory }}
     secrets: inherit
