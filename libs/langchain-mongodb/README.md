@@ -34,6 +34,7 @@ vectorstore = MongoDBAtlasVectorSearch.from_connection_string(
     namespace=DB_NAME + "." + COLLECTION_NAME,
     embedding=OpenAIEmbeddings(model=MODEL_NAME),
     index_name=VECTOR_SEARCH_INDEX_NAME,
+    text_key="text",  # MongoDB field name containing the text content in your documents
 )
 
 retrieved_docs = vectorstore.similarity_search(
