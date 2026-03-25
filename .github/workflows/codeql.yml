@@ -37,7 +37,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v6
       with:
-        ref: ${{ inputs.ref }}
+        ref: ${{ github.sha }}
         persist-credentials: false
     - uses: actions/setup-python@v6
 
