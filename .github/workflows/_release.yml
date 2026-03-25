@@ -62,7 +62,7 @@ jobs:
         run: uv build
 
       - name: Upload build
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: ${{ inputs.working-directory }}/dist/
@@ -148,7 +148,7 @@ jobs:
 
           uv run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
 
       - name: Import test dependencies
         run: just install
@@ -217,7 +217,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: ${{ inputs.working-directory }}/dist/
@@ -256,7 +256,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: ${{ inputs.working-directory }}/dist/
