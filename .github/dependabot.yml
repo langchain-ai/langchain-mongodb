@@ -12,15 +12,15 @@ updates:
         patterns:
           - "*"
   # Python
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "libs/langchain-mongodb"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "libs/langgraph-checkpoint-mongodb"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "libs/langgraph-store-mongodb"
     schedule:
       interval: "weekly"
