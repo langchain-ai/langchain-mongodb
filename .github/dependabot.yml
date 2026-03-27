@@ -4,23 +4,54 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
+      interval: "monthly"
     groups:
-      actions:
+      minor-and-patch:
         patterns:
           - "*"
-  # Python
-  - package-ecosystem: "pip"
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+
+  # Python — root workspace
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  # Python — libs
+  - package-ecosystem: "uv"
     directory: "libs/langchain-mongodb"
     schedule:
-      interval: "weekly"
-  - package-ecosystem: "pip"
+      interval: "monthly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "uv"
     directory: "libs/langgraph-checkpoint-mongodb"
     schedule:
-      interval: "weekly"
-  - package-ecosystem: "pip"
+      interval: "monthly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "uv"
     directory: "libs/langgraph-store-mongodb"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
