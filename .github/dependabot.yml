@@ -5,6 +5,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       minor-and-patch:
         patterns:
@@ -23,6 +25,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       all-dependencies:
         patterns:
@@ -33,6 +37,8 @@ updates:
     directory: "libs/langchain-mongodb"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       all-dependencies:
         patterns:
@@ -42,6 +48,8 @@ updates:
     directory: "libs/langgraph-checkpoint-mongodb"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       all-dependencies:
         patterns:
@@ -51,6 +59,8 @@ updates:
     directory: "libs/langgraph-store-mongodb"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       all-dependencies:
         patterns:
