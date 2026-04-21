@@ -190,6 +190,26 @@ class MongoDBStore(BaseStore):
             self.collection.drop_index([("namespace", 1), ("key", 1)])
             idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
         if SON([("namespace_str", 1), ("key", 1)]) not in idx_keys:
+            # Backfill namespace_str on any legacy documents that lack it before
+            # building the unique index, to avoid null collisions on index build.
+            # Process in batches to avoid accumulating all updates in memory.
+            batch: list[UpdateOne] = []
+            for doc in self.collection.find(
+                {"namespace_str": {"$exists": False}},
+                {"_id": 1, "namespace": 1},
+            ):
+                namespace = doc.get("namespace") or ()
+                batch.append(
+                    UpdateOne(
+                        {"_id": doc["_id"], "namespace_str": {"$exists": False}},
+                        {"$set": {"namespace_str": self.sep.join(namespace)}},
+                    )
+                )
+                if len(batch) >= 1000:
+                    self.collection.bulk_write(batch, ordered=False)
+                    batch = []
+            if batch:
+                self.collection.bulk_write(batch, ordered=False)
             self.collection.create_index(keys=["namespace_str", "key"], unique=True)
 
         # Optionally, expire values using [TTL Index](https://www.mongodb.com/docs/manual/core/index-ttl/)
