@@ -580,12 +580,13 @@ class MongoDBStore(BaseStore):
                 vectors = self.embeddings.embed_documents(texts)
             v = 0
         for op in dedupped_putops.values():
+            ns_str = self.sep.join(op.namespace)
             if op.value is None:
                 # mark the item for deletion.
                 writes.append(
                     DeleteOne(
                         filter={
-                            "namespace_str": self.sep.join(op.namespace),
+                            "namespace_str": ns_str,
                             "key": op.key,
                         }
                     )
@@ -593,7 +594,7 @@ class MongoDBStore(BaseStore):
             else:
                 # Add or Upsert the value
                 to_set = {
-                    "namespace_str": self.sep.join(op.namespace),
+                    "namespace_str": ns_str,
                     "value": op.value,
                     "updated_at": datetime.now(tz=timezone.utc),
                 }
@@ -606,7 +607,7 @@ class MongoDBStore(BaseStore):
                 writes.append(
                     UpdateOne(
                         filter={
-                            "namespace_str": self.sep.join(op.namespace),
+                            "namespace_str": ns_str,
                             "key": op.key,
                         },
                         update={
