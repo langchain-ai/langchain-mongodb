@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional, Union
@@ -196,13 +196,7 @@ class MongoDBStore(BaseStore):
             {"_id": 1, "namespace": 1},
         ):
             namespace = doc.get("namespace") or ()
-            if any(not part or self.sep in part for part in namespace):
-                raise ValueError(
-                    f"Cannot backfill namespace_str: existing document {doc['_id']} "
-                    f"has a namespace part containing the separator {self.sep!r}. "
-                    f"Change the store's sep to one not present in your data, or "
-                    f"clean up the document before upgrading."
-                )
+            self._validate_namespace(namespace)
             backfill_batch.append(
                 UpdateOne(
                     {"_id": doc["_id"], "namespace_str": {"$exists": False}},
@@ -216,11 +210,17 @@ class MongoDBStore(BaseStore):
             self.collection.bulk_write(backfill_batch, ordered=False)
         # Check for the unique index by both key pattern and unique option, so
         # a non-unique index with the same key pattern does not suppress creation.
+        # If a conflicting non-unique index exists, drop it first — otherwise
+        # create_index(..., unique=True) raises IndexOptionsConflict.
         ns_str_key = SON([("namespace_str", 1), ("key", 1)])
-        has_unique_ns_idx = any(
-            idx["key"] == ns_str_key and idx.get("unique", False) for idx in indexes
-        )
+        ns_str_indexes = [idx for idx in indexes if idx["key"] == ns_str_key]
+        has_unique_ns_idx = any(idx.get("unique", False) for idx in ns_str_indexes)
         if not has_unique_ns_idx:
+            conflicting = next(
+                (idx for idx in ns_str_indexes if not idx.get("unique", False)), None
+            )
+            if conflicting is not None:
+                self.collection.drop_index(conflicting["name"])
             self.collection.create_index(keys=["namespace_str", "key"], unique=True)
         # Drop the legacy multikey index only after the new unique index exists,
         # so there is never a window with no uniqueness enforcement.
@@ -357,8 +357,8 @@ class MongoDBStore(BaseStore):
         Returns:
             The retrieved item or None if not found.
         """
-        ns_str = self.sep.join(namespace)
         self._validate_namespace(namespace)
+        ns_str = self.sep.join(namespace)
         if refresh_ttl is False or (
             self.ttl_config and not self.ttl_config["refresh_on_read"]
         ):
@@ -392,7 +392,7 @@ class MongoDBStore(BaseStore):
             {"namespace_str": self.sep.join(namespace), "key": key}
         )
 
-    def _validate_namespace(self, namespace: tuple[str, ...]) -> None:
+    def _validate_namespace(self, namespace: Sequence[str]) -> None:
         """Raise ValueError if any namespace part is empty or contains the separator."""
         for part in namespace:
             if not part:
