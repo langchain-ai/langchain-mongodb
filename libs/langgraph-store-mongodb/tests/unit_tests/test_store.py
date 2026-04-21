@@ -287,25 +287,29 @@ def test_put_no_multikey_collision(store: MongoDBStore) -> None:
 
 
 def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
-    """Namespace parts containing the separator must be rejected.
+    """Namespace parts containing the separator or empty parts must be rejected.
 
     Allowing them would make the namespace_str join non-injective:
     e.g. ('a/b', 'c') and ('a', 'b/c') both map to 'a/b/c' with sep='/'.
+    Empty parts cause the same problem: ('a', '', 'b') maps to 'a//b',
+    which collides with any other tuple that also joins to 'a//b'.
     """
     sep = store.sep
     bad_namespace = (f"a{sep}b", "c")
+    empty_namespace = ("a", "", "b")
 
-    with pytest.raises(ValueError, match="separator"):
-        store.put(bad_namespace, "key", {"v": 1})
+    for ns in (bad_namespace, empty_namespace):
+        with pytest.raises(ValueError):
+            store.put(ns, "key", {"v": 1})
 
-    with pytest.raises(ValueError, match="separator"):
-        store.get(bad_namespace, "key")
+        with pytest.raises(ValueError):
+            store.get(ns, "key")
 
-    with pytest.raises(ValueError, match="separator"):
-        store.delete(bad_namespace, "key")
+        with pytest.raises(ValueError):
+            store.delete(ns, "key")
 
-    with pytest.raises(ValueError, match="separator"):
-        store.batch([PutOp(namespace=bad_namespace, key="key", value={"v": 1})])
+        with pytest.raises(ValueError):
+            store.batch([PutOp(namespace=ns, key="key", value={"v": 1})])
 
 
 def test_delete(store: MongoDBStore) -> None:
