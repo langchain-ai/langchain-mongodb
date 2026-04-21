@@ -286,6 +286,28 @@ def test_put_no_multikey_collision(store: MongoDBStore) -> None:
     assert bob is not None and bob.value == {"likes": "tacos"}
 
 
+def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
+    """Namespace parts containing the separator must be rejected.
+
+    Allowing them would make the namespace_str join non-injective:
+    e.g. ('a/b', 'c') and ('a', 'b/c') both map to 'a/b/c' with sep='/'.
+    """
+    sep = store.sep
+    bad_namespace = (f"a{sep}b", "c")
+
+    with pytest.raises(ValueError, match="separator"):
+        store.put(bad_namespace, "key", {"v": 1})
+
+    with pytest.raises(ValueError, match="separator"):
+        store.get(bad_namespace, "key")
+
+    with pytest.raises(ValueError, match="separator"):
+        store.delete(bad_namespace, "key")
+
+    with pytest.raises(ValueError, match="separator"):
+        store.batch([PutOp(namespace=bad_namespace, key="key", value={"v": 1})])
+
+
 def test_delete(store: MongoDBStore) -> None:
     n_items = store.collection.count_documents({})
     store.delete(namespace=("a", "b", "c"), key="id_0")

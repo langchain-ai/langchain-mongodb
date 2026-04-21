@@ -185,27 +185,35 @@ class MongoDBStore(BaseStore):
         # "users/alice/preferences"), which avoids the multikey-index collision
         # that occurs when indexing the namespace array directly.
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
-        if SON([("namespace_str", 1), ("key", 1)]) not in idx_keys:
-            # Backfill namespace_str on any legacy documents that lack it before
-            # building the unique index, to avoid null collisions on index build.
-            # Process in batches to avoid accumulating all updates in memory.
-            batch: list[UpdateOne] = []
-            for doc in self.collection.find(
-                {"namespace_str": {"$exists": False}},
-                {"_id": 1, "namespace": 1},
-            ):
-                namespace = doc.get("namespace") or ()
-                batch.append(
-                    UpdateOne(
-                        {"_id": doc["_id"], "namespace_str": {"$exists": False}},
-                        {"$set": {"namespace_str": self.sep.join(namespace)}},
-                    )
+        # Always backfill namespace_str on legacy documents. Reads and deletes
+        # now filter on namespace_str, so any document missing it is unreachable.
+        # This also runs if the index already exists but an old client wrote new
+        # documents without namespace_str after the migration.
+        backfill_batch: list[UpdateOne] = []
+        for doc in self.collection.find(
+            {"namespace_str": {"$exists": False}},
+            {"_id": 1, "namespace": 1},
+        ):
+            namespace = doc.get("namespace") or ()
+            if any(self.sep in part for part in namespace):
+                raise ValueError(
+                    f"Cannot backfill namespace_str: existing document {doc['_id']} "
+                    f"has a namespace part containing the separator {self.sep!r}. "
+                    f"Change the store's sep to one not present in your data, or "
+                    f"clean up the document before upgrading."
                 )
-                if len(batch) >= 1000:
-                    self.collection.bulk_write(batch, ordered=False)
-                    batch = []
-            if batch:
-                self.collection.bulk_write(batch, ordered=False)
+            backfill_batch.append(
+                UpdateOne(
+                    {"_id": doc["_id"], "namespace_str": {"$exists": False}},
+                    {"$set": {"namespace_str": self.sep.join(namespace)}},
+                )
+            )
+            if len(backfill_batch) >= 1000:
+                self.collection.bulk_write(backfill_batch, ordered=False)
+                backfill_batch = []
+        if backfill_batch:
+            self.collection.bulk_write(backfill_batch, ordered=False)
+        if SON([("namespace_str", 1), ("key", 1)]) not in idx_keys:
             self.collection.create_index(keys=["namespace_str", "key"], unique=True)
         # Drop the legacy multikey index only after the new unique index exists,
         # so there is never a window with no uniqueness enforcement.
@@ -340,6 +348,7 @@ class MongoDBStore(BaseStore):
             The retrieved item or None if not found.
         """
         ns_str = self.sep.join(namespace)
+        self._validate_namespace(namespace)
         if refresh_ttl is False or (
             self.ttl_config and not self.ttl_config["refresh_on_read"]
         ):
@@ -368,9 +377,18 @@ class MongoDBStore(BaseStore):
             namespace: Hierarchical path for the item.
             key: Unique identifier within the namespace.
         """
+        self._validate_namespace(namespace)
         self.collection.delete_one(
             {"namespace_str": self.sep.join(namespace), "key": key}
         )
+
+    def _validate_namespace(self, namespace: tuple[str, ...]) -> None:
+        """Raise ValueError if any namespace part contains the separator."""
+        if any(self.sep in part for part in namespace):
+            raise ValueError(
+                f"Namespace parts must not contain the separator {self.sep!r}. "
+                f"Got namespace: {namespace}"
+            )
 
     @staticmethod
     def _match_prefix(prefix: NamespacePath) -> dict[str, Any]:
@@ -492,11 +510,7 @@ class MongoDBStore(BaseStore):
 
         for op in ops:
             if isinstance(op, PutOp):
-                if any(self.sep in part for part in op.namespace):
-                    raise ValueError(
-                        f"Namespace parts must not contain the separator {self.sep!r}. "
-                        f"Got namespace: {op.namespace}"
-                    )
+                self._validate_namespace(op.namespace)
                 dedupped_putops[(op.namespace, op.key)] = op
                 results.append(None)
 

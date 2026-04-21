@@ -4,7 +4,7 @@
 
 ## Changes in version 0.2.1 (Unreleased)
 
-- Fixes duplicate-key collisions when two items share a namespace component and the same key (INTPYTHON-948). The unique index is now created on a denormalized `namespace_str` field (e.g. `"users/alice/preferences"`) instead of the `namespace` array, which was creating a multikey index in MongoDB.
+- Fixes duplicate-key collisions when two items share a namespace component and the same key (INTPYTHON-948). The unique index is now created on a denormalized `namespace_str` field (e.g. `"users/alice/preferences"`) instead of the `namespace` array, which was creating a multikey index in MongoDB. **Operational note:** this release is not safe for mixed-version deployments. Old clients that write documents without `namespace_str` will create documents that new clients cannot retrieve. Upgrade all writers and readers together; do not run old and new versions of the store concurrently against the same collection.
 
 ## Changes in version 0.2.0 (2026/01/15)
 
