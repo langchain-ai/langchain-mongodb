@@ -269,6 +269,23 @@ def test_put(store: MongoDBStore) -> None:
     store.put(("a",), "idx", {"data": "val"}, index=["data"])
 
 
+def test_put_no_multikey_collision(store: MongoDBStore) -> None:
+    """Regression test for INTPYTHON-948.
+
+    namespace is stored as an array; indexing it directly creates a multikey
+    index whose entries are individual elements, so two documents that share
+    any element (e.g. "users" or "preferences") and have the same key would
+    collide.  The fix stores a joined namespace_str and indexes that instead.
+    """
+    store.put(("users", "alice", "preferences"), "food", {"likes": "pizza"})
+    store.put(("users", "bob", "preferences"), "food", {"likes": "tacos"})
+
+    alice = store.get(("users", "alice", "preferences"), "food")
+    bob = store.get(("users", "bob", "preferences"), "food")
+    assert alice is not None and alice.value == {"likes": "pizza"}
+    assert bob is not None and bob.value == {"likes": "tacos"}
+
+
 def test_delete(store: MongoDBStore) -> None:
     n_items = store.collection.count_documents({})
     store.delete(namespace=("a", "b", "c"), key="id_0")

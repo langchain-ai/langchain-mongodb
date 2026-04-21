@@ -173,16 +173,24 @@ class MongoDBStore(BaseStore):
         self.collection = collection
         self.ttl_config = {} if ttl_config is None else ttl_config
         self.index_config = {} if index_config is None else index_config
+        self.sep = kwargs.get("sep", "/")
 
         append_client_metadata(
             client=self.collection.database.client, driver_info=DRIVER_METADATA
         )
 
         # Create indexes if not present
-        # Create a unique index, akin to primary key, on namespace + key
+        # Unique compound index on (namespace_str, key) acts as the primary key.
+        # namespace_str is the namespace tuple joined into a single string (e.g.
+        # "users/alice/preferences"), which avoids the multikey-index collision
+        # that occurs when indexing the namespace array directly.
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
-        if SON([("namespace", 1), ("key", 1)]) not in idx_keys:
-            self.collection.create_index(keys=["namespace", "key"], unique=True)
+        # Drop legacy multikey index on the namespace array if it exists.
+        if SON([("namespace", 1), ("key", 1)]) in idx_keys:
+            self.collection.drop_index([("namespace", 1), ("key", 1)])
+            idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
+        if SON([("namespace_str", 1), ("key", 1)]) not in idx_keys:
+            self.collection.create_index(keys=["namespace_str", "key"], unique=True)
 
         # Optionally, expire values using [TTL Index](https://www.mongodb.com/docs/manual/core/index-ttl/)
         if (
@@ -217,8 +225,6 @@ class MongoDBStore(BaseStore):
                     self.embeddings.model if query_model is None else query_model
                 )
 
-            self.sep = kwargs.get("sep", "/")  # used for prefix denormalization/search
-
             # Create the vector index if it does not yet exist
             if not any(
                 [
@@ -250,9 +256,9 @@ class MongoDBStore(BaseStore):
     ) -> Iterator["MongoDBStore"]:
         """Context manager to create a persistent MongoDB key-value store.
 
-        A unique compound index as shown below will be added to the collections
-        backing the store (namespace, key). If the collection exists,
-        and have indexes already, nothing will be done during initialization.
+        A unique compound index will be added to the collections backing the
+        store on (namespace_str, key). If the collection exists and already has
+        indexes, nothing will be done during initialization.
 
         If the `ttl` argument is provided, TTL functionality will be employed.
         This is done automatically via MongoDB's TTL Indexes, based on the
@@ -523,6 +529,7 @@ class MongoDBStore(BaseStore):
             else:
                 # Add or Upsert the value
                 to_set = {
+                    "namespace_str": self.sep.join(op.namespace),
                     "value": op.value,
                     "updated_at": datetime.now(tz=timezone.utc),
                 }

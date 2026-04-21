@@ -2,6 +2,10 @@
 
 ---
 
+## Changes in version 0.2.1 (Unreleased)
+
+- Fixes duplicate-key collisions when two items share a namespace component and the same key (INTPYTHON-948). The unique index is now created on a denormalized `namespace_str` field (e.g. `"users/alice/preferences"`) instead of the `namespace` array, which was creating a multikey index in MongoDB.
+
 ## Changes in version 0.2.0 (2026/01/15)
 
 - Adds support for semantic search with Automated embedding in Vector search (for public preview on MongoDB Community).
