@@ -185,10 +185,6 @@ class MongoDBStore(BaseStore):
         # "users/alice/preferences"), which avoids the multikey-index collision
         # that occurs when indexing the namespace array directly.
         idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
-        # Drop legacy multikey index on the namespace array if it exists.
-        if SON([("namespace", 1), ("key", 1)]) in idx_keys:
-            self.collection.drop_index([("namespace", 1), ("key", 1)])
-            idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
         if SON([("namespace_str", 1), ("key", 1)]) not in idx_keys:
             # Backfill namespace_str on any legacy documents that lack it before
             # building the unique index, to avoid null collisions on index build.
@@ -211,6 +207,10 @@ class MongoDBStore(BaseStore):
             if batch:
                 self.collection.bulk_write(batch, ordered=False)
             self.collection.create_index(keys=["namespace_str", "key"], unique=True)
+        # Drop the legacy multikey index only after the new unique index exists,
+        # so there is never a window with no uniqueness enforcement.
+        if SON([("namespace", 1), ("key", 1)]) in idx_keys:
+            self.collection.drop_index([("namespace", 1), ("key", 1)])
 
         # Optionally, expire values using [TTL Index](https://www.mongodb.com/docs/manual/core/index-ttl/)
         if (
@@ -277,8 +277,10 @@ class MongoDBStore(BaseStore):
         """Context manager to create a persistent MongoDB key-value store.
 
         A unique compound index will be added to the collections backing the
-        store on (namespace_str, key). If the collection exists and already has
-        indexes, nothing will be done during initialization.
+        store on (namespace_str, key). On first initialization of an existing
+        collection, legacy documents are backfilled with a namespace_str field
+        and the old (namespace, key) index is replaced. Subsequent
+        initializations are no-ops.
 
         If the `ttl` argument is provided, TTL functionality will be employed.
         This is done automatically via MongoDB's TTL Indexes, based on the
@@ -337,15 +339,16 @@ class MongoDBStore(BaseStore):
         Returns:
             The retrieved item or None if not found.
         """
+        ns_str = self.sep.join(namespace)
         if refresh_ttl is False or (
             self.ttl_config and not self.ttl_config["refresh_on_read"]
         ):
             res = self.collection.find_one(
-                filter={"namespace": namespace, "key": key},
+                filter={"namespace_str": ns_str, "key": key},
             )
         else:
             res = self.collection.find_one_and_update(
-                filter={"namespace": namespace, "key": key},
+                filter={"namespace_str": ns_str, "key": key},
                 update={"$set": {"updated_at": datetime.now(tz=timezone.utc)}},
                 return_document=ReturnDocument.AFTER,
             )
@@ -365,7 +368,9 @@ class MongoDBStore(BaseStore):
             namespace: Hierarchical path for the item.
             key: Unique identifier within the namespace.
         """
-        self.collection.delete_one({"namespace": list(namespace), "key": key})
+        self.collection.delete_one(
+            {"namespace_str": self.sep.join(namespace), "key": key}
+        )
 
     @staticmethod
     def _match_prefix(prefix: NamespacePath) -> dict[str, Any]:
@@ -487,6 +492,11 @@ class MongoDBStore(BaseStore):
 
         for op in ops:
             if isinstance(op, PutOp):
+                if any(self.sep in part for part in op.namespace):
+                    raise ValueError(
+                        f"Namespace parts must not contain the separator {self.sep!r}. "
+                        f"Got namespace: {op.namespace}"
+                    )
                 dedupped_putops[(op.namespace, op.key)] = op
                 results.append(None)
 
@@ -544,7 +554,12 @@ class MongoDBStore(BaseStore):
             if op.value is None:
                 # mark the item for deletion.
                 writes.append(
-                    DeleteOne(filter={"namespace": list(op.namespace), "key": op.key})
+                    DeleteOne(
+                        filter={
+                            "namespace_str": self.sep.join(op.namespace),
+                            "key": op.key,
+                        }
+                    )
                 )
             else:
                 # Add or Upsert the value
@@ -561,10 +576,14 @@ class MongoDBStore(BaseStore):
 
                 writes.append(
                     UpdateOne(
-                        filter={"namespace": list(op.namespace), "key": op.key},
+                        filter={
+                            "namespace_str": self.sep.join(op.namespace),
+                            "key": op.key,
+                        },
                         update={
                             "$set": to_set,
                             "$setOnInsert": {
+                                "namespace": list(op.namespace),
                                 "created_at": datetime.now(tz=timezone.utc),
                             },
                         },
