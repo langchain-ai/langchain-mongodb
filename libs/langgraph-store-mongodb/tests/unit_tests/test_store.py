@@ -269,6 +269,49 @@ def test_put(store: MongoDBStore) -> None:
     store.put(("a",), "idx", {"data": "val"}, index=["data"])
 
 
+def test_put_no_multikey_collision(store: MongoDBStore) -> None:
+    """Regression test for INTPYTHON-948.
+
+    namespace is stored as an array; indexing it directly creates a multikey
+    index whose entries are individual elements, so two documents that share
+    any element (e.g. "users" or "preferences") and have the same key would
+    collide.  The fix stores a joined namespace_str and indexes that instead.
+    """
+    store.put(("users", "alice", "preferences"), "food", {"likes": "pizza"})
+    store.put(("users", "bob", "preferences"), "food", {"likes": "tacos"})
+
+    alice = store.get(("users", "alice", "preferences"), "food")
+    bob = store.get(("users", "bob", "preferences"), "food")
+    assert alice is not None and alice.value == {"likes": "pizza"}
+    assert bob is not None and bob.value == {"likes": "tacos"}
+
+
+def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
+    """Namespace parts containing the separator or empty parts must be rejected.
+
+    Allowing them would make the namespace_str join non-injective:
+    e.g. ('a/b', 'c') and ('a', 'b/c') both map to 'a/b/c' with sep='/'.
+    Empty parts cause the same problem: ('a', '', 'b') maps to 'a//b',
+    which collides with any other tuple that also joins to 'a//b'.
+    """
+    sep = store.sep
+    bad_namespace = (f"a{sep}b", "c")
+    empty_namespace = ("a", "", "b")
+
+    for ns in (bad_namespace, empty_namespace):
+        with pytest.raises(ValueError):
+            store.put(ns, "key", {"v": 1})
+
+        with pytest.raises(ValueError):
+            store.get(ns, "key")
+
+        with pytest.raises(ValueError):
+            store.delete(ns, "key")
+
+        with pytest.raises(ValueError):
+            store.batch([PutOp(namespace=ns, key="key", value={"v": 1})])
+
+
 def test_delete(store: MongoDBStore) -> None:
     n_items = store.collection.count_documents({})
     store.delete(namespace=("a", "b", "c"), key="id_0")
