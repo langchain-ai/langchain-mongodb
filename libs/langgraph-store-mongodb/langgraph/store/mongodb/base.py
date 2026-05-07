@@ -46,6 +46,16 @@ from langgraph.store.mongodb.utils import DRIVER_METADATA
 logger = logging.getLogger(__name__)
 
 
+def _validate_filter(filter_dict: dict) -> None:  # type: ignore[type-arg]
+    for key, value in filter_dict.items():
+        if not isinstance(key, str) or key.startswith("$"):
+            raise ValueError(
+                f"Invalid filter key '{key}': MongoDB operator keys are not allowed."
+            )
+        if isinstance(value, dict):
+            _validate_filter(value)
+
+
 class VectorIndexConfig(IndexConfig, total=False):
     """Configuration for a MongoDB Atlas Vector Index providing semantic search.
 
@@ -699,11 +709,7 @@ class MongoDBStore(BaseStore):
         if filter:
             if any(f.startswith("value") for f in filter):
                 raise ValueError("filters should be specified without `value`")
-            if any(isinstance(v, dict) for v in filter.values()):
-                raise ValueError(
-                    "filter values must be scalars (str, int, float, bool, None); "
-                    "dict values allow MQL operator injection"
-                )
+            _validate_filter(filter)
 
         if query is None:
             # Case 1. $match namespace and filter

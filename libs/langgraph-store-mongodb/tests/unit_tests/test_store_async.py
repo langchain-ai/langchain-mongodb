@@ -353,6 +353,8 @@ async def test_asearch_basic(store: MongoDBStore) -> None:
     assert len(result) == 1
 
 
-async def test_asearch_rejects_dict_filter_values(store: MongoDBStore) -> None:
-    with pytest.raises(ValueError, match="filter values must be scalars"):
+async def test_asearch_rejects_mql_operator_keys(store: MongoDBStore) -> None:
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         await store.asearch(("a",), filter={"status": {"$regex": ".*"}})
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"$where": "1==1"})

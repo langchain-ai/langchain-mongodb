@@ -395,9 +395,11 @@ def test_search_basic(store: MongoDBStore) -> None:
     assert len(result) == 1
 
 
-def test_search_rejects_dict_filter_values(store: MongoDBStore) -> None:
-    with pytest.raises(ValueError, match="filter values must be scalars"):
+def test_search_rejects_mql_operator_keys(store: MongoDBStore) -> None:
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         store.search(("a",), filter={"status": {"$regex": ".*"}})
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"$where": "sleep(1000)"})
 
 
 # ---------------------------------------------------------------------------

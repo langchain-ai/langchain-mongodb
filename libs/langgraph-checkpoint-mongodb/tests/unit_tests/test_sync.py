@@ -253,3 +253,11 @@ def test_init_creates_indexes() -> None:
 
     db.drop_collection(checkpoint_coll)
     db.drop_collection(writes_coll)
+
+
+def test_list_rejects_mql_operator_keys() -> None:
+    with MongoDBSaver.from_conn_string(MONGODB_URI) as saver:
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"status": {"$regex": ".*"}}))
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"$where": "1==1"}))

@@ -112,3 +112,10 @@ async def test_null_chars(input_data: dict[str, Any], saver: MongoDBSaver) -> No
             {null_str: "my_value"},  # type: ignore
             {},
         )
+
+
+async def test_alist_rejects_mql_operator_keys(saver: MongoDBSaver) -> None:
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"status": {"$regex": ".*"}})]
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"$where": "1==1"})]
