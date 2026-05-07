@@ -43,6 +43,7 @@ dev = [
     "langchain-tests==1.1.6",
     "pip>=25.0.1",
     "typing-extensions>=4.12.2",
+    "pygments>=2.20.0",  # Temporary. See https://github.com/langchain-ai/langchain-mongodb/security/dependabot/101
 ]
 
 [project.optional-dependencies]

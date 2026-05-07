@@ -29,6 +29,7 @@ dev = [
     "syrupy>=4.0.2",
     "pre-commit>=4.0",
     "mypy>=1.10.0",
+    "pygments>=2.20.0",  # Temporary. See https://github.com/langchain-ai/langchain-mongodb/security/dependabot/101
 ]
 
 [tool.hatch.build.targets.wheel]
