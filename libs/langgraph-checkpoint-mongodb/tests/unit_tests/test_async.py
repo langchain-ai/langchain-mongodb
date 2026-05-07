@@ -115,7 +115,69 @@ async def test_null_chars(input_data: dict[str, Any], saver: MongoDBSaver) -> No
 
 
 async def test_alist_rejects_mql_operator_keys(saver: MongoDBSaver) -> None:
+    # nested operator value — $exists bypass leaks all checkpoints
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"user_id": {"$exists": True}})]
+    # $ne leaks other tenants' checkpoints
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"user_id": {"$ne": "alice"}})]
+    # $gt bypasses numeric metadata filter
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"step": {"$gt": 0}})]
+    # $in enumerates across tenants
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [
+            c
+            async for c in saver.alist(
+                None, filter={"user_id": {"$in": ["alice", "bob"]}}
+            )
+        ]
+    # $regex pattern match
     with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         [c async for c in saver.alist(None, filter={"status": {"$regex": ".*"}})]
+    # top-level $where injection
     with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         [c async for c in saver.alist(None, filter={"$where": "1==1"})]
+    # top-level $or injection
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        [c async for c in saver.alist(None, filter={"$or": [{"source": "loop"}]})]
+
+
+async def test_alist_filter_normal_behavior(
+    input_data: dict[str, Any], saver: MongoDBSaver
+) -> None:
+    """Safe filters — including nested dicts with non-$ keys — work unchanged after the patch."""
+    await saver.aput(
+        input_data["config_1"], input_data["chkpnt_1"], input_data["metadata_1"], {}
+    )
+    await saver.aput(
+        input_data["config_2"], input_data["chkpnt_2"], input_data["metadata_2"], {}
+    )
+    await saver.aput(
+        input_data["config_3"], input_data["chkpnt_3"], input_data["metadata_3"], {}
+    )
+
+    # empty filter: returns all 3 checkpoints
+    assert len([c async for c in saver.alist(None, filter={})]) == 3
+
+    # string scalar filter
+    results = [c async for c in saver.alist(None, filter={"source": "input"})]
+    assert len(results) == 1 and results[0].metadata["source"] == "input"
+
+    # numeric scalar filter
+    results = [c async for c in saver.alist(None, filter={"step": 1})]
+    assert len(results) == 1 and results[0].metadata["step"] == 1
+
+    # multiple scalar filters (AND)
+    results = [c async for c in saver.alist(None, filter={"source": "loop", "step": 1})]
+    assert len(results) == 1
+
+    # no match returns empty
+    results = [
+        c async for c in saver.alist(None, filter={"source": "update", "step": 1})
+    ]
+    assert len(results) == 0
+
+    # nested dict with safe (non-$) keys is allowed — not rejected as injection
+    results = [c async for c in saver.alist(None, filter={"writes": {"foo": "bar"}})]
+    assert len(results) == 1 and results[0].metadata["writes"] == {"foo": "bar"}

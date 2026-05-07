@@ -354,7 +354,71 @@ async def test_asearch_basic(store: MongoDBStore) -> None:
 
 
 async def test_asearch_rejects_mql_operator_keys(store: MongoDBStore) -> None:
+    # nested operator value — $exists bypass leaks all docs
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"user_id": {"$exists": True}})
+    # $ne leaks other tenants' data
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"user_id": {"$ne": "alice"}})
+    # $gt bypasses numeric filter
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"step": {"$gt": 0}})
+    # $in enumerates across tenants
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"user_id": {"$in": ["alice", "bob"]}})
+    # $regex pattern match
     with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         await store.asearch(("a",), filter={"status": {"$regex": ".*"}})
+    # top-level $where injection
     with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
         await store.asearch(("a",), filter={"$where": "1==1"})
+    # top-level $or injection
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        await store.asearch(("a",), filter={"$or": [{"user_id": "alice"}]})
+
+
+async def test_asearch_filter_normal_behavior(store: MongoDBStore) -> None:
+    """Safe filters — including nested dicts with non-$ keys — work unchanged after the patch."""
+    ns = ("users", "async-filter-test")
+    await store.aput(ns, "alice-0", {"user_id": "alice", "step": 0})
+    await store.aput(ns, "alice-1", {"user_id": "alice", "step": 1})
+    await store.aput(ns, "bob-0", {"user_id": "bob", "step": 0})
+    await store.aput(ns, "bob-1", {"user_id": "bob", "step": 1})
+
+    # no filter: returns all items in namespace
+    assert len(await store.asearch(ns)) == 4
+
+    # string scalar filter: only alice's items
+    results = await store.asearch(ns, filter={"user_id": "alice"})
+    assert len(results) == 2
+    assert all(r.value["user_id"] == "alice" for r in results)
+
+    # numeric scalar filter: step==0 across both users
+    results = await store.asearch(ns, filter={"step": 0})
+    assert len(results) == 2
+    assert all(r.value["step"] == 0 for r in results)
+
+    # multiple scalar filters (AND): alice AND step==1
+    results = await store.asearch(ns, filter={"user_id": "alice", "step": 1})
+    assert len(results) == 1
+    assert results[0].value["user_id"] == "alice" and results[0].value["step"] == 1
+
+    # no match returns empty list
+    results = await store.asearch(ns, filter={"user_id": "charlie"})
+    assert len(results) == 0
+
+    # namespace isolation: different namespace returns empty
+    results = await store.asearch(("other", "async-ns"), filter={"user_id": "alice"})
+    assert len(results) == 0
+
+    # nested dict with safe (non-$) keys is allowed — not rejected as injection
+    await store.aput(
+        ns,
+        "alice-meta",
+        {"user_id": "alice", "meta": {"source": "api", "version": "v1"}},
+    )
+    results = await store.asearch(
+        ns, filter={"meta": {"source": "api", "version": "v1"}}
+    )
+    assert len(results) == 1
+    assert results[0].value["user_id"] == "alice"

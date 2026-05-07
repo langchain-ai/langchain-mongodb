@@ -257,7 +257,65 @@ def test_init_creates_indexes() -> None:
 
 def test_list_rejects_mql_operator_keys() -> None:
     with MongoDBSaver.from_conn_string(MONGODB_URI) as saver:
+        # nested operator value — $exists bypass leaks all checkpoints
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"user_id": {"$exists": True}}))
+        # $ne leaks other tenants' checkpoints
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"user_id": {"$ne": "alice"}}))
+        # $gt bypasses numeric metadata filter
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"step": {"$gt": 0}}))
+        # $in enumerates across tenants
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"user_id": {"$in": ["alice", "bob"]}}))
+        # $regex pattern match
         with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
             list(saver.list(None, filter={"status": {"$regex": ".*"}}))
+        # top-level $where injection
         with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
             list(saver.list(None, filter={"$where": "1==1"}))
+        # top-level $or injection
+        with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+            list(saver.list(None, filter={"$or": [{"source": "loop"}]}))
+
+
+def test_list_filter_normal_behavior(input_data: dict[str, Any]) -> None:
+    """Safe filters — including nested dicts with non-$ keys — work unchanged after the patch."""
+    clxn_name = "filter_normal_behavior"
+    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, clxn_name) as saver:
+        saver.put(
+            input_data["config_1"], input_data["chkpnt_1"], input_data["metadata_1"], {}
+        )
+        saver.put(
+            input_data["config_2"], input_data["chkpnt_2"], input_data["metadata_2"], {}
+        )
+        saver.put(
+            input_data["config_3"], input_data["chkpnt_3"], input_data["metadata_3"], {}
+        )
+
+        # empty filter: returns all 3 checkpoints
+        assert len(list(saver.list(None, filter={}))) == 3
+
+        # string scalar filter
+        results = list(saver.list(None, filter={"source": "input"}))
+        assert len(results) == 1 and results[0].metadata["source"] == "input"
+
+        # numeric scalar filter
+        results = list(saver.list(None, filter={"step": 1}))
+        assert len(results) == 1 and results[0].metadata["step"] == 1
+
+        # multiple scalar filters (AND)
+        results = list(saver.list(None, filter={"source": "loop", "step": 1}))
+        assert len(results) == 1
+
+        # no match returns empty
+        results = list(saver.list(None, filter={"source": "update", "step": 1}))
+        assert len(results) == 0
+
+        # nested dict with safe (non-$) keys is allowed — not rejected as injection
+        results = list(saver.list(None, filter={"writes": {"foo": "bar"}}))
+        assert len(results) == 1 and results[0].metadata["writes"] == {"foo": "bar"}
+
+        saver.checkpoint_collection.drop()
+        saver.writes_collection.drop()
