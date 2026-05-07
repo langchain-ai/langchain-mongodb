@@ -2,6 +2,9 @@
 
 ---
 
+## Changes in version 0.4.0 (XXXX/XX/XX)
+- Bump Pygments version as it had a warning about inefficient regex for GUID mataching.
+
 ## Changes in version 0.3.1 (2026/01/22)
 - Fixes issue #287 to migrate checkpoint data created with v<0.2.2 with a migration script: [migrate_checkpoints_to_typed_metadata.py](./scripts/migrate_checkpoints_to_typed_metadata.py).
 - Fixes issue #299 to ensure TTL indexes are always created on initialization of MongoDBSaver if enabled.

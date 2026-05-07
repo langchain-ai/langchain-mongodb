@@ -16,6 +16,8 @@
   - `MongoDBAtlasParentDocumentRetriever`
   - `MongoDBAtlasSelfQueryRetriever`
 
+- Bump Pygments version as it had a warning about inefficient regex for GUID mataching.
+
 ## Changes in version 0.11.0 (2026/01/15)
 
 - Add support for auto-embeddings in `MongoDBAtlasVectorSearch`.
