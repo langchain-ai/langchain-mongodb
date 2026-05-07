@@ -23,6 +23,7 @@ dev = [
     "langchain-community>=0.3.14",
     "myst-parser>=3.0.1",
     "ipython>=8.18.1",
+    "pygments>=2.20.0",  # Temporary. See https://github.com/langchain-ai/langchain-mongodb/security/dependabot/101
 ]
 
 [tool.uv.sources]
