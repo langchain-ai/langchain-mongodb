@@ -395,6 +395,11 @@ def test_search_basic(store: MongoDBStore) -> None:
     assert len(result) == 1
 
 
+def test_search_rejects_dict_filter_values(store: MongoDBStore) -> None:
+    with pytest.raises(ValueError, match="filter values must be scalars"):
+        store.search(("a",), filter={"status": {"$regex": ".*"}})
+
+
 # ---------------------------------------------------------------------------
 # INTPYTHON-957: upgrade path from the legacy (namespace, key) multikey index
 # to the new (namespace_str, key) unique index, plus namespace_str backfill.

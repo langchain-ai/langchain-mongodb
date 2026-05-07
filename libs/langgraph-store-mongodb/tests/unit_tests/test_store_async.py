@@ -3,6 +3,7 @@ import os
 from collections.abc import AsyncGenerator
 from datetime import datetime
 
+import pytest
 import pytest_asyncio
 from langgraph.store.base import (
     GetOp,
@@ -350,3 +351,8 @@ async def test_asearch_basic(store: MongoDBStore) -> None:
     await store.aput(namespace=namespace, key="id_foo", value={"data": "value_foo"})
     result = await store.asearch(namespace, filter={"data": "value_foo"})
     assert len(result) == 1
+
+
+async def test_asearch_rejects_dict_filter_values(store: MongoDBStore) -> None:
+    with pytest.raises(ValueError, match="filter values must be scalars"):
+        await store.asearch(("a",), filter={"status": {"$regex": ".*"}})

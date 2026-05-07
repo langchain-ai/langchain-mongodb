@@ -699,6 +699,11 @@ class MongoDBStore(BaseStore):
         if filter:
             if any(f.startswith("value") for f in filter):
                 raise ValueError("filters should be specified without `value`")
+            if any(isinstance(v, dict) for v in filter.values()):
+                raise ValueError(
+                    "filter values must be scalars (str, int, float, bool, None); "
+                    "dict values allow MQL operator injection"
+                )
 
         if query is None:
             # Case 1. $match namespace and filter
