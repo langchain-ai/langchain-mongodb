@@ -46,7 +46,7 @@ from langgraph.store.mongodb.utils import DRIVER_METADATA
 logger = logging.getLogger(__name__)
 
 
-def _validate_filter(filter_dict: dict) -> None:  # type: ignore[type-arg]
+def _validate_filter(filter_dict: dict[str, Any]) -> None:
     for key, value in filter_dict.items():
         if not isinstance(key, str) or key.startswith("$"):
             raise ValueError(
