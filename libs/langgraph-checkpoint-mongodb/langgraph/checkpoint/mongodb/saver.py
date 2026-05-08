@@ -23,7 +23,7 @@ from pymongo import ASCENDING, MongoClient, UpdateOne
 from pymongo.collection import Collection
 from pymongo.database import Database as MongoDatabase
 
-from .utils import DRIVER_METADATA, dumps_metadata, loads_metadata
+from .utils import DRIVER_METADATA, _validate_filter, dumps_metadata, loads_metadata
 
 
 def _create_saver_indexes(
@@ -323,6 +323,7 @@ class MongoDBSaver(BaseCheckpointSaver):
                 query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
 
         if filter:
+            _validate_filter(filter)
             for key, value in filter.items():
                 query[f"metadata.{key}"] = dumps_metadata(self.serde, value)
 
