@@ -3,7 +3,7 @@
 ---
 
 ## Changes in version 0.3.0 (2026/05/11)
-- Fix multikey possible index collision on namespace arrays.
+- Fix possible multikey index collision on namespace arrays.
 - Reject MQL operator keys in filter dicts.
 ## Changes in version 0.2.0 (2026/01/15)
 - Adds support for semantic search with Automated embedding in Vector search (for public preview on MongoDB Community).
