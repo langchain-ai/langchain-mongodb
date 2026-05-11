@@ -3,9 +3,8 @@
 ---
 
 ## Changes in version 0.4.0 (2026/05/11)
-- Reject MQL operator keys in filter dicts.
+- Reject MQL operator keys (any key containing a "$") in filter dicts.
 - Add links to mongodb.com documentation.
-- Bump Pygments version as it had a warning about inefficient regex for GUID matching.
 
 ## Changes in version 0.3.1 (2026/01/22)
 - Fixes issue #287 to migrate checkpoint data created with v<0.2.2 with a migration script: [migrate_checkpoints_to_typed_metadata.py](./scripts/migrate_checkpoints_to_typed_metadata.py).
