@@ -264,7 +264,10 @@ def _loads_generations(generations_str: str) -> Union[RETURN_VAL_TYPE, None]:
 
     """
     try:
-        generations = [loads(_item_str, allowed_objects="core") for _item_str in json.loads(generations_str)]
+        generations = [
+            loads(_item_str, allowed_objects="core")
+            for _item_str in json.loads(generations_str)
+        ]
         return generations
     except (json.JSONDecodeError, TypeError):
         # deferring the (soft) handling to after the legacy-format attempt
