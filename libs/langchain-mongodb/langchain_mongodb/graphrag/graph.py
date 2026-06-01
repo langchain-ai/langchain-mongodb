@@ -579,7 +579,7 @@ class MongoDBGraphStore:
         json_opts = {} if json_opts is None else json_opts
 
         # First pass: Add all nodes with their attributes
-        nx_graph = nx.DiGraph(**nx_opts)
+        nx_graph: networkx.DiGraph = nx.DiGraph(**nx_opts)
         for doc in self.collection.find({}, {"type": 1, "attributes": 1}):
             # Add node with all attributes
             node_id = doc["_id"]
