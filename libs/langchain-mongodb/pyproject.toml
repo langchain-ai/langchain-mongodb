@@ -68,6 +68,8 @@ filterwarnings = [
     "error",
     # Ignore ResourceWarning raised by langchain standardized base classes.
     "ignore:unclosed <socket.socket:ResourceWarning",
+    # Suppress pending deprecation from langchain-core loads() raised by upstream packages.
+    "ignore::langchain_core._api.deprecation.LangChainPendingDeprecationWarning",
 ]
 
 [tool.mypy]
