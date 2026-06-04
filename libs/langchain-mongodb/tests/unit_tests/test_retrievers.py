@@ -1,4 +1,5 @@
 import datetime
+from typing import Any, List
 
 import pytest
 from langchain_classic.chains.query_constructor.schema import AttributeInfo
@@ -15,6 +16,19 @@ from langchain_mongodb.retrievers.self_querying import MongoDBStructuredQueryTra
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 
 from ..utils import ConsistentFakeEmbeddings, MockCollection
+
+
+class MockCollectionCapturePipeline(MockCollection):
+    """MockCollection that records the last pipeline passed to aggregate()."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.last_pipeline: List[Any] = []
+
+    def aggregate(self, pipeline, *args, **kwargs) -> List[Any]:  # type: ignore[override]
+        self.last_pipeline = list(pipeline)
+        return super().aggregate(pipeline, *args, **kwargs)
+
 
 _FIELD_INFO = [
     AttributeInfo(name="genre", description="The genre of the movie", type="string"),
@@ -185,3 +199,60 @@ def test_visit_comparison_non_date_unchanged(translator):
     assert translator.visit_comparison(
         _comparison("genre", Comparator.EQ, "comedy")
     ) == {"genre": {"$eq": "comedy"}}
+
+
+class TestHybridRetrieverRerank:
+    def test_hybrid_pipeline_includes_rerank(self, embeddings) -> None:
+        collection = MockCollectionCapturePipeline()
+        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
+        retriever = MongoDBAtlasHybridSearchRetriever(
+            vectorstore=vs,
+            search_index_name="foo",
+            k=3,
+            rerank_path="text",
+            num_docs_to_rerank=10,
+            rerank_model="rerank-2.5",
+            auto_create_index=False,
+        )
+        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+        pipeline = collection.last_pipeline
+        stage_keys = [list(s.keys())[0] for s in pipeline]
+        assert "$rerank" in stage_keys
+        rerank = pipeline[stage_keys.index("$rerank")]["$rerank"]
+        assert rerank["query"] == {"text": "cats"}
+        assert rerank["path"] == "text"
+        assert rerank["numDocsToRerank"] == 10
+        assert rerank["model"] == "rerank-2.5"
+
+    def test_hybrid_pipeline_limit_added_when_n_to_rerank_gt_k(
+        self, embeddings
+    ) -> None:
+        collection = MockCollectionCapturePipeline()
+        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
+        retriever = MongoDBAtlasHybridSearchRetriever(
+            vectorstore=vs,
+            search_index_name="foo",
+            k=3,
+            rerank_path="text",
+            num_docs_to_rerank=15,
+            auto_create_index=False,
+        )
+        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+        pipeline = collection.last_pipeline
+        stage_keys = [list(s.keys())[0] for s in pipeline]
+        # The post-rerank trim-to-k $limit comes after $rerank; check the last one.
+        limit_stages = [pipeline[i] for i, k in enumerate(stage_keys) if k == "$limit"]
+        assert limit_stages[-1]["$limit"] == 3
+
+    def test_hybrid_pipeline_no_rerank_by_default(self, embeddings) -> None:
+        collection = MockCollectionCapturePipeline()
+        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
+        retriever = MongoDBAtlasHybridSearchRetriever(
+            vectorstore=vs,
+            search_index_name="foo",
+            auto_create_index=False,
+        )
+        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+        pipeline = collection.last_pipeline
+        stage_keys = [list(s.keys())[0] for s in pipeline]
+        assert "$rerank" not in stage_keys
