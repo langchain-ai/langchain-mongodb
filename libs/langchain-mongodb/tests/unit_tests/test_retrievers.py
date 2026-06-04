@@ -201,58 +201,74 @@ def test_visit_comparison_non_date_unchanged(translator):
     ) == {"genre": {"$eq": "comedy"}}
 
 
-class TestHybridRetrieverRerank:
-    def test_hybrid_pipeline_includes_rerank(self, embeddings) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
-        retriever = MongoDBAtlasHybridSearchRetriever(
-            vectorstore=vs,
-            search_index_name="foo",
-            k=3,
-            rerank_path="text",
-            num_docs_to_rerank=10,
-            rerank_model="rerank-2.5",
-            auto_create_index=False,
-        )
-        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
-        pipeline = collection.last_pipeline
-        stage_keys = [list(s.keys())[0] for s in pipeline]
-        assert "$rerank" in stage_keys
-        rerank = pipeline[stage_keys.index("$rerank")]["$rerank"]
-        assert rerank["query"] == {"text": "cats"}
-        assert rerank["path"] == "text"
-        assert rerank["numDocsToRerank"] == 10
-        assert rerank["model"] == "rerank-2.5"
+@pytest.fixture()
+def capturing_collection() -> MockCollectionCapturePipeline:
+    return MockCollectionCapturePipeline()
 
-    def test_hybrid_pipeline_limit_added_when_n_to_rerank_gt_k(
-        self, embeddings
-    ) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
-        retriever = MongoDBAtlasHybridSearchRetriever(
-            vectorstore=vs,
-            search_index_name="foo",
-            k=3,
-            rerank_path="text",
-            num_docs_to_rerank=15,
-            auto_create_index=False,
-        )
-        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
-        pipeline = collection.last_pipeline
-        stage_keys = [list(s.keys())[0] for s in pipeline]
-        # The post-rerank trim-to-k $limit comes after $rerank; check the last one.
-        limit_stages = [pipeline[i] for i, k in enumerate(stage_keys) if k == "$limit"]
-        assert limit_stages[-1]["$limit"] == 3
 
-    def test_hybrid_pipeline_no_rerank_by_default(self, embeddings) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(collection, embeddings, auto_create_index=False)
-        retriever = MongoDBAtlasHybridSearchRetriever(
-            vectorstore=vs,
-            search_index_name="foo",
-            auto_create_index=False,
-        )
-        retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
-        pipeline = collection.last_pipeline
-        stage_keys = [list(s.keys())[0] for s in pipeline]
-        assert "$rerank" not in stage_keys
+def test_hybrid_pipeline_includes_rerank(
+    capturing_collection: MockCollectionCapturePipeline,
+    embeddings: ConsistentFakeEmbeddings,
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embeddings, auto_create_index=False
+    )
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=vs,
+        search_index_name="foo",
+        k=3,
+        rerank_path="text",
+        num_docs_to_rerank=10,
+        rerank_model="rerank-2.5",
+        auto_create_index=False,
+    )
+    retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+    pipeline = capturing_collection.last_pipeline
+    stage_keys = [list(s.keys())[0] for s in pipeline]
+    assert "$rerank" in stage_keys
+    rerank = pipeline[stage_keys.index("$rerank")]["$rerank"]
+    assert rerank["query"] == {"text": "cats"}
+    assert rerank["path"] == "text"
+    assert rerank["numDocsToRerank"] == 10
+    assert rerank["model"] == "rerank-2.5"
+
+
+def test_hybrid_pipeline_limit_added_when_n_to_rerank_gt_k(
+    capturing_collection: MockCollectionCapturePipeline,
+    embeddings: ConsistentFakeEmbeddings,
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embeddings, auto_create_index=False
+    )
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=vs,
+        search_index_name="foo",
+        k=3,
+        rerank_path="text",
+        num_docs_to_rerank=15,
+        auto_create_index=False,
+    )
+    retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+    pipeline = capturing_collection.last_pipeline
+    stage_keys = [list(s.keys())[0] for s in pipeline]
+    # The post-rerank trim-to-k $limit comes after $rerank; check the last one.
+    limit_stages = [pipeline[i] for i, k in enumerate(stage_keys) if k == "$limit"]
+    assert limit_stages[-1]["$limit"] == 3
+
+
+def test_hybrid_pipeline_no_rerank_by_default(
+    capturing_collection: MockCollectionCapturePipeline,
+    embeddings: ConsistentFakeEmbeddings,
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embeddings, auto_create_index=False
+    )
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=vs,
+        search_index_name="foo",
+        auto_create_index=False,
+    )
+    retriever._get_relevant_documents("cats", run_manager=None)  # type: ignore[arg-type]
+    pipeline = capturing_collection.last_pipeline
+    stage_keys = [list(s.keys())[0] for s in pipeline]
+    assert "$rerank" not in stage_keys

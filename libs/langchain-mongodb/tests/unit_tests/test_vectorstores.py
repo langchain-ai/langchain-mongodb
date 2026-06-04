@@ -239,66 +239,66 @@ class MockCollectionCapturePipeline(MockCollection):
         return super().aggregate(pipeline, *args, **kwargs)
 
 
-class TestRerank:
-    def test_rerank_stage_minimal(self) -> None:
-        stages = rerank_stage(query="cats", path="text", num_docs_to_rerank=10)
-        assert len(stages) == 2
-        rerank = stages[0]["$rerank"]
-        assert rerank["query"] == {"text": "cats"}
-        assert rerank["path"] == "text"
-        assert rerank["numDocsToRerank"] == 10
-        assert "model" not in rerank
-        assert stages[1] == {"$set": {"score": {"$meta": "score"}}}
+@pytest.fixture()
+def capturing_collection() -> MockCollectionCapturePipeline:
+    return MockCollectionCapturePipeline()
 
-    def test_rerank_stage_with_model_and_list_path(self) -> None:
-        stages = rerank_stage(
-            query="cats",
-            path=["title", "body"],
-            num_docs_to_rerank=25,
-            model="rerank-2.5",
-        )
-        rerank = stages[0]["$rerank"]
-        assert rerank["path"] == ["title", "body"]
-        assert rerank["model"] == "rerank-2.5"
 
-    def test_vectorstore_pipeline_includes_rerank(
-        self, embedding_openai: Embeddings
-    ) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(
-            collection, embedding_openai, index_name=INDEX_NAME
-        )
-        vs.similarity_search("cats", k=3, rerank_path="text", num_docs_to_rerank=10)
-        pipeline = collection.last_pipeline
-        stage_keys = [list(s.keys())[0] for s in pipeline]
-        assert "$vectorSearch" in stage_keys
-        assert "$rerank" in stage_keys
-        rerank_idx = stage_keys.index("$rerank")
-        rerank = pipeline[rerank_idx]["$rerank"]
-        assert rerank["query"] == {"text": "cats"}
-        assert rerank["path"] == "text"
-        assert rerank["numDocsToRerank"] == 10
+def test_rerank_stage_minimal() -> None:
+    stages = rerank_stage(query="cats", path="text", num_docs_to_rerank=10)
+    assert len(stages) == 2
+    rerank = stages[0]["$rerank"]
+    assert rerank["query"] == {"text": "cats"}
+    assert rerank["path"] == "text"
+    assert rerank["numDocsToRerank"] == 10
+    assert "model" not in rerank
+    assert stages[1] == {"$set": {"score": {"$meta": "score"}}}
 
-    def test_vectorstore_pipeline_limit_added_when_n_to_rerank_gt_k(
-        self, embedding_openai: Embeddings
-    ) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(
-            collection, embedding_openai, index_name=INDEX_NAME
-        )
-        vs.similarity_search("cats", k=3, rerank_path="text", num_docs_to_rerank=20)
-        pipeline = collection.last_pipeline
-        stage_keys = [list(s.keys())[0] for s in pipeline]
-        assert "$limit" in stage_keys
-        limit_stage = pipeline[stage_keys.index("$limit")]
-        assert limit_stage["$limit"] == 3
 
-    def test_vectorstore_rerank_requires_query_text(
-        self, embedding_openai: Embeddings
-    ) -> None:
-        collection = MockCollectionCapturePipeline()
-        vs = MongoDBAtlasVectorSearch(
-            collection, embedding_openai, index_name=INDEX_NAME
-        )
-        with pytest.raises(ValueError, match="rerank_query"):
-            vs._similarity_search_with_score([0.1] * 10, k=3, rerank_path="text")
+def test_rerank_stage_with_model_and_list_path() -> None:
+    stages = rerank_stage(
+        query="cats", path=["title", "body"], num_docs_to_rerank=25, model="rerank-2.5"
+    )
+    rerank = stages[0]["$rerank"]
+    assert rerank["path"] == ["title", "body"]
+    assert rerank["model"] == "rerank-2.5"
+
+
+def test_vectorstore_pipeline_includes_rerank(
+    capturing_collection: MockCollectionCapturePipeline, embedding_openai: Embeddings
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embedding_openai, index_name=INDEX_NAME
+    )
+    vs.similarity_search("cats", k=3, rerank_path="text", num_docs_to_rerank=10)
+    pipeline = capturing_collection.last_pipeline
+    stage_keys = [list(s.keys())[0] for s in pipeline]
+    assert "$vectorSearch" in stage_keys
+    assert "$rerank" in stage_keys
+    rerank = pipeline[stage_keys.index("$rerank")]["$rerank"]
+    assert rerank["query"] == {"text": "cats"}
+    assert rerank["path"] == "text"
+    assert rerank["numDocsToRerank"] == 10
+
+
+def test_vectorstore_pipeline_limit_added_when_n_to_rerank_gt_k(
+    capturing_collection: MockCollectionCapturePipeline, embedding_openai: Embeddings
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embedding_openai, index_name=INDEX_NAME
+    )
+    vs.similarity_search("cats", k=3, rerank_path="text", num_docs_to_rerank=20)
+    pipeline = capturing_collection.last_pipeline
+    stage_keys = [list(s.keys())[0] for s in pipeline]
+    assert "$limit" in stage_keys
+    assert pipeline[stage_keys.index("$limit")]["$limit"] == 3
+
+
+def test_vectorstore_rerank_requires_query_text(
+    capturing_collection: MockCollectionCapturePipeline, embedding_openai: Embeddings
+) -> None:
+    vs = MongoDBAtlasVectorSearch(
+        capturing_collection, embedding_openai, index_name=INDEX_NAME
+    )
+    with pytest.raises(ValueError, match="rerank_query"):
+        vs._similarity_search_with_score([0.1] * 10, k=3, rerank_path="text")
