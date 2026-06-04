@@ -22,7 +22,7 @@ jobs:
           - "3.13"
     name: "run test #${{ matrix.python-version }}"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           persist-credentials: false
       - name: Install uv
