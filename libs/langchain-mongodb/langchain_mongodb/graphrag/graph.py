@@ -3,7 +3,16 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeAlias, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TypeAlias,
+    Union,
+)
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -16,6 +25,7 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
 
+from ..pipelines import rerank_stage
 from ..utils import DRIVER_METADATA, _append_client_metadata
 from .prompts import rag_prompt
 from .schema import entity_schema
@@ -430,6 +440,10 @@ class MongoDBGraphStore:
         self,
         starting_entities: List[str],
         max_depth: Optional[int] = None,
+        rerank_query: Optional[str] = None,
+        rerank_path: Optional[Union[str, List[str]]] = None,
+        rerank_model: Optional[str] = None,
+        num_docs_to_rerank: Optional[int] = None,
     ) -> List[Entity]:
         """Traverse Graph along relationship edges to find connected entities.
 
@@ -437,9 +451,15 @@ class MongoDBGraphStore:
             starting_entities: Traversal begins with documents whose _id fields match these strings.
             max_depth: Recursion continues until no more matching documents are found,
                 or until the operation reaches a recursion depth specified by this parameter.
+            rerank_query: Original text query used for $rerank scoring.
+            rerank_path: Field or list of fields on entity documents to rerank on.
+                Enables $rerank when set. The entity ``_id`` (name) is a natural choice.
+            rerank_model: Voyage AI reranking model. Uses latest model if omitted.
+            num_docs_to_rerank: Candidates passed to the reranker. Defaults to 1000
+                (all graph results). Max 1000.
 
         Returns:
-            List of connected entities.
+            List of connected entities, reranked by relevance if rerank_path is set.
         """
         pipeline = [
             # Match starting entities
@@ -495,9 +515,25 @@ class MongoDBGraphStore:
                 }
             },
         ]
+
+        # Native Reranking via $rerank on graph results (requires MongoDB 8.3+).
+        # Particularly useful here because graph traversal may surface entities
+        # several hops away whose relevance to the original query varies.
+        if rerank_path is not None and rerank_query is not None:
+            n_to_rerank = num_docs_to_rerank or 1000
+            pipeline.extend(
+                rerank_stage(rerank_query, rerank_path, n_to_rerank, rerank_model)
+            )
+
         return list(self.collection.aggregate(pipeline))  # type:ignore[arg-type]
 
-    def similarity_search(self, input_document: str) -> List[Entity]:
+    def similarity_search(
+        self,
+        input_document: str,
+        rerank_path: Optional[Union[str, List[str]]] = None,
+        rerank_model: Optional[str] = None,
+        num_docs_to_rerank: Optional[int] = None,
+    ) -> List[Entity]:
         """Retrieve list of connected Entities found via traversal of KnowledgeGraph.
 
         1. Use LLM & Prompt to find entities within the input_document itself.
@@ -506,11 +542,21 @@ class MongoDBGraphStore:
 
         Args:
             input_document: String to find relevant documents for.
+            rerank_path: Field or list of fields on entity documents to rerank on.
+                Enables $rerank when set. The entity ``_id`` (name) is a natural choice.
+            rerank_model: Voyage AI reranking model. Uses latest model if omitted.
+            num_docs_to_rerank: Candidates passed to the reranker. Defaults to 1000. Max 1000.
         Returns:
-            List of connected Entity dictionaries.
+            List of connected Entity dictionaries, reranked by relevance if rerank_path is set.
         """
         starting_ids: List[str] = self.extract_entity_names(input_document)
-        return self.related_entities(starting_ids)
+        return self.related_entities(
+            starting_ids,
+            rerank_query=input_document,
+            rerank_path=rerank_path,
+            rerank_model=rerank_model,
+            num_docs_to_rerank=num_docs_to_rerank,
+        )
 
     def chat_response(
         self,
