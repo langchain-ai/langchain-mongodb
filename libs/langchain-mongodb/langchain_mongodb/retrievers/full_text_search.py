@@ -8,7 +8,7 @@ from pydantic import Field
 from pymongo.collection import Collection
 
 from langchain_mongodb.index import create_fulltext_search_index
-from langchain_mongodb.pipelines import text_search_stage
+from langchain_mongodb.pipelines import rerank_stage, text_search_stage
 from langchain_mongodb.utils import _append_client_metadata, make_serializable
 
 
@@ -27,6 +27,12 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
     """(Optional) List of MQL match expression comparing an indexed field"""
     include_scores: bool = True
     """If True, include scores that provide measure of relative relevance"""
+    rerank_path: Optional[Union[str, List[str]]] = None
+    """Field or list of fields to rerank on. Enables $rerank when set."""
+    rerank_model: Optional[str] = None
+    """Voyage AI reranking model (e.g. 'rerank-2.5'). Uses latest model if omitted."""
+    num_docs_to_rerank: Optional[int] = None
+    """Candidates passed to the reranker. Defaults to k. Max 1000."""
     top_k: Annotated[
         Optional[int], Field(deprecated='top_k is deprecated, use "k" instead')
     ] = None
@@ -42,6 +48,9 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
         k: Optional[int] = None,
         filter: Optional[Dict[str, Any]] = None,
         include_scores: bool = True,
+        rerank_path: Optional[Union[str, List[str]]] = None,
+        rerank_model: Optional[str] = None,
+        num_docs_to_rerank: Optional[int] = None,
         top_k: Optional[int] = None,
         auto_create_index: bool = True,
         auto_index_timeout: int = 15,
@@ -54,6 +63,9 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             k=k,
             filter=filter,
             include_scores=include_scores,
+            rerank_path=rerank_path,
+            rerank_model=rerank_model,
+            num_docs_to_rerank=num_docs_to_rerank,
             top_k=top_k,
             **kwargs,
         )
@@ -95,14 +107,26 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             if self.top_k is not None:
                 is_top_k_set = True
         default_k = self.k if not is_top_k_set else self.top_k
+        k = kwargs.get("k", default_k)
+        n_to_rerank = self.num_docs_to_rerank or k
+        # Expand the text search limit so the reranker has enough candidates.
+        text_limit = n_to_rerank if self.rerank_path else k
         pipeline = text_search_stage(  # type: ignore
             query=query,
             search_field=self.search_field,
             index_name=self.search_index_name,
-            limit=kwargs.get("k", default_k),
+            limit=text_limit,
             filter=self.filter,
             include_scores=self.include_scores,
         )
+
+        # Native Reranking via $rerank (requires MongoDB 8.3+ and Atlas project setting).
+        if self.rerank_path is not None:
+            pipeline.extend(
+                rerank_stage(query, self.rerank_path, n_to_rerank, self.rerank_model)
+            )
+            if n_to_rerank > k:
+                pipeline.append({"$limit": k})
 
         if not self._added_metadata:
             _append_client_metadata(self.collection.database.client)
