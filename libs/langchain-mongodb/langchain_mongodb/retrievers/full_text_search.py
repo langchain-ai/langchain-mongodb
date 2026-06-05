@@ -108,7 +108,9 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
                 is_top_k_set = True
         default_k = self.k if not is_top_k_set else self.top_k
         k = kwargs.get("k", default_k)
-        n_to_rerank = self.num_docs_to_rerank or k
+        # num_docs_to_rerank must be a concrete int for $rerank; fall back to 1000
+        # (the stage maximum) when no limit is configured on the retriever.
+        n_to_rerank: int = self.num_docs_to_rerank or k or 1000
         # Expand the text search limit so the reranker has enough candidates.
         text_limit = n_to_rerank if self.rerank_path else k
         pipeline = text_search_stage(  # type: ignore
@@ -125,7 +127,7 @@ class MongoDBAtlasFullTextSearchRetriever(BaseRetriever):
             pipeline.extend(
                 rerank_stage(query, self.rerank_path, n_to_rerank, self.rerank_model)
             )
-            if n_to_rerank > k:
+            if k is not None and n_to_rerank > k:
                 pipeline.append({"$limit": k})
 
         if not self._added_metadata:
