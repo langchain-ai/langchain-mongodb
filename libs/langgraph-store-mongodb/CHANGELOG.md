@@ -2,6 +2,15 @@
 
 ---
 
+## Changes in version 0.4.0 (2026/06/05)
+
+- Add native reranking (`$rerank`) support to `MongoDBStore.search()`. Pass a
+  `RerankConfig` to the `MongoDBStore` constructor to enable reranking of vector
+  search results using the Voyage AI reranker. Requires MongoDB Atlas 8.3+,
+  Native Reranking enabled in Atlas Project Settings, and a Voyage AI API key
+  configured in Atlas. Runs entirely server-side — no Voyage AI client dependency
+  is needed.
+
 ## Changes in version 0.3.0 (2026/05/11)
 - Fix possible multikey index collision on namespace arrays.
 - Reject MQL operator keys (any key containing a "$") in filter dicts.
