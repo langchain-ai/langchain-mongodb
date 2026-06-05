@@ -34,12 +34,20 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain_mongodb.index import create_vector_search_index
+from langchain_mongodb.index import (
+    create_fulltext_search_index,
+    create_vector_search_index,
+)
+from langchain_mongodb.retrievers import (
+    MongoDBAtlasFullTextSearchRetriever,
+    MongoDBAtlasHybridSearchRetriever,
+)
 
 from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_rerank"
 INDEX_NAME = "langchain-test-index-rerank"
+FULLTEXT_INDEX_NAME = "langchain-test-fts-rerank"
 RERANK_MODEL = "rerank-2.5-lite"
 
 pytestmark = pytest.mark.skipif(
@@ -92,6 +100,14 @@ def collection(
             dimensions=dimensions,
             path="embedding",
             similarity="cosine",
+            wait_until_complete=120,
+        )
+
+    if not any(FULLTEXT_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()):
+        create_fulltext_search_index(
+            collection=clxn,
+            index_name=FULLTEXT_INDEX_NAME,
+            field="text",
             wait_until_complete=120,
         )
 
@@ -254,3 +270,45 @@ def test_rerank_changes_ordering_vs_vector_search(
 
     # The top picks differ — confirming reranking changed the outcome.
     assert vector_top != rerank_top
+
+
+# ---------------------------------------------------------------------------
+# Retriever tests
+# ---------------------------------------------------------------------------
+
+
+def test_fulltext_retriever_rerank(
+    vectorstore: MongoDBAtlasVectorSearch, collection: Collection
+) -> None:
+    """FullTextSearchRetriever returns k reranked Documents with no errors."""
+    retriever = MongoDBAtlasFullTextSearchRetriever(
+        collection=collection,
+        search_index_name=FULLTEXT_INDEX_NAME,
+        search_field="text",
+        k=3,
+        rerank_path="text",
+        rerank_model=RERANK_MODEL,
+        num_docs_to_rerank=len(DOCUMENTS),
+        auto_create_index=False,
+    )
+    results = retriever.invoke("filling between bread")
+    assert len(results) == 3
+    assert all(isinstance(doc, Document) for doc in results)
+    assert results[0].page_content == CLUB_SANDWICH
+
+
+def test_hybrid_retriever_rerank(vectorstore: MongoDBAtlasVectorSearch) -> None:
+    """HybridSearchRetriever returns k reranked Documents with no errors."""
+    retriever = MongoDBAtlasHybridSearchRetriever(
+        vectorstore=vectorstore,
+        search_index_name=FULLTEXT_INDEX_NAME,
+        k=3,
+        rerank_path="text",
+        rerank_model=RERANK_MODEL,
+        num_docs_to_rerank=len(DOCUMENTS),
+        auto_create_index=False,
+    )
+    results = retriever.invoke("filling between bread")
+    assert len(results) == 3
+    assert all(isinstance(doc, Document) for doc in results)
+    assert results[0].page_content == CLUB_SANDWICH
