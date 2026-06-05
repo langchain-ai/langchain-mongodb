@@ -23,7 +23,7 @@ one document that affirmatively describes filling between bread to the top.
 """
 
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from time import monotonic, sleep
 
 import pytest
@@ -84,13 +84,15 @@ FRENCH_TOAST = ITEMS[2][1]
 NAMESPACE = ("food", "descriptions")
 
 
-def get_embedding():
+def get_embedding() -> OpenAIEmbeddings | AzureOpenAIEmbeddings:
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return AzureOpenAIEmbeddings(model="text-embedding-3-small")
     return OpenAIEmbeddings(model="text-embedding-3-small")
 
 
-def wait_until(predicate, timeout: int = TIMEOUT, interval: int = INTERVAL) -> None:
+def wait_until(
+    predicate: Callable, timeout: int = TIMEOUT, interval: int = INTERVAL
+) -> None:
     start = monotonic()
     while monotonic() - start < timeout:
         if predicate():
@@ -169,7 +171,7 @@ def test_rerank_score_is_positive_float(store: MongoDBStore) -> None:
 def test_rerank_scores_are_descending(store: MongoDBStore) -> None:
     """Results are ordered highest rerank score first."""
     results = store.search(NAMESPACE, query="bread", limit=5)
-    scores = [r.score for r in results]
+    scores = [r.score for r in results if r.score is not None]
     assert scores == sorted(scores, reverse=True), (
         f"Scores not in descending order: {scores}"
     )
