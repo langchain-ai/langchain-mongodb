@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.4.0 (2026/06/05)
+## Changes in version 0.4.0 (XXXX/XX/XX)
 
 - Add native reranking (`$rerank`) support to `MongoDBStore.search()`. Pass a
   `RerankConfig` to the `MongoDBStore` constructor to enable reranking of vector
