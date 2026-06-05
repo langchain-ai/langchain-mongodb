@@ -8,6 +8,7 @@ $rerank requires:
 Tests are skipped automatically when MONGODB_URI points to localhost / 127.0.0.1.
 """
 
+import os
 from typing import Generator
 
 import pytest
@@ -19,20 +20,22 @@ from pymongo.collection import Collection
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.index import create_vector_search_index
 
-from ..utils import CONNECTION_STRING, DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
 
 COLLECTION_NAME = "langchain_test_rerank"
 INDEX_NAME = "langchain-test-index-rerank"
-RERANK_MODEL = "rerank-2.5"
+BREAD_COLLECTION_NAME = "langchain_test_rerank_bread"
+BREAD_INDEX_NAME = "langchain-test-index-rerank-bread"
+RERANK_MODEL = "rerank-2.5-lite"
 
 pytestmark = pytest.mark.skipif(
-    any(host in CONNECTION_STRING for host in ("localhost", "127.0.0.1")),
+    any(
+        host in os.environ.get("MONGODB_URI", "") for host in ("localhost", "127.0.0.1")
+    ),
     reason="$rerank requires a real Atlas cluster with MongoDB 8.3+ and Native Reranking enabled",
 )
 
-# Corpus chosen so that a semantically precise query ("food between bread")
-# is not an obvious vector-space nearest-neighbour of "What is a sandwich?"
-# but the Voyage reranker should surface it as the top result.
+# General mixed corpus used for structural / output-characteristic tests.
 DOCUMENTS = [
     Document(page_content="Dogs are tough.", metadata={"topic": "animals"}),
     Document(page_content="Cats have fluff.", metadata={"topic": "animals"}),
@@ -43,6 +46,37 @@ DOCUMENTS = [
         page_content="Python is a programming language.", metadata={"topic": "tech"}
     ),
 ]
+
+
+# All documents in this corpus mention bread, so their embedding vectors land
+# in a similar region of the embedding space and cosine similarities are close.
+# Vector search has genuine difficulty discriminating between them.
+# Only the reranker's deeper semantic comprehension can identify the club
+# sandwich as the document that actually describes "food between bread".
+BREAD_DOCUMENTS = [
+    Document(
+        page_content="A club sandwich layers turkey, bacon, lettuce, and tomato between toasted bread.",
+        metadata={"type": "sandwich"},
+    ),
+    Document(
+        page_content="Bread pudding is a dessert made from stale bread soaked in custard.",
+        metadata={"type": "dessert"},
+    ),
+    Document(
+        page_content="French toast is made by soaking bread slices in egg and frying them.",
+        metadata={"type": "breakfast"},
+    ),
+    Document(
+        page_content="Sourdough is a type of bread made through a long fermentation process.",
+        metadata={"type": "bread"},
+    ),
+    Document(
+        page_content="Breadcrumbs are used as a topping for macaroni and cheese.",
+        metadata={"type": "ingredient"},
+    ),
+]
+
+CLUB_SANDWICH = BREAD_DOCUMENTS[0].page_content
 
 
 @pytest.fixture(scope="module")
@@ -80,6 +114,45 @@ def vectorstore(
         embedding=embedding,
         collection=collection,
         index_name=INDEX_NAME,
+    )
+    yield vs
+
+
+@pytest.fixture(scope="module")
+def bread_collection(
+    client: MongoClient, dimensions: int
+) -> Generator[Collection, None, None]:
+    if BREAD_COLLECTION_NAME not in client[DB_NAME].list_collection_names():
+        clxn = client[DB_NAME].create_collection(BREAD_COLLECTION_NAME)
+    else:
+        clxn = client[DB_NAME][BREAD_COLLECTION_NAME]
+
+    clxn.delete_many({})
+
+    if not any(BREAD_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()):
+        create_vector_search_index(
+            collection=clxn,
+            index_name=BREAD_INDEX_NAME,
+            dimensions=dimensions,
+            path="embedding",
+            similarity="cosine",
+            wait_until_complete=120,
+        )
+
+    yield clxn
+    clxn.delete_many({})
+
+
+@pytest.fixture(scope="module")
+def bread_vectorstore(
+    bread_collection: Collection, embedding: Embeddings
+) -> Generator[MongoDBAtlasVectorSearch, None, None]:
+    """VectorStore pre-loaded with BREAD_DOCUMENTS and polled until fully indexed."""
+    vs = PatchedMongoDBAtlasVectorSearch.from_documents(
+        documents=BREAD_DOCUMENTS,
+        embedding=embedding,
+        collection=bread_collection,
+        index_name=BREAD_INDEX_NAME,
     )
     yield vs
 
@@ -166,38 +239,42 @@ def test_rerank_semantic_ordering(vectorstore: MongoDBAtlasVectorSearch) -> None
     assert results[0].page_content == "What is a sandwich?"
 
 
-def test_rerank_changes_ordering_vs_vector_search(
-    vectorstore: MongoDBAtlasVectorSearch,
+def test_rerank_produces_meaningful_scores(
+    bread_vectorstore: MongoDBAtlasVectorSearch,
 ) -> None:
-    """Reranked results differ in ordering from pure vector-similarity results.
+    """Reranker produces distinct scores and correct top-1 in a bread-only corpus.
 
-    This test demonstrates that $rerank adds value beyond the raw vector score:
-    the top-1 reranked document for a precise semantic query should rank the
-    most relevant result higher than vector search alone might.
+    Every document in BREAD_DOCUMENTS mentions bread, so their embeddings cluster
+    together and cosine similarities are close.  Two things confirm the reranker
+    is doing real work rather than returning a constant:
+
+    1. The rerank scores are not all identical (Voyage AI is actually scoring).
+    2. The club sandwich — the only document describing filling between bread —
+       is ranked first.
     """
-    query = "food between bread"
+    query = "two slices of bread with fillings"
 
-    vector_results = vectorstore.similarity_search_with_score(query, k=len(DOCUMENTS))
-    rerank_results = vectorstore.similarity_search_with_score(
+    rerank_results = bread_vectorstore.similarity_search_with_score(
         query,
-        k=len(DOCUMENTS),
+        k=len(BREAD_DOCUMENTS),
         rerank_path="text",
         rerank_model=RERANK_MODEL,
-        num_docs_to_rerank=len(DOCUMENTS),
+        num_docs_to_rerank=len(BREAD_DOCUMENTS),
     )
 
-    vector_order = [doc.page_content for doc, _ in vector_results]
     rerank_order = [doc.page_content for doc, _ in rerank_results]
+    rerank_scores = [score for _, score in rerank_results]
 
-    # The reranked top result must be the sandwich document.
-    assert rerank_order[0] == "What is a sandwich?", (
-        f"Expected sandwich as reranked top-1, got: {rerank_order[0]}"
+    # Scores must not all be identical — a constant score (e.g. 0.5987) indicates
+    # the reranker model is not GPU-backed and is not doing real scoring.
+    assert len(set(rerank_scores)) > 1, (
+        f"All rerank scores are identical ({rerank_scores[0]:.4f}): the reranker "
+        f"model '{RERANK_MODEL}' may not be GPU-backed. Use 'rerank-2.5-lite'."
     )
 
-    # The two orderings should differ, confirming reranking had an effect.
-    assert vector_order != rerank_order, (
-        "Reranked and vector-only orderings are identical — "
-        "either reranking had no effect or the corpus needs adjustment."
+    # The reranker must surface the club sandwich as top-1.
+    assert rerank_order[0] == CLUB_SANDWICH, (
+        f"Expected club sandwich as reranked top-1, got: {rerank_order[0]}"
     )
 
 

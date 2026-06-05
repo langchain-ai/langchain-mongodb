@@ -50,7 +50,7 @@ def rerank_stage(
         spec["model"] = model
     return [
         {"$rerank": spec},
-        {"$set": {"score": {"$meta": "score"}}},
+        {"$set": {"score": {"$meta": "score"}, "rerankScore": {"$meta": "score"}}},
     ]
 
 

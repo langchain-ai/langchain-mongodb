@@ -252,7 +252,9 @@ def test_rerank_stage_minimal() -> None:
     assert rerank["path"] == "text"
     assert rerank["numDocsToRerank"] == 10
     assert "model" not in rerank
-    assert stages[1] == {"$set": {"score": {"$meta": "score"}}}
+    assert stages[1] == {
+        "$set": {"score": {"$meta": "score"}, "rerankScore": {"$meta": "score"}}
+    }
 
 
 def test_rerank_stage_with_model_and_list_path() -> None:
