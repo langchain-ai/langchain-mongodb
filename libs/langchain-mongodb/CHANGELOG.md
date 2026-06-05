@@ -16,6 +16,13 @@
   - `MongoDBAtlasParentDocumentRetriever`
   - `MongoDBAtlasSelfQueryRetriever`
 
+- Add native reranking (`$rerank`) support to `MongoDBAtlasVectorSearch` and all
+  retrievers. Pass `rerank_path`, `rerank_model`, and `num_docs_to_rerank` to any
+  search method or retriever to re-rank candidates using the Voyage AI reranker
+  before returning results. Requires MongoDB Atlas 8.3+ with Native Reranking
+  enabled in Project Settings. The rerank score is also exposed as `rerankScore`
+  in each returned document's metadata.
+
 ## Changes in version 0.11.0 (2026/01/15)
 
 - Add support for auto-embeddings in `MongoDBAtlasVectorSearch`.
