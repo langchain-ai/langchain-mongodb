@@ -36,6 +36,7 @@ from langchain_mongodb.index import (
 )
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
+    rerank_stage,
     vector_search_stage,
 )
 from langchain_mongodb.utils import (
@@ -590,6 +591,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
             post_filter_pipeline=post_filter_pipeline,
             oversampling_factor=oversampling_factor,
             include_embeddings=include_embeddings,
+            rerank_query=query,
             **kwargs,
         )
 
@@ -844,9 +846,17 @@ class MongoDBAtlasVectorSearch(VectorStore):
         post_filter_pipeline: Optional[List[Dict]] = None,
         oversampling_factor: int = 10,
         include_embeddings: bool = False,
+        rerank_query: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         """Core search routine. See external methods for details."""
+        rerank_path = kwargs.pop("rerank_path", None)
+        rerank_model = kwargs.pop("rerank_model", None)
+        num_docs_to_rerank = kwargs.pop("num_docs_to_rerank", None)
+
+        n_to_rerank = num_docs_to_rerank or k
+        # Expand the vector search limit so the reranker has enough candidates.
+        vector_limit = n_to_rerank if rerank_path else k
 
         # Atlas Vector Search, potentially with filter
         if self._is_autoembedding:
@@ -858,7 +868,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     self._text_key,
                     self._index_name,
                     self._embedding.model,
-                    k,
+                    vector_limit,
                     pre_filter,
                     oversampling_factor,
                     **kwargs,
@@ -873,7 +883,7 @@ class MongoDBAtlasVectorSearch(VectorStore):
                     query_vector,
                     self._embedding_key,
                     self._index_name,
-                    k,
+                    vector_limit,
                     pre_filter,
                     oversampling_factor,
                     **kwargs,
@@ -881,9 +891,26 @@ class MongoDBAtlasVectorSearch(VectorStore):
                 {"$set": {"score": {"$meta": "vectorSearchScore"}}},
             ]
 
+        # Native Reranking via $rerank (requires MongoDB 8.3+ and Atlas project setting).
+        if rerank_path is not None:
+            query_text: Optional[str] = (
+                query_vector if self._is_autoembedding else rerank_query  # type: ignore[assignment]
+            )
+            if not isinstance(query_text, str):
+                raise ValueError(
+                    "rerank_path requires the original text query. Pass rerank_query "
+                    "or use an auto-embedding vector store."
+                )
+            pipeline.extend(
+                rerank_stage(query_text, rerank_path, n_to_rerank, rerank_model)
+            )
+
         # Remove embeddings unless requested.
         if not include_embeddings and not self._is_autoembedding:
             pipeline.append({"$project": {self._embedding_key: 0}})
+        # Trim to k after reranking when the vector search returned more candidates.
+        if rerank_path is not None and n_to_rerank > k:
+            pipeline.append({"$limit": k})
         # Post-processing
         if post_filter_pipeline is not None:
             pipeline.extend(post_filter_pipeline)

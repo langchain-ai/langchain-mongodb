@@ -18,6 +18,42 @@ from pymongo_search_utils import (
 )
 
 
+def rerank_stage(
+    query: str,
+    path: Union[str, List[str]],
+    num_docs_to_rerank: int,
+    model: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """$rerank aggregation stage for Native Reranking in Atlas.
+
+    Requires MongoDB 8.3+ and Native Reranking enabled via Atlas Project Settings.
+    Best used after a $search, $vectorSearch, $rankFusion, or $scoreFusion stage.
+
+    Will migrate to pymongo_search_utils once available there. (PYTHON-5876)
+
+    Args:
+        query: Text query used for reranking
+        path: Field or list of fields to rerank on
+        num_docs_to_rerank: Number of documents to pass to the reranker (max 1000)
+        model: Voyage AI reranking model (e.g. "rerank-2.5", "rerank-2", "rerank-2.5-lite").
+            Omit to use the latest available model.
+
+    Returns:
+        List of pipeline stages: $rerank followed by $set to update the score field
+    """
+    spec: Dict[str, Any] = {
+        "query": {"text": query},
+        "path": path,
+        "numDocsToRerank": num_docs_to_rerank,
+    }
+    if model is not None:
+        spec["model"] = model
+    return [
+        {"$rerank": spec},
+        {"$set": {"score": {"$meta": "score"}, "rerankScore": {"$meta": "score"}}},
+    ]
+
+
 def text_search_stage(
     query: str,
     search_field: Union[str, List[str]],

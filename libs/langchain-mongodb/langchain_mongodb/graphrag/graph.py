@@ -3,7 +3,16 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeAlias, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TypeAlias,
+    Union,
+)
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -16,6 +25,7 @@ from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
 
+from ..pipelines import rerank_stage
 from ..utils import DRIVER_METADATA, _append_client_metadata
 from .prompts import rag_prompt
 from .schema import entity_schema
@@ -102,6 +112,9 @@ class MongoDBGraphStore:
         entity_name_examples: str = "",
         validate: bool = False,
         validation_action: str = "warn",
+        rerank_path: Optional[Union[str, List[str]]] = None,
+        rerank_model: Optional[str] = None,
+        num_docs_to_rerank: int = 1000,
     ):
         """
         Args:
@@ -124,6 +137,15 @@ class MongoDBGraphStore:
             validation_action: One of {"warn", "error"}.
               - If "warn", the default, documents will be inserted but errors logged.
               - If "error", an exception will be raised if any document does not match the schema.
+            rerank_path: Field or list of fields on entity documents to rerank on.
+                Enables $rerank when set. The entity ``_id`` (name) is a natural choice.
+                Requires MongoDB 8.3+ and Native Reranking enabled in Atlas.
+            rerank_model: Voyage AI reranking model (e.g. ``"rerank-2.5-lite"``).
+                Uses latest model if omitted.
+            num_docs_to_rerank: Number of graph traversal results passed to the
+                reranker. Lower values reduce reranking cost; higher values give the
+                reranker a larger candidate pool. Defaults to 1000, the MongoDB
+                maximum.
         """
         self._schema = deepcopy(entity_schema)
         collection_existed = True
@@ -201,6 +223,9 @@ class MongoDBGraphStore:
         self.entity_name_examples = entity_name_examples
 
         self.max_depth = max_depth
+        self.rerank_path = rerank_path
+        self.rerank_model = rerank_model
+        self.num_docs_to_rerank = num_docs_to_rerank
         self._schema = deepcopy(entity_schema)
         if allowed_entity_types:
             self.allowed_entity_types = allowed_entity_types
@@ -430,6 +455,7 @@ class MongoDBGraphStore:
         self,
         starting_entities: List[str],
         max_depth: Optional[int] = None,
+        rerank_query: Optional[str] = None,
     ) -> List[Entity]:
         """Traverse Graph along relationship edges to find connected entities.
 
@@ -437,9 +463,11 @@ class MongoDBGraphStore:
             starting_entities: Traversal begins with documents whose _id fields match these strings.
             max_depth: Recursion continues until no more matching documents are found,
                 or until the operation reaches a recursion depth specified by this parameter.
+            rerank_query: Original text query used for $rerank scoring.
+                Required when ``rerank_path`` is set on the store.
 
         Returns:
-            List of connected entities.
+            List of connected entities, reranked by relevance if ``rerank_path`` is set on the store.
         """
         pipeline = [
             # Match starting entities
@@ -495,9 +523,31 @@ class MongoDBGraphStore:
                 }
             },
         ]
+
+        # Native Reranking via $rerank on graph results (requires MongoDB 8.3+).
+        # Particularly useful here because graph traversal may surface entities
+        # several hops away whose relevance to the original query varies.
+        if self.rerank_path is not None and rerank_query is None:
+            raise ValueError(
+                "rerank_query is required when rerank_path is set on the store. "
+                "Pass the query text to use for reranking."
+            )
+        if self.rerank_path is not None and rerank_query is not None:
+            pipeline.extend(
+                rerank_stage(
+                    rerank_query,
+                    self.rerank_path,
+                    self.num_docs_to_rerank,
+                    self.rerank_model,
+                )
+            )
+
         return list(self.collection.aggregate(pipeline))  # type:ignore[arg-type]
 
-    def similarity_search(self, input_document: str) -> List[Entity]:
+    def similarity_search(
+        self,
+        input_document: str,
+    ) -> List[Entity]:
         """Retrieve list of connected Entities found via traversal of KnowledgeGraph.
 
         1. Use LLM & Prompt to find entities within the input_document itself.
@@ -507,10 +557,14 @@ class MongoDBGraphStore:
         Args:
             input_document: String to find relevant documents for.
         Returns:
-            List of connected Entity dictionaries.
+            List of connected Entity dictionaries, reranked by relevance if
+            ``rerank_path`` is set on the store.
         """
         starting_ids: List[str] = self.extract_entity_names(input_document)
-        return self.related_entities(starting_ids)
+        return self.related_entities(
+            starting_ids,
+            rerank_query=input_document,
+        )
 
     def chat_response(
         self,
