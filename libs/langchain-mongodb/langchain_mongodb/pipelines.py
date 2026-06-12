@@ -29,7 +29,7 @@ def rerank_stage(
     Requires MongoDB 8.3+ and Native Reranking enabled via Atlas Project Settings.
     Best used after a $search, $vectorSearch, $rankFusion, or $scoreFusion stage.
 
-    Will migrate to pymongo_search_utils once available there.
+    Will migrate to pymongo_search_utils once available there. (PYTHON-5876)
 
     Args:
         query: Text query used for reranking

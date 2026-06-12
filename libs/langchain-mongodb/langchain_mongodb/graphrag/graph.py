@@ -519,6 +519,16 @@ class MongoDBGraphStore:
         # Native Reranking via $rerank on graph results (requires MongoDB 8.3+).
         # Particularly useful here because graph traversal may surface entities
         # several hops away whose relevance to the original query varies.
+        if rerank_path is not None and rerank_query is None:
+            raise ValueError(
+                "rerank_query is required when rerank_path is set. "
+                "Pass the query text to use for reranking."
+            )
+        if rerank_query is not None and rerank_path is None:
+            raise ValueError(
+                "rerank_path is required when rerank_query is set. "
+                "Pass the field or list of fields to rerank on."
+            )
         if rerank_path is not None and rerank_query is not None:
             n_to_rerank = num_docs_to_rerank or 1000
             pipeline.extend(
