@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, TypedDict, Union
 
 from bson import SON
 from langchain_core.embeddings import Embeddings
@@ -54,6 +54,33 @@ def _validate_filter(filter_dict: dict[str, Any]) -> None:
             )
         if isinstance(value, dict):
             _validate_filter(value)
+
+
+class RerankConfig(TypedDict, total=False):
+    """Configuration for native reranking via the $rerank aggregation stage.
+
+    Reranking runs entirely server-side on MongoDB Atlas — no Voyage AI SDK or
+    client-side API key is required.  Atlas calls the Voyage AI reranker API on
+    your behalf using a key you configure in Atlas Project Settings.
+
+    Prerequisites (all must be satisfied before results are reranked):
+      1. MongoDB Atlas cluster running MongoDB 8.3+.
+      2. Native Reranking enabled in Atlas Project Settings.
+      3. A Voyage AI API key configured in Atlas Project Settings.
+
+    If any prerequisite is missing, ``search()`` will return constant scores
+    (e.g. ``0.5987``) for all documents rather than raising an error.
+
+    Attributes:
+        model: Voyage AI reranking model (e.g. ``"rerank-2.5-lite"``).
+            Omit to use the latest available model.
+        num_docs_to_rerank: Number of candidates passed from $vectorSearch to the
+            reranker. Must be >= the ``limit`` passed to ``search()``.
+            Defaults to ``min(limit * 10, 1000)``.
+    """
+
+    model: str
+    num_docs_to_rerank: int
 
 
 class VectorIndexConfig(IndexConfig, total=False):
@@ -162,6 +189,7 @@ class MongoDBStore(BaseStore):
         index_config: Optional[VectorIndexConfig] = None,
         auto_index_timeout: int = 15,
         query_model: str | None = None,
+        rerank_config: Optional[RerankConfig] = None,
         **kwargs: Any,
     ):
         """Construct store and its indexes.
@@ -175,10 +203,17 @@ class MongoDBStore(BaseStore):
             index_config: Optionally define a VectorIndexConfig for semantic search.
             auto_index_timeout: Optional timeout for creation of indexes.
             query_model: For semantic search, optionally provide a different model for search than indexing.
+            rerank_config: Optionally enable native reranking via $rerank after vector
+                search. Requires MongoDB Atlas 8.3+, Native Reranking enabled in
+                Atlas Project Settings, and a Voyage AI API key configured in Atlas.
+                ``index_config`` must also be set. See ``RerankConfig`` for details.
 
         Returns:
             Instance of MongoDBStore.
         """
+        if rerank_config and not index_config:
+            raise ValueError("rerank_config requires index_config to be set")
+        self._rerank_config: RerankConfig = rerank_config or {}
 
         self.collection = collection
         self.ttl_config = {} if ttl_config is None else ttl_config
@@ -733,6 +768,14 @@ class MongoDBStore(BaseStore):
                 filter_cond = [{f"value.{k}": v} for k, v in filter.items()]
                 filter_vec = {"$and": [filter_vec] + filter_cond}
 
+            # Expand the vector search limit so the reranker has enough candidates.
+            n_to_rerank = (
+                self._rerank_config.get("num_docs_to_rerank", min(limit * 10, 1000))
+                if self._rerank_config
+                else limit
+            )
+            vector_limit = n_to_rerank if self._rerank_config else limit
+
             if not self._is_autoembedding:
                 query_vector = self.embeddings.embed_query(query)
                 pipeline = [
@@ -740,7 +783,7 @@ class MongoDBStore(BaseStore):
                         query_vector=query_vector,
                         search_field=self._embedding_key,
                         index_name=self._index_name,
-                        top_k=limit,
+                        top_k=vector_limit,
                         filter=filter_vec,
                     ),
                     {"$set": {"score": {"$meta": "vectorSearchScore"}}},
@@ -754,11 +797,36 @@ class MongoDBStore(BaseStore):
                         search_field=self._embedding_key,
                         index_name=self._index_name,
                         model=self.query_model,
-                        top_k=limit,
+                        top_k=vector_limit,
                         filter=filter_vec,
                     ),
                     {"$set": {"score": {"$meta": "vectorSearchScore"}}},
                 ]
+
+            # Native Reranking via $rerank. Requires MongoDB 8.3+, Native Reranking
+            # enabled in Atlas Project Settings, and a Voyage AI API key configured
+            # in Atlas. Will migrate to pymongo_search_utils once available there.
+            #
+            # $rerank only supports top-level field paths, so we temporarily surface
+            # value.<index_field> as a top-level field, rerank on it, then remove it.
+            if self._rerank_config:
+                _rerank_text = "_rerank_text"
+                rerank_spec: dict[str, Any] = {
+                    "query": {"text": query},
+                    "path": _rerank_text,
+                    "numDocsToRerank": n_to_rerank,
+                }
+                if "model" in self._rerank_config:
+                    rerank_spec["model"] = self._rerank_config["model"]
+                pipeline.extend(
+                    [
+                        {"$addFields": {_rerank_text: f"$value.{self.index_field}"}},
+                        {"$rerank": rerank_spec},
+                        {"$set": {"score": {"$meta": "score"}}},
+                        {"$unset": _rerank_text},
+                        {"$limit": limit},
+                    ]
+                )
 
         results = self.collection.aggregate(pipeline)
 
