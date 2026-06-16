@@ -828,7 +828,7 @@ class MongoDBStore(BaseStore):
             #
             # $rerank only supports top-level field paths, so we temporarily surface
             # value.<index_field> as a top-level field, rerank on it, then remove it.
-            if self._rerank_config is not None:
+            if self._rerank_config:
                 _rerank_text = "_rerank_text"
                 rerank_spec: dict[str, Any] = {
                     "query": {"text": query},

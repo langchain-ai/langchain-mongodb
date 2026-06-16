@@ -49,8 +49,12 @@ RERANK_MODEL = "rerank-2.5-lite"
 TIMEOUT, INTERVAL = 120, 1
 
 pytestmark = pytest.mark.skipif(
-    any(host in MONGODB_URI for host in ("localhost", "127.0.0.1")),
-    reason="$rerank requires a real Atlas cluster with MongoDB 8.3+ and Native Reranking enabled",
+    not os.environ.get("MONGODB_NATIVE_RERANKING_SUPPORT"),
+    reason=(
+        "$rerank requires MONGODB_NATIVE_RERANKING_SUPPORT env var to be set, "
+        "plus an Atlas cluster running MongoDB 8.3+ with Native Reranking "
+        "and a Voyage AI API key enabled in Atlas Project Settings"
+    ),
 )
 
 # Every document mentions "filling", "two slices of bread", or both.
