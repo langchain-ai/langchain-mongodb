@@ -75,12 +75,20 @@ class RerankConfig(TypedDict, total=False):
         model: Voyage AI reranking model (e.g. ``"rerank-2.5-lite"``).
             Omit to use the latest available model.
         num_docs_to_rerank: Number of candidates passed from $vectorSearch to the
-            reranker. Must be >= the ``limit`` passed to ``search()``.
-            Defaults to ``min(limit * 10, 1000)``.
+            reranker. Must be >= the ``limit`` passed to ``search()`` and <= 1000
+            (the MongoDB maximum for ``$rerank``). Defaults to
+            ``min(limit * oversampling_factor, 1000)``, which satisfies both
+            constraints as long as ``limit`` itself is <= 1000. Passing
+            ``limit > 1000`` with reranking enabled raises a ``ValueError`` at
+            search time.
+        oversampling_factor: Multiplier applied to ``limit`` when computing the
+            default ``num_docs_to_rerank``. Ignored when ``num_docs_to_rerank``
+            is set explicitly. Defaults to 10.
     """
 
     model: str
     num_docs_to_rerank: int
+    oversampling_factor: int
 
 
 class VectorIndexConfig(IndexConfig, total=False):
@@ -769,8 +777,19 @@ class MongoDBStore(BaseStore):
                 filter_vec = {"$and": [filter_vec] + filter_cond}
 
             # Expand the vector search limit so the reranker has enough candidates.
+            if self._rerank_config and limit > 1000:
+                raise ValueError(
+                    f"search(limit={limit}) exceeds the $rerank maximum of 1000. "
+                    "Reduce limit or disable reranking."
+                )
             n_to_rerank = (
-                self._rerank_config.get("num_docs_to_rerank", min(limit * 10, 1000))
+                self._rerank_config.get(
+                    "num_docs_to_rerank",
+                    min(
+                        limit * self._rerank_config.get("oversampling_factor", 10),
+                        1000,
+                    ),
+                )
                 if self._rerank_config
                 else limit
             )
