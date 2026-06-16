@@ -211,9 +211,9 @@ class MongoDBStore(BaseStore):
         Returns:
             Instance of MongoDBStore.
         """
-        if rerank_config and not index_config:
+        if rerank_config is not None and not index_config:
             raise ValueError("rerank_config requires index_config to be set")
-        self._rerank_config: RerankConfig = rerank_config or {}
+        self._rerank_config: Optional[RerankConfig] = rerank_config or {}
 
         self.collection = collection
         self.ttl_config = {} if ttl_config is None else ttl_config
@@ -809,7 +809,7 @@ class MongoDBStore(BaseStore):
             #
             # $rerank only supports top-level field paths, so we temporarily surface
             # value.<index_field> as a top-level field, rerank on it, then remove it.
-            if self._rerank_config:
+            if self._rerank_config is not None:
                 _rerank_text = "_rerank_text"
                 rerank_spec: dict[str, Any] = {
                     "query": {"text": query},
