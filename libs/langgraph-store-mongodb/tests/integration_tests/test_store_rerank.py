@@ -48,12 +48,16 @@ INDEX_NAME = "rerank_vector_index"
 RERANK_MODEL = "rerank-2.5-lite"
 TIMEOUT, INTERVAL = 120, 1
 
+_is_local = any(host in MONGODB_URI for host in ("localhost", "127.0.0.1"))
+
+# TODO: Remove this skip once $rerank reaches general availability.
+# Track GA status at: https://www.mongodb.com/docs/vector-search/query/aggregation-stages/rerank/
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("MONGODB_NATIVE_RERANKING_SUPPORT"),
+    _is_local,
     reason=(
-        "$rerank requires MONGODB_NATIVE_RERANKING_SUPPORT env var to be set, "
-        "plus an Atlas cluster running MongoDB 8.3+ with Native Reranking "
-        "and a Voyage AI API key enabled in Atlas Project Settings"
+        "$rerank is not supported on local MongoDB. "
+        "Run against an Atlas cluster with MongoDB 8.3+, Native Reranking enabled "
+        "in Atlas Project Settings, and a Voyage AI API key configured."
     ),
 )
 
