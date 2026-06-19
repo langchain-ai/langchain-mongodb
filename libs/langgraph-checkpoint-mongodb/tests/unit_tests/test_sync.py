@@ -83,22 +83,26 @@ def test_search(input_data: dict[str, Any]) -> None:
 
 
 def test_null_chars(input_data: dict[str, Any]) -> None:
-    """In MongoDB string *values* can be any valid UTF-8 including nulls.
-    *Field names*, however, cannot contain nulls characters."""
+    """Null bytes in metadata *values* are stripped by langgraph's
+    get_checkpoint_metadata before storage. Null bytes in metadata *field
+    names* are not sanitized and are rejected by MongoDB."""
     with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:
         null_str = "\x00abc"  # string containing null character
+        sanitized_str = "abc"  # null bytes stripped by get_checkpoint_metadata
 
-        # 1. null string in field *value*
+        # 1. null string in field *value* -> stripped before storage
         null_value_cfg = saver.put(
             input_data["config_1"],
             input_data["chkpnt_1"],
             {"my_key": null_str},
             {},
         )
-        assert saver.get_tuple(null_value_cfg).metadata["my_key"] == null_str  # type: ignore
+        assert saver.get_tuple(null_value_cfg).metadata["my_key"] == sanitized_str  # type: ignore
         assert (
-            list(saver.list(None, filter={"my_key": null_str}))[0].metadata["my_key"]
-            == null_str
+            list(saver.list(None, filter={"my_key": sanitized_str}))[0].metadata[
+                "my_key"
+            ]
+            == sanitized_str
         )
 
         # 2. null string in field *name*

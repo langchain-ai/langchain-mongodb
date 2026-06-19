@@ -87,12 +87,14 @@ async def test_asearch(input_data: dict[str, Any], saver: MongoDBSaver) -> None:
 
 @pytest.mark.asyncio
 async def test_null_chars(input_data: dict[str, Any], saver: MongoDBSaver) -> None:
-    """In MongoDB string *values* can be any valid UTF-8 including nulls.
-    *Field names*, however, cannot contain nulls characters."""
+    """Null bytes in metadata *values* are stripped by langgraph's
+    get_checkpoint_metadata before storage. Null bytes in metadata *field
+    names* are not sanitized and are rejected by MongoDB."""
 
     null_str = "\x00abc"  # string containing null character
+    sanitized_str = "abc"  # null bytes stripped by get_checkpoint_metadata
 
-    # 1. null string in field *value*
+    # 1. null string in field *value* -> stripped before storage
     null_value_cfg = await saver.aput(
         input_data["config_1"],
         input_data["chkpnt_1"],
@@ -100,9 +102,9 @@ async def test_null_chars(input_data: dict[str, Any], saver: MongoDBSaver) -> No
         {},
     )
     null_tuple = await saver.aget_tuple(null_value_cfg)
-    assert null_tuple.metadata["my_key"] == null_str  # type: ignore
-    cps = [c async for c in saver.alist(None, filter={"my_key": null_str})]
-    assert cps[0].metadata["my_key"] == null_str
+    assert null_tuple.metadata["my_key"] == sanitized_str  # type: ignore
+    cps = [c async for c in saver.alist(None, filter={"my_key": sanitized_str})]
+    assert cps[0].metadata["my_key"] == sanitized_str
 
     # 2. null string in field *name*
     with pytest.raises(InvalidDocument):
