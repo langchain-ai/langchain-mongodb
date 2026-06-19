@@ -180,8 +180,8 @@ async def test_custom_properties_async(checkpointer_mongodb: MongoDBSaver) -> No
     compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb)
 
     # Invoke the compiled state graph with user input
-    await compiled_state_graph.ainvoke(
-        input={"subjects": [], "step": 0},  # type:ignore[arg-type]
+    await compiled_state_graph.ainvoke(  # type:ignore[call-overload]
+        input={"subjects": [], "step": 0},
         config=config,
         stream_mode="values",
         debug=False,
@@ -212,8 +212,8 @@ def test_custom_properties(checkpointer_mongodb: MongoDBSaver) -> None:
     compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb)
 
     # Invoke the compiled state graph with user input
-    compiled_state_graph.invoke(
-        input={"subjects": [], "step": 0},  # type:ignore[arg-type]
+    compiled_state_graph.invoke(  # type:ignore[call-overload]
+        input={"subjects": [], "step": 0},
         config=config,
         stream_mode="values",
         debug=False,

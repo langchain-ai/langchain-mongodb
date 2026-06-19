@@ -16,6 +16,7 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     CheckpointTuple,
     get_checkpoint_id,
+    get_checkpoint_metadata,
 )
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -409,8 +410,7 @@ class MongoDBSaver(BaseCheckpointSaver):
         checkpoint_ns = config["configurable"]["checkpoint_ns"]
         checkpoint_id = checkpoint["id"]
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
-        metadata = metadata.copy()
-        metadata.update(config.get("metadata", {}))
+        metadata = get_checkpoint_metadata(config, metadata)
         doc = {
             "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
             "type": type_,
