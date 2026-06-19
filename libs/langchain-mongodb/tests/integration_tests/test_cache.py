@@ -89,7 +89,7 @@ def _execute_test(
     # Fabricate an LLM String
 
     if not isinstance(llm, str):
-        params = llm.dict()
+        params = llm.asdict()
         params["stop"] = None
         llm_string = str(sorted([(k, v) for k, v in params.items()]))
     else:
@@ -191,7 +191,7 @@ def test_mongodb_atlas_cache_matrix(
     llm = FakeLLM()
 
     # Fabricate an LLM String
-    params = llm.dict()
+    params = llm.asdict()
     params["stop"] = None
     llm_string = str(sorted([(k, v) for k, v in params.items()]))
 
