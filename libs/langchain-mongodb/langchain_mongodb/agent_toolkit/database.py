@@ -57,9 +57,14 @@ class MongoDBDatabase:
             )
         self._include_colls = set(include_collections or [])
         self._ignore_colls = set(ignore_collections or [])
-        self._all_colls = set(
-            self._db.list_collection_names(authorizedCollections=True)
-        )
+        # Try with authorizedCollections=True first, fall back to False
+        # for MongoDB-compatible endpoints (e.g., Firestore) that don't support it
+        try:
+            self._all_colls = set(
+                self._db.list_collection_names(authorizedCollections=True)
+            )
+        except PyMongoError:
+            self._all_colls = set(self._db.list_collection_names())
 
         self._sample_docs_in_coll_info = sample_docs_in_collection_info
         self._indexes_in_coll_info = indexes_in_collection_info
