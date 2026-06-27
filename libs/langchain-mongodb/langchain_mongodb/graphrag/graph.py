@@ -20,7 +20,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, PyMongoError
 from pymongo.results import BulkWriteResult
 
 from langchain_mongodb.graphrag import example_templates, prompts
@@ -162,9 +162,13 @@ class MongoDBGraphStore:
                 driver=DRIVER_METADATA,
             )
             db = client[database_name]
-            if collection_name not in db.list_collection_names(
-                authorizedCollections=True
-            ):
+            try:
+                coll_names = db.list_collection_names(
+                    authorizedCollections=True
+                )
+            except PyMongoError:
+                coll_names = db.list_collection_names()
+            if collection_name not in coll_names:
                 validator = {"$jsonSchema": self._schema} if validate else None
                 collection = client[database_name].create_collection(
                     collection_name,
