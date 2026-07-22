@@ -1,0 +1,10 @@
+Line 1: The quick brown fox jumps over the lazy dog.
+Line 2: MongoDB Atlas provides powerful vector search capabilities.
+Line 3: LangChain DeepAgents can use filesystem backends for file operations.
+Line 4: S3 is a highly durable and available object store.
+Line 5: Chunking with overlaps preserves context at split boundaries.
+Line 6: Embeddings encode semantic meaning into high-dimensional vectors.
+Line 7: Hybrid search combines full-text and vector search for best results.
+Line 8: Index provisioning ensures Atlas search indexes are ready before queries.
+Line 9: The polling watcher detects S3 changes via ETag diffs.
+Line 10: The SQS watcher reacts to S3 event notifications in near real-time.
