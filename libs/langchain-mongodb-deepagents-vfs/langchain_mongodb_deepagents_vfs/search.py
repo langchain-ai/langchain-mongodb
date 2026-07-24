@@ -35,6 +35,10 @@ _DEFAULT_GREP_LIMIT = 20
 _DEFAULT_GLOB_LIMIT = 200
 _DEFAULT_LS_LIMIT = 1000
 
+# Server-side cap on the non-Atlas regex grep so a pathological pattern can't
+# saturate MongoDB CPU. Paired with re.escape() (literal match) at the callsite.
+_GREP_MAX_TIME_MS = 5000
+
 
 def _file_infos(paths: Iterable[str]) -> list[FileInfo]:
     """Wrap source paths in the protocol's FileInfo shape.
@@ -344,15 +348,25 @@ class SearchRouter:
         return self._dedupe_to_grep_result(docs)
 
     def _grep_regex(self, pattern: str, path: str, glob: str) -> GrepResult:
-        query: dict[str, Any] = {"content": {"$regex": pattern, "$options": "i"}}
+        # Escape the user pattern to a literal: the non-Atlas fallback is a
+        # substring search, not a regex engine exposed to callers. This defuses
+        # catastrophic-backtracking inputs like "(a+)+$". max_time_ms bounds the
+        # scan server-side as a second line of defence.
+        query: dict[str, Any] = {
+            "content": {"$regex": re.escape(pattern), "$options": "i"}
+        }
         if path:
             query["source_path"] = {"$regex": f"^{re.escape(path)}"}
         if glob:
             query["filename"] = {"$regex": fnmatch.translate(glob)}
-        cursor = self._col.find(
-            query,
-            {"source_path": 1, "line_start": 1, "content": 1, "_id": 0},
-        ).limit(self._grep_limit)
+        cursor = (
+            self._col.find(
+                query,
+                {"source_path": 1, "line_start": 1, "content": 1, "_id": 0},
+            )
+            .limit(self._grep_limit)
+            .max_time_ms(_GREP_MAX_TIME_MS)
+        )
         return self._dedupe_to_grep_result(list(cursor))
 
     @staticmethod

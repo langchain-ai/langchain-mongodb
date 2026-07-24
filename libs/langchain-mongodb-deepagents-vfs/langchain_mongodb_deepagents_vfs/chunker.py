@@ -56,6 +56,14 @@ _SUPPORTED_EXTENSIONS = {
 # Magic byte signature for OLE2 Compound File Binary (legacy .xls / .ppt / .doc)
 _OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
+# Zip-bomb guardrails for OOXML (docx/xlsx/pptx) parsing. A crafted ~42 KB
+# archive can expand to gigabytes; the Office parsers decompress every entry, so
+# we inspect the ZIP central directory first and refuse anything past these caps.
+_MAX_OOXML_COMPRESSED_BYTES = 100 * 1024 * 1024  # raw archive on disk
+_MAX_OOXML_UNCOMPRESSED_BYTES = 500 * 1024 * 1024  # total inflated size
+_MAX_OOXML_ENTRIES = 10_000  # entry count (guards zip-of-many-files)
+_MAX_OOXML_EXPANSION_RATIO = 200  # uncompressed / compressed
+
 
 class Chunker:
     """Converts raw bytes into a list of Chunk objects.
@@ -167,6 +175,52 @@ class Chunker:
         return self._extract_text(data)
 
     @staticmethod
+    def _guard_ooxml(data: bytes) -> None:
+        """Reject OOXML zip bombs before handing bytes to an Office parser.
+
+        Inspects the ZIP central directory (metadata only, no decompression) and
+        raises AdapterError(E9002) if compressed size, total uncompressed size,
+        entry count, or expansion ratio exceed safe bounds.
+        """
+        if len(data) > _MAX_OOXML_COMPRESSED_BYTES:
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED,
+                f"Archive is {len(data)} bytes, exceeds "
+                f"{_MAX_OOXML_COMPRESSED_BYTES} byte limit",
+            )
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                infos = zf.infolist()
+        except zipfile.BadZipFile as exc:
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED, f"Corrupt archive: {exc}"
+            ) from exc
+
+        if len(infos) > _MAX_OOXML_ENTRIES:
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED,
+                f"Archive has {len(infos)} entries, exceeds "
+                f"{_MAX_OOXML_ENTRIES} limit",
+            )
+        total_uncompressed = sum(i.file_size for i in infos)
+        total_compressed = sum(i.compress_size for i in infos)
+        if total_uncompressed > _MAX_OOXML_UNCOMPRESSED_BYTES:
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED,
+                f"Archive inflates to {total_uncompressed} bytes, exceeds "
+                f"{_MAX_OOXML_UNCOMPRESSED_BYTES} byte limit",
+            )
+        if (
+            total_compressed > 0
+            and total_uncompressed / total_compressed > _MAX_OOXML_EXPANSION_RATIO
+        ):
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED,
+                f"Archive expansion ratio {total_uncompressed / total_compressed:.0f}x "
+                f"exceeds {_MAX_OOXML_EXPANSION_RATIO}x limit",
+            )
+
+    @staticmethod
     def _sniff_ooxml(data: bytes) -> str | None:
         """Inspect a ZIP archive to identify which OOXML variant it is."""
         try:
@@ -225,6 +279,7 @@ class Chunker:
             raise AdapterError(
                 ErrorCode.E9003_FORMAT_UNSUPPORTED, "python-docx is not installed"
             ) from exc
+        self._guard_ooxml(data)
         doc = docx.Document(io.BytesIO(data))
         full_text = "\n".join(p.text for p in doc.paragraphs)
         return [(0, full_text)]
@@ -238,6 +293,7 @@ class Chunker:
                 ErrorCode.E9003_FORMAT_UNSUPPORTED,
                 "openpyxl is not installed; pip install openpyxl",
             ) from exc
+        self._guard_ooxml(data)
         wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
         pages: list[tuple[int, str]] = []
         try:
@@ -288,6 +344,7 @@ class Chunker:
                 ErrorCode.E9003_FORMAT_UNSUPPORTED,
                 "python-pptx is not installed; pip install python-pptx",
             ) from exc
+        self._guard_ooxml(data)
         prs = Presentation(io.BytesIO(data))
         pages: list[tuple[int, str]] = []
         for page_number, slide in enumerate(prs.slides):

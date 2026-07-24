@@ -256,3 +256,28 @@ class TestChunkerPPTLegacy:
             ErrorCode.E9002_CHUNKER_FAILED,
             ErrorCode.E9003_FORMAT_UNSUPPORTED,
         )
+
+
+@pytest.mark.unit
+class TestChunkerZipBombGuard:
+    @staticmethod
+    def _zip_bomb() -> bytes:
+        """A tiny archive that inflates far past the expansion-ratio limit."""
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("word/document.xml", b"\x00" * (10 * 1024 * 1024))
+        return buf.getvalue()
+
+    def test_guard_rejects_high_expansion_ratio(self):
+        with pytest.raises(AdapterError) as ei:
+            Chunker._guard_ooxml(self._zip_bomb())
+        assert ei.value.code == ErrorCode.E9002_CHUNKER_FAILED
+
+    def test_docx_extraction_guarded(self, chunker):
+        # Reaches _extract_docx via the docx extension and is rejected pre-parse.
+        with pytest.raises(AdapterError) as ei:
+            chunker.chunk("bomb.docx", self._zip_bomb())
+        assert ei.value.code == ErrorCode.E9002_CHUNKER_FAILED

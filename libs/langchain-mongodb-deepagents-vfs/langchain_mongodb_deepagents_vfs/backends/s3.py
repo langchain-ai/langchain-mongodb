@@ -184,3 +184,17 @@ class S3Backend(ObjectStoreBackend):
             return etag
         except ClientError:
             return None
+
+    def get_size(self, path: str) -> int:
+        """Return the object's size in bytes via a HEAD request (no body fetch)."""
+        key = self._key(path)
+        try:
+            head = self._client.head_object(Bucket=self._bucket, Key=key)
+            return int(head["ContentLength"])
+        except ClientError as exc:
+            code = exc.response["Error"]["Code"]
+            if code in ("NoSuchKey", "404"):
+                raise AdapterError(
+                    ErrorCode.E2001_OBJECT_NOT_FOUND, f"Key '{key}' not found"
+                ) from exc
+            raise AdapterError(ErrorCode.E2002_OBJECT_READ_FAILED, str(exc)) from exc

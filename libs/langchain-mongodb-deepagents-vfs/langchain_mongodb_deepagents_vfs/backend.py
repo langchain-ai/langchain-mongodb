@@ -69,6 +69,14 @@ _DRIVER_INFO = DriverInfo(name="DeepAgents-MongoDB-FS", version=_VERSION)
 _DB_NAME = "langchain_mongodb_deepagents_vfs"
 _COLLECTION_NAME = "demo_chunks"
 
+# Cap the object size read() will pull into memory. read() slices by *line*, so a
+# byte Range can't satisfy the request without a line index — the only safe bound
+# is to refuse oversized objects before the GET. 64 MiB comfortably covers text
+# files while stopping a multi-GB upload-then-read OOM.
+# ponytail: bytes cap, not a line index — raise the constant if huge text reads
+# become a real use case.
+_MAX_READ_BYTES = 64 * 1024 * 1024
+
 WatcherType = Literal["polling", "sqs"]
 
 
@@ -266,9 +274,16 @@ class MongoFilesystemBackend(BackendProtocol):
         Returns:
             ReadResult carrying a ``FileData`` payload.
         """
-        # ponytail: object stores have no line index, so this fetches the whole
-        # object and slices lines in memory. Swap in a ranged/streaming read if
-        # line-offset reads of very large objects become a hot path.
+        # HEAD first: refuse oversized objects before the GET so a large upload
+        # can't be read back to exhaust worker memory. Line-offset slicing needs
+        # the whole decoded object, so a byte Range can't substitute here.
+        size = self._store.get_size(file_path)
+        if size > _MAX_READ_BYTES:
+            raise AdapterError(
+                ErrorCode.E2002_OBJECT_READ_FAILED,
+                f"Object is {size} bytes, exceeds read limit of "
+                f"{_MAX_READ_BYTES} bytes",
+            )
         data = self._store.read(file_path)
         lines = data.decode("utf-8", errors="replace").splitlines(keepends=True)
         end = offset + limit if limit >= 0 else None

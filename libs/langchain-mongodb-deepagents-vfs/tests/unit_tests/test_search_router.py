@@ -114,6 +114,16 @@ class TestSearchRouterGrep:
         assert isinstance(result, GrepResult)
         assert any("api.txt" in m["path"] for m in result.matches)
 
+    def test_grep_regex_pattern_escaped_to_literal(
+        self, mongo_collection, mock_embedder
+    ):
+        # "a+" as a regex matches "aaa"; escaped to a literal it must not, proving
+        # user input can't reach the $regex engine as an unbounded pattern.
+        _seed(mongo_collection, [_make_doc("docs/a.txt", content="aaa")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert router.grep("a+").matches == []
+        assert any("a.txt" in m["path"] for m in router.grep("aaa").matches)
+
     def test_grep_deduplication(self, mongo_collection, mock_embedder):
         # Two chunks from the same file with same line_start → should be deduped
         _seed(

@@ -58,6 +58,50 @@ class TestS3BackendRead:
 
 
 @pytest.mark.unit
+class TestS3BackendGetSize:
+    def test_get_size_returns_byte_length(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="test-bkt")
+            client.put_object(Bucket="test-bkt", Key="f.txt", Body=b"0123456789")
+            backend = S3Backend(bucket_name="test-bkt", region_name="us-east-1")
+            assert backend.get_size("f.txt") == 10
+
+    def test_get_size_missing_raises(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="test-bkt")
+            backend = S3Backend(bucket_name="test-bkt", region_name="us-east-1")
+            with pytest.raises(AdapterError) as ei:
+                backend.get_size("missing.txt")
+            assert ei.value.code == ErrorCode.E2001_OBJECT_NOT_FOUND
+
+
+@pytest.mark.unit
+class TestReadSizeCap:
+    def test_read_rejects_oversized_object(self):
+        """backend.read HEADs first and refuses objects past the memory cap."""
+        from langchain_mongodb_deepagents_vfs.backend import (
+            _MAX_READ_BYTES,
+            MongoFilesystemBackend,
+        )
+
+        class _FakeStore:
+            def get_size(self, path):
+                return _MAX_READ_BYTES + 1
+
+            def read(self, path):  # pragma: no cover - must not be reached
+                raise AssertionError("read() called despite oversized object")
+
+        backend = MongoFilesystemBackend.__new__(MongoFilesystemBackend)
+        backend._store = _FakeStore()
+        backend.debug = True  # re-raise past the adapter boundary
+        with pytest.raises(AdapterError) as ei:
+            backend.read("bomb.txt", limit=1)
+        assert ei.value.code == ErrorCode.E2002_OBJECT_READ_FAILED
+
+
+@pytest.mark.unit
 class TestS3BackendWrite:
     def test_write_creates_object(self, aws_credentials):
         with mock_aws():
