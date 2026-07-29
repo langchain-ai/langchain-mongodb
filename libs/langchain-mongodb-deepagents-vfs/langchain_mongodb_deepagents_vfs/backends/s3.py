@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterator
-from pprint import pprint
 from typing import Any
-
 import boto3
 from botocore.exceptions import ClientError
 
