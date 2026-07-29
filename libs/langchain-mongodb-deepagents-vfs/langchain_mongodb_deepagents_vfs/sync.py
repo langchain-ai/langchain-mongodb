@@ -88,8 +88,9 @@ class InitialSync:
             report.processed = 0
             return report
 
-        # Download concurrently
-        raw_objects = self._download_all(to_process)
+        # Download concurrently. Failures are counted, not swallowed: a key we
+        # never fetched is a failed key, not a silently-absent one.
+        raw_objects = self._download_all(to_process, report)
 
         # Process sequentially: chunk → embed → upsert batch
         pending_records: list[FileRecord] = []
@@ -161,7 +162,7 @@ class InitialSync:
         return [(key, etag) for key, etag in keys_etags if stored.get(key) != etag]
 
     def _download_all(
-        self, to_process: list[tuple[str, str]]
+        self, to_process: list[tuple[str, str]], report: SyncReport
     ) -> list[tuple[str, str, bytes]]:
         results: list[tuple[str, str, bytes]] = []
         with ThreadPoolExecutor(max_workers=self._workers) as pool:
@@ -176,6 +177,7 @@ class InitialSync:
                     results.append((key, etag, data))
                 except Exception as exc:
                     logger.warning("Download failed for key '%s': %s", key, exc)
+                    report.failed += 1
         return results
 
     def _upsert(self, records: list[FileRecord]) -> None:

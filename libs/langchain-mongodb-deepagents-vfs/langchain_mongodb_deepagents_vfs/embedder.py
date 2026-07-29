@@ -1,12 +1,12 @@
 """Embedding module — single point of contact with the embedding provider.
 
 Provider is selected at construction time via the ``EMBEDDING_PROVIDER`` env var
-(default: ``openai``).  Supported values:
+(default: ``bedrock``).  Supported values:
 
-  openai   — OpenAIEmbeddings (requires OPENAI_API_KEY)
-             Default model: text-embedding-3-small @ 1024 dims
   bedrock  — BedrockEmbeddings via langchain-aws (uses boto3 credential chain)
              Default model: amazon.titan-embed-text-v2:0 @ 1024 dims
+  openai   — OpenAIEmbeddings (requires OPENAI_API_KEY)
+             Default model: text-embedding-3-small @ 1024 dims
 
 Override the model name with ``EMBEDDING_MODEL``.  Any LangChain-compatible
 ``Embeddings`` instance can also be passed directly to bypass env-var lookup.
@@ -29,7 +29,7 @@ from langchain_mongodb_deepagents_vfs.errors import AdapterError, ErrorCode
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PROVIDER = "bedrock"
-_DEFAULT_MODEL = "text-embedding-3-small"
+_OPENAI_DEFAULT_MODEL = "text-embedding-3-small"
 _BEDROCK_DEFAULT_MODEL = "amazon.titan-embed-text-v2:0"
 _DEFAULT_DIMENSIONS = 1024
 _DEFAULT_BATCH_SIZE = 100
@@ -40,7 +40,7 @@ class Embedder:
 
     Args:
         model: A LangChain ``Embeddings`` instance.  If None, the provider is
-            resolved from the ``EMBEDDING_PROVIDER`` env var (default ``openai``).
+            resolved from the ``EMBEDDING_PROVIDER`` env var (default ``bedrock``).
         model_name: Model identifier used when *model* is None.  Falls back to
             the ``EMBEDDING_MODEL`` env var, then the provider default.
         dimensions: Expected embedding vector size; validated on first call.
@@ -63,7 +63,11 @@ class Embedder:
             resolved_name = (
                 model_name
                 or os.getenv("EMBEDDING_MODEL")
-                or (_DEFAULT_MODEL if provider == "openai" else _BEDROCK_DEFAULT_MODEL)
+                or (
+                    _OPENAI_DEFAULT_MODEL
+                    if provider == "openai"
+                    else _BEDROCK_DEFAULT_MODEL
+                )
             )
             self._model = self._build_model(provider, resolved_name, dimensions)
 

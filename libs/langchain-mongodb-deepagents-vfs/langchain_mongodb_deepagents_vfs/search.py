@@ -11,8 +11,6 @@ import fnmatch
 import logging
 import re
 from collections.abc import Iterable
-
-# from pathlib import PurePosixPath
 from typing import Any
 
 from langchain_mongodb.pipelines import text_search_stage
@@ -143,7 +141,9 @@ class SearchRouter:
                 for p in full_paths
             )
             entry_path = prefix + segment + ("/" if is_dir else "")
-            entries.append(FileInfo(path=entry_path, is_dir=is_dir, size=0))
+            # size omitted, not zeroed — see _file_infos: we store chunks, not
+            # the objects, so byte size isn't known without an extra S3 call.
+            entries.append(FileInfo(path=entry_path, is_dir=is_dir))
 
         return LsResult(entries=entries)
 
@@ -154,11 +154,14 @@ class SearchRouter:
     def glob(self, pattern: str, path: str = "") -> GlobResult:
         """Find files matching *pattern* under *path*.
 
-        Uses Atlas Search wildcard query on ``filename`` when available;
-        falls back to Python fnmatch on the cursor if not.
+        Uses an Atlas Search wildcard query when available; falls back to
+        Python fnmatch on the cursor if not. Both paths match against the full
+        ``source_path``, and ``*`` crosses "/" (fnmatch semantics, not shell),
+        so "*.pdf" also matches "docs/nested/report.pdf".
 
         Args:
-            pattern: Glob pattern applied to the filename (e.g. "*.pdf").
+            pattern: Glob pattern applied to the full object key
+                (e.g. "*.pdf", "docs/*.md").
             path: Restrict search to this path prefix.
 
         Returns:
@@ -208,9 +211,7 @@ class SearchRouter:
         prefix_filter: dict[str, Any] = {}
         if path:
             prefix_filter["source_path"] = {"$regex": f"^{re.escape(path)}"}
-        cursor = self._col.find(
-            prefix_filter, {"source_path": 1, "filename": 1, "_id": 0}
-        )
+        cursor = self._col.find(prefix_filter, {"source_path": 1, "_id": 0})
         seen: set[str] = set()
         results: list[str] = []
         for doc in cursor:

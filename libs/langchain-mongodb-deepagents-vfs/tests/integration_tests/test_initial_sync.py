@@ -48,6 +48,25 @@ class TestInitialSyncBasic:
             assert report.seen == 2
             assert report.processed + report.skipped == report.seen - report.failed
 
+    def test_download_failure_counts_as_failed(
+        self, setup_bucket, mongo_collection, mock_embedder, chunker
+    ):
+        """A key we could not fetch is reported as failed, not silently dropped."""
+        with mock_aws():
+            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            original_read = store.read
+
+            def flaky_read(path, *args, **kwargs):
+                if path.endswith("b.txt"):
+                    raise OSError("boom")
+                return original_read(path, *args, **kwargs)
+
+            store.read = flaky_read  # type: ignore[method-assign]
+            report = InitialSync(store, chunker, mock_embedder, mongo_collection).run()
+            assert report.seen == 2
+            assert report.failed == 1
+            assert mongo_collection.count_documents({"source_path": "docs/b.txt"}) == 0
+
     def test_sync_is_idempotent(
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):

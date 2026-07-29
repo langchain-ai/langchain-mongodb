@@ -33,7 +33,7 @@ class PollingWatcher(S3Watcher):
         chunker: Chunker instance.
         embedder: Embedder instance.
         collection: MongoDB collection.
-        interval_seconds: Poll interval in seconds (default 300).
+        interval_seconds: Poll interval in seconds (default 10).
         prefix: Only watch keys under this S3 prefix.
     """
 

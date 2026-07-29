@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from typing import Any
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -61,7 +62,6 @@ class S3Backend(ObjectStoreBackend):
         try:
             self._client.head_bucket(Bucket=self._bucket)
         except ClientError as exc:
-            pprint(exc)
             code = exc.response["Error"]["Code"]
             if code in ("404", "NoSuchBucket"):
                 raise AdapterError(

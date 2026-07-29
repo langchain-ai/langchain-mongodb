@@ -206,7 +206,9 @@ def _mongo_command_log(request):
     import pymongo.monitoring as monitoring
 
     filename = f"mongo-e2e-{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}.log"
-    default_path = request.getfixturevalue("tmp_path_factory").mktemp("mongo-log") / filename
+    default_path = (
+        request.getfixturevalue("tmp_path_factory").mktemp("mongo-log") / filename
+    )
     log_path = Path(os.getenv("MONGO_LOG_FILE", str(default_path))).resolve()
     sink = log_path.open("w", encoding="utf-8")
     listener = _MongoCommandLogger(sink)

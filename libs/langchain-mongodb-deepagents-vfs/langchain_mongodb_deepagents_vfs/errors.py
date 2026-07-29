@@ -12,7 +12,7 @@ import logging
 import traceback
 import uuid
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any, TypeVar
 
 from deepagents.backends.protocol import FILE_NOT_FOUND, PERMISSION_DENIED
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """Stable error codes surfaced to callers of MongoFilesystemBackend."""
 
     # E1xxx — configuration / initialization errors
@@ -165,7 +165,11 @@ def adapter_boundary(
                     exc.code.value,
                     fn.__qualname__,
                     exc.message,
-                    exc_info=exc.cause,
+                    # exc_info=True, not exc.cause: AdapterError is nearly always
+                    # raised with `from exc`, which populates __cause__ and leaves
+                    # the explicit `cause` arg None. True renders the live
+                    # exception plus its whole chain either way.
+                    exc_info=True,
                 )
                 if getattr(self, "debug", False):
                     raise

@@ -199,8 +199,7 @@ class Chunker:
         if len(infos) > _MAX_OOXML_ENTRIES:
             raise AdapterError(
                 ErrorCode.E9002_CHUNKER_FAILED,
-                f"Archive has {len(infos)} entries, exceeds "
-                f"{_MAX_OOXML_ENTRIES} limit",
+                f"Archive has {len(infos)} entries, exceeds {_MAX_OOXML_ENTRIES} limit",
             )
         total_uncompressed = sum(i.file_size for i in infos)
         total_compressed = sum(i.compress_size for i in infos)
