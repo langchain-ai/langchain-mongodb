@@ -1,3 +1,4 @@
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,8 +14,12 @@ def db() -> MongoDBDatabase:
     database._ignore_colls = set()
     database._all_colls = {"allowed", "related", "excluded"}
     database._db = MagicMock()
-    database._db["allowed"].aggregate.return_value = [{"count": 1}]
+    _aggregate_mock(database).return_value = [{"count": 1}]
     return database
+
+
+def _aggregate_mock(db: MongoDBDatabase) -> Any:
+    return cast(Any, db._db["allowed"].aggregate)
 
 
 def test_run_executes_valid_pipeline(db: MongoDBDatabase) -> None:
@@ -36,7 +41,7 @@ def test_run_executes_valid_pipeline(db: MongoDBDatabase) -> None:
         result = db.run("db.allowed.aggregate([])")
 
     assert '"count": 1' in result
-    db._db["allowed"].aggregate.assert_called_once_with(pipeline)
+    _aggregate_mock(db).assert_called_once_with(pipeline)
 
 
 @pytest.mark.parametrize(
@@ -65,8 +70,9 @@ def test_run_rejects_blocked_operators(
     ):
         result = db.run_no_throw("db.allowed.aggregate([])")
 
+    assert isinstance(result, str)
     assert result.startswith("Error: Aggregation operator $")
-    db._db["allowed"].aggregate.assert_not_called()
+    _aggregate_mock(db).assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -88,7 +94,7 @@ def test_run_enforces_collection_boundaries(
         result = db.run_no_throw("db.allowed.aggregate([])")
 
     assert result == "Error: Collection excluded is not available."
-    db._db["allowed"].aggregate.assert_not_called()
+    _aggregate_mock(db).assert_not_called()
 
 
 def test_run_validates_facet_pipeline(db: MongoDBDatabase) -> None:
@@ -107,7 +113,7 @@ def test_run_validates_facet_pipeline(db: MongoDBDatabase) -> None:
         result = db.run_no_throw("db.allowed.aggregate([])")
 
     assert result == "Error: Collection excluded is not available."
-    db._db["allowed"].aggregate.assert_not_called()
+    _aggregate_mock(db).assert_not_called()
 
 
 @pytest.mark.parametrize("stage_name", ["$rankFusion", "$scoreFusion"])
@@ -139,7 +145,7 @@ def test_run_validates_fusion_pipeline(db: MongoDBDatabase, stage_name: str) -> 
         result = db.run_no_throw("db.allowed.aggregate([])")
 
     assert result == "Error: Collection excluded is not available."
-    db._db["allowed"].aggregate.assert_not_called()
+    _aggregate_mock(db).assert_not_called()
 
 
 @pytest.mark.parametrize("stage_name", ["$lookup", "$unionWith"])
@@ -155,7 +161,7 @@ def test_run_allows_collectionless_documents_pipeline(
         result = db.run("db.allowed.aggregate([])")
 
     assert '"count": 1' in result
-    db._db["allowed"].aggregate.assert_called_once_with(pipeline)
+    _aggregate_mock(db).assert_called_once_with(pipeline)
 
 
 def test_run_allows_blocked_operator_name_inside_literal(db: MongoDBDatabase) -> None:
@@ -168,11 +174,11 @@ def test_run_allows_blocked_operator_name_inside_literal(db: MongoDBDatabase) ->
         result = db.run("db.allowed.aggregate([])")
 
     assert '"count": 1' in result
-    db._db["allowed"].aggregate.assert_called_once_with(pipeline)
+    _aggregate_mock(db).assert_called_once_with(pipeline)
 
 
 def test_run_no_throw_hides_driver_error_details(db: MongoDBDatabase) -> None:
-    db._db["allowed"].aggregate.side_effect = OperationFailure(
+    _aggregate_mock(db).side_effect = OperationFailure(
         "document containing private value was rejected"
     )
 
