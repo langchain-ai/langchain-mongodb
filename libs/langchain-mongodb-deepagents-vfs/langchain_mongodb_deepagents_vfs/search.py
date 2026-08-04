@@ -16,6 +16,7 @@ from typing import Any
 from langchain_mongodb.pipelines import text_search_stage
 from pymongo.collection import Collection
 from pymongo_search_utils import vector_search_stage
+from wcmatch.glob import BRACE, GLOBSTAR, globmatch
 
 from langchain_mongodb_deepagents_vfs.dtypes import (
     FileInfo,
@@ -154,14 +155,28 @@ class SearchRouter:
     def glob(self, pattern: str, path: str = "") -> GlobResult:
         """Find files matching *pattern* under *path*.
 
-        Uses an Atlas Search wildcard query when available; falls back to
-        Python fnmatch on the cursor if not. Both paths match against the full
-        ``source_path``, and ``*`` crosses "/" (fnmatch semantics, not shell),
-        so "*.pdf" also matches "docs/nested/report.pdf".
+        Follows the standard glob semantics the ``BackendProtocol`` documents,
+        using the same matcher (``wcmatch`` with BRACE + GLOBSTAR) as
+        deepagents' own backends, so behaviour is identical to theirs:
+
+        - ``*`` matches within one path segment and does **not** cross "/",
+          so "*.pdf" matches "report.pdf" but not "docs/report.pdf".
+        - ``**`` matches recursively — use "**/*.pdf" to search subdirectories.
+        - ``?`` matches a single character, ``[abc]`` a character set, and
+          ``{a,b}`` alternates.
+
+        The pattern is matched against each key *relative to* ``path``, so
+        ``glob("*.pdf", path="docs/")`` matches "docs/report.pdf".
+
+        There is a single implementation for Atlas and non-Atlas clusters:
+        Atlas Search's ``wildcard`` operator cannot express ``**``, ``[abc]``
+        or ``{a,b}``, so matching all patterns identically means matching in
+        Python. Only one document per distinct key is fetched (``$group``), so
+        the cost is O(files), not O(chunks).
 
         Args:
-            pattern: Glob pattern applied to the full object key
-                (e.g. "*.pdf", "docs/*.md").
+            pattern: Glob pattern applied to the key relative to *path*
+                (e.g. "*.pdf", "**/*.md").
             path: Restrict search to this path prefix.
 
         Returns:
@@ -172,58 +187,36 @@ class SearchRouter:
             AdapterError(E5002): Query failure.
         """
         try:
-            if self._is_atlas_available():
-                return self._glob_atlas(pattern, path)
-            return self._glob_regex(pattern, path)
+            return self._glob(pattern, path)
         except AdapterError:
             raise
         except Exception as exc:
             raise AdapterError(ErrorCode.E5002_GLOB_FAILED, str(exc)) from exc
 
-    def _glob_atlas(self, pattern: str, path: str) -> GlobResult:
+    def _glob(self, pattern: str, path: str) -> GlobResult:
+        prefix = path.rstrip("/")
+        if prefix:
+            prefix = prefix + "/"
+        match_stage: dict[str, Any] = (
+            {"source_path": {"$regex": f"^{re.escape(prefix)}"}} if prefix else {}
+        )
         pipeline: list[dict[str, Any]] = [
-            {
-                "$search": {
-                    "index": "fulltext_search_content_filename",
-                    "wildcard": {
-                        "query": pattern,
-                        "path": "source_path",
-                        # allowAnalyzedField required: source_path uses lucene.keyword analyzer
-                        # (single-token), so wildcard matches against the full path string
-                        "allowAnalyzedField": True,
-                    },
-                }
-            },
-            # Apply path prefix filter post-$search ($search wildcard doesn't support pre-filter)
-            *(
-                [{"$match": {"source_path": {"$regex": f"^{re.escape(path)}"}}}]
-                if path
-                else []
-            ),
+            {"$match": match_stage},
             {"$group": {"_id": "$source_path"}},
             {"$sort": {"_id": 1}},
-            {"$limit": self._glob_limit},
         ]
-        docs = list(self._col.aggregate(pipeline))
-        return GlobResult(matches=_file_infos(d["_id"] for d in docs if d["_id"]))
-
-    def _glob_regex(self, pattern: str, path: str) -> GlobResult:
-        prefix_filter: dict[str, Any] = {}
-        if path:
-            prefix_filter["source_path"] = {"$regex": f"^{re.escape(path)}"}
-        cursor = self._col.find(prefix_filter, {"source_path": 1, "_id": 0})
-        seen: set[str] = set()
+        # Leading "/" is not meaningful for S3 keys, which are always relative.
+        effective = pattern.lstrip("/")
         results: list[str] = []
-        for doc in cursor:
-            sp = doc["source_path"]
-            if sp in seen:
+        for doc in self._col.aggregate(pipeline):
+            source_path = doc["_id"]
+            if not source_path:
                 continue
-            if fnmatch.fnmatch(sp, pattern):
-                seen.add(sp)
-                results.append(sp)
+            if globmatch(source_path[len(prefix) :], effective, flags=BRACE | GLOBSTAR):
+                results.append(source_path)
                 if len(results) >= self._glob_limit:
                     break
-        return GlobResult(matches=_file_infos(sorted(results)))
+        return GlobResult(matches=_file_infos(results))
 
     # ------------------------------------------------------------------
     # grep

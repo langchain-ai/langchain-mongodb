@@ -83,13 +83,21 @@ class TestSearchRouterIntegration:
 
     def test_glob_pdf_files(self, mongo_collection, mock_embedder):
         router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
-        result = router.glob("*.pdf")
+        result = router.glob("**/*.pdf")
         assert len(result.matches) == 1
         assert result.matches[0]["path"] == "docs/report.pdf"
 
+    def test_glob_non_recursive_by_default(self, mongo_collection, mock_embedder):
+        """Every seeded key is nested, so a bare "*.pdf" from root matches none."""
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert router.glob("*.pdf").matches == []
+        assert (
+            router.glob("*.pdf", path="docs/").matches[0]["path"] == "docs/report.pdf"
+        )
+
     def test_glob_md_files(self, mongo_collection, mock_embedder):
         router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
-        result = router.glob("*.md")
+        result = router.glob("**/*.md")
         assert any("install.md" in m["path"] for m in result.matches)
 
     def test_glob_with_path_restriction(self, mongo_collection, mock_embedder):

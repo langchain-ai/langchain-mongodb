@@ -114,7 +114,7 @@ class TestMongoFilesystemBackendE2E:
         assert result.error is None
 
     def test_glob_pdf_pattern(self, backend_env):
-        result = backend_env.glob("*.txt")
+        result = backend_env.glob("**/*.txt")
         assert isinstance(result, GlobResult)
         assert result.error is None
 

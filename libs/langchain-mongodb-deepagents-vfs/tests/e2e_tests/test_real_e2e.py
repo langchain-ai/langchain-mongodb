@@ -80,19 +80,19 @@ class TestLsGlob:
         assert len(result.entries) > 0
 
     def test_glob_txt_files(self, real_backend, e2e_prefix):
-        result = real_backend.glob("*.txt")
+        result = real_backend.glob("**/*.txt")
         assert isinstance(result, GlobResult)
         assert result.error is None
         assert any("api.txt" in m["path"] for m in result.matches)
 
     def test_glob_py_files(self, real_backend, e2e_prefix):
-        result = real_backend.glob("*.py")
+        result = real_backend.glob("**/*.py")
         assert isinstance(result, GlobResult)
         assert result.error is None
         assert any("main.py" in m["path"] for m in result.matches)
 
     def test_glob_no_match(self, real_backend, e2e_prefix):
-        result = real_backend.glob("*.xyz_nonexistent")
+        result = real_backend.glob("**/*.xyz_nonexistent")
         assert isinstance(result, GlobResult)
         assert result.error is None
         assert result.matches == []

@@ -74,7 +74,8 @@ class TestSearchRouterGlob:
             ],
         )
         router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
-        result = router.glob("*.pdf")
+        # "**/" is required to reach into docs/ — "*" does not cross "/".
+        result = router.glob("**/*.pdf")
         assert isinstance(result, GlobResult)
         for m in result.matches:
             assert m["path"].endswith(".pdf")
@@ -83,8 +84,56 @@ class TestSearchRouterGlob:
     def test_glob_no_match(self, mongo_collection, mock_embedder):
         _seed(mongo_collection, [_make_doc("docs/guide.txt", filename="guide.txt")])
         router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
-        result = router.glob("*.pdf")
+        result = router.glob("**/*.pdf")
         assert result.matches == []
+
+    def test_glob_star_does_not_cross_separator(self, mongo_collection, mock_embedder):
+        """Standard glob semantics: "*" matches within one segment only."""
+        _seed(
+            mongo_collection,
+            [
+                _make_doc("root.pdf", filename="root.pdf"),
+                _make_doc("docs/nested.pdf", filename="nested.pdf"),
+            ],
+        )
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert [m["path"] for m in router.glob("*.pdf").matches] == ["root.pdf"]
+        assert [m["path"] for m in router.glob("**/*.pdf").matches] == [
+            "docs/nested.pdf",
+            "root.pdf",
+        ]
+
+    def test_glob_brace_and_charset(self, mongo_collection, mock_embedder):
+        """BRACE alternation and [abc] sets, which fnmatch/Atlas wildcard lack."""
+        _seed(
+            mongo_collection,
+            [
+                _make_doc("a.py", filename="a.py"),
+                _make_doc("b.md", filename="b.md"),
+                _make_doc("c.txt", filename="c.txt"),
+            ],
+        )
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert {m["path"] for m in router.glob("*.{py,md}").matches} == {"a.py", "b.md"}
+        assert [m["path"] for m in router.glob("[ab].py").matches] == ["a.py"]
+
+    def test_glob_pattern_is_relative_to_path(self, mongo_collection, mock_embedder):
+        """The pattern matches the key relative to *path*, not the full key."""
+        _seed(
+            mongo_collection,
+            [
+                _make_doc("docs/api/auth.md", filename="auth.md"),
+                _make_doc("docs/install.md", filename="install.md"),
+            ],
+        )
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        # Relative to "docs/", install.md is a direct child; auth.md is not.
+        assert [m["path"] for m in router.glob("*.md", path="docs/").matches] == [
+            "docs/install.md"
+        ]
+        assert [m["path"] for m in router.glob("api/*.md", path="docs/").matches] == [
+            "docs/api/auth.md"
+        ]
 
     def test_glob_with_path_prefix(self, mongo_collection, mock_embedder):
         _seed(

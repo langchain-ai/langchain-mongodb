@@ -1010,6 +1010,7 @@ dependencies = [
     { name = "python-pptx" },
     { name = "tenacity" },
     { name = "tiktoken" },
+    { name = "wcmatch" },
     { name = "xlrd" },
 ]
 
@@ -1053,6 +1054,7 @@ requires-dist = [
     { name = "python-pptx", specifier = ">=0.6.21" },
     { name = "tenacity", specifier = ">=8.2.0" },
     { name = "tiktoken", specifier = ">=0.7.0" },
+    { name = "wcmatch", specifier = ">=10.1" },
     { name = "xlrd", specifier = ">=2.0.1" },
 ]
 provides-extras = ["openai", "bedrock"]

@@ -66,8 +66,11 @@ def _atlas_search_ready(backend: Any, keys: list[str], timeout: int = 60) -> Non
         for key in remaining:
             filename = key.split("/")[-1]
             ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
+            # Basename pattern for the local check; "**/" prefix for the backend
+            # call, since glob() follows standard semantics where "*" does not
+            # cross "/" and every e2e key is nested under a prefix.
             pattern = f"*.{ext}" if ext else filename
-            result = backend.glob(pattern)
+            result = backend.glob(f"**/{pattern}")
             found = {
                 m["path"]
                 for m in (result.matches or [])

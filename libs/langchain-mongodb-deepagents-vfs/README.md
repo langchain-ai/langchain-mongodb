@@ -43,7 +43,8 @@ for match in result.matches or []:
     # Plain GrepMatch dicts, most relevant first (rank is the list order)
     print(match["path"], match["line"], match["text"][:80])
 
-# Glob by filename pattern → FileInfo dicts
+# Glob by path pattern → FileInfo dicts. Standard glob semantics: the pattern
+# is relative to `path`, and "*" does not cross "/" — use "**/*.pdf" to recurse.
 pdfs = backend.glob("*.pdf", path="reports/")
 print([m["path"] for m in pdfs.matches or []])
 
@@ -100,6 +101,42 @@ The provider is resolved at construction time from the `EMBEDDING_PROVIDER` envi
 
 Pass a `LangChain Embeddings` instance directly to `embedding_model` to bypass provider lookup entirely.
 
+## Why not `MongoDBStore` + `StoreBackend`?
+
+DeepAgents already ships [`StoreBackend`](https://github.com/langchain-ai/deepagents), which implements the same `BackendProtocol` on top of LangGraph's `BaseStore`. Since `langgraph-store-mongodb`'s `MongoDBStore` *is* a `BaseStore`, this works today and needs no new package:
+
+```python
+from deepagents.backends import StoreBackend
+from langgraph.store.mongodb import MongoDBStore
+
+backend = StoreBackend(store=MongoDBStore.from_conn_string(...))
+```
+
+The two are close cousins — LangGraph's Store is already filesystem-shaped (hierarchical namespaces, keys, prefix search), and `StoreBackend` maps a file path to a single Store key, much as this package maps it to `source_path`. So the difference is not the data model; it is **where search runs** and **how large a file can be**.
+
+Note that `MongoDBStore` itself is not the limiting factor on search: `MongoDBStore.search(query=...)` performs Atlas Vector Search, with optional reranking. The gap is that `StoreBackend` never calls it that way — its `grep` loads items and matches literally in Python, so the Store's semantic search goes unused. The rows below therefore describe the pairing as `StoreBackend` wires it up, not the ceiling of what `MongoDBStore` can do.
+
+| | `MongoDBStore` + `StoreBackend`                                                                          | This package |
+|---|----------------------------------------------------------------------------------------------------------|---|
+| `grep` / `glob` execution | `StoreBackend` fetches every item in the namespace, then filters in Python                               | runs as an aggregation inside MongoDB; only matches come back |
+| `grep` matching | literal substring — `StoreBackend` does not pass `query` to `MongoDBStore.search()`, so no vector search | hybrid `$rankFusion` — full-text **and** vector, so natural-language queries work |
+| Unit of storage | one Store item per file, read and written whole                                                          | file chunked into 512-token documents |
+| Large files | whole file must fit in memory on every `grep`                                                            | only matching chunks are returned; `line_start` gives real line numbers |
+| Where bytes live | in MongoDB, as the Store value                                                                           | in S3; MongoDB holds only chunks and embeddings |
+| Source of truth | MongoDB                                                                                                  | the S3 bucket — objects written by other tools are picked up automatically |
+
+The chunking is the part that cannot be retrofitted onto `StoreBackend`: it depends on one Store item per file path, and splitting a file into many items would break that identity. Chunking is also what makes semantic `grep` useful, since embedding a whole document into one vector loses the passage-level detail an agent is searching for.
+
+**Use `MongoDBStore` + `StoreBackend`** for an agent scratchpad — modest numbers of small, agent-authored files, where exact-match `grep` is fine and you want writes and reads in one system.
+
+**Use this package** when the corpus is large, pre-existing, and lives in S3 (documents, PDFs, spreadsheets), and the agent needs to find things by meaning rather than by exact string.
+
+### A note on search freshness
+
+Neither option gives read-your-writes for search. Atlas Search and Vector Search are eventually consistent by design: `mongod` replicates to the `mongot` process, which indexes asynchronously, so any newly written document becomes searchable a short time after the write acknowledges. Point reads are unaffected — `read` here goes straight to S3, and a `MongoDBStore.get()` (or a `search()` with only a `filter` and no `query`) is a normal MongoDB query.
+
+This package adds two further hops on top of that: a `write` lands in S3, and the object is only chunked and embedded once the watcher notices it — up to the poll interval (10s default) with `PollingWatcher`, or near real-time with `SQSWatcher`. Budget for `write` → `grep` lag on the order of the watcher interval plus Atlas indexing time, and don't rely on a file being greppable immediately after writing it.
+
 ## Design Decisions
 
 ### Non-blocking constructor
@@ -140,7 +177,9 @@ Format is detected by file extension; magic bytes are used as a fallback for ext
 - **Atlas Full-Text Search** (`lucene.standard` on `content`)
 - **Atlas Vector Search** (cosine similarity on `embedding`)
 
-If the embedding API is unavailable at query time, `grep` falls back to full-text only. On non-Atlas MongoDB (mongomock, community server), both `grep` and `glob` fall back to regex queries.
+If the embedding API is unavailable at query time, `grep` falls back to full-text only. On non-Atlas MongoDB (mongomock, community server), `grep` falls back to a regex query.
+
+`glob` has a single implementation on every cluster. It matches with [`wcmatch`](https://facelessuser.github.io/wcmatch/) using the same flags as DeepAgents' own backends, so it follows the standard glob semantics the `BackendProtocol` documents: `*` stays within one path segment, `**` recurses, and `?`, `[abc]`, `{a,b}` all work. Atlas Search's `wildcard` operator cannot express `**`, `[abc]` or `{a,b}`, so matching identically everywhere means matching in Python; only one document per distinct key is fetched, making the cost O(files) rather than O(chunks).
 
 ### Watcher
 

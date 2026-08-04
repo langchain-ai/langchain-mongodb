@@ -5,19 +5,11 @@ from __future__ import annotations
 import io
 import os
 import textwrap
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import boto3
 import pytest
 from moto import mock_aws
-
-# ---------------------------------------------------------------------------
-# Fixture data paths
-# ---------------------------------------------------------------------------
-
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
-
 
 # ---------------------------------------------------------------------------
 # mongomock <-> pymongo>=4.9 compatibility

@@ -86,11 +86,18 @@ class Chunker:
     # Public API
     # ------------------------------------------------------------------
 
-    def chunk(self, path: str, data: bytes) -> list[Chunk]:
+    def chunk(self, key: str, data: bytes) -> list[Chunk]:
         """Extract text from *data* and split into overlapping chunks.
 
+        *key* and *data* are independent inputs, not a path and its contents:
+        callers (``InitialSync``, the watchers) already hold bytes fetched from
+        S3 over the network, and there is no local file to open. The key is a
+        plain ``str`` because that is what the S3 API uses throughout — it is
+        an object key, not a filesystem path, so ``pathlib.Path`` would
+        normalise separators in ways that are wrong for keys on Windows.
+
         Args:
-            path: Source object key / path (used to derive filename + extension).
+            key: Source object key (used only to derive the extension).
             data: Raw bytes of the object.
 
         Returns:
@@ -100,7 +107,7 @@ class Chunker:
             AdapterError(E9003): Unsupported file format.
             AdapterError(E9002): Extraction failure.
         """
-        ext = PurePosixPath(path).suffix.lower()
+        ext = PurePosixPath(key).suffix.lower()
         try:
             pages = self._extract(data, ext)
         except AdapterError:
@@ -114,7 +121,7 @@ class Chunker:
             for chunk_text, char_start, char_end, line_start in self._split(page_text):
                 chunks.append(
                     Chunk(
-                        source_path=path,
+                        source_path=key,
                         chunk_index=chunk_index,
                         content=chunk_text,
                         page_number=page_number,

@@ -12,6 +12,10 @@ keywords = ["langchain", "mongodb", "atlas", "vector-search", "deepagents", "s3"
 dependencies = [
     # Source of the BackendProtocol and all result types this adapter returns.
     "deepagents>=0.6.0",
+    # Same glob matcher deepagents' own backends use, so glob() semantics match
+    # the BackendProtocol exactly. Already an install-time dep of deepagents;
+    # declared explicitly because we import it directly.
+    "wcmatch>=10.1",
     "boto3>=1.34.0",
     "pymongo>=4.6.1",
     "langchain-core>=0.2.0",
