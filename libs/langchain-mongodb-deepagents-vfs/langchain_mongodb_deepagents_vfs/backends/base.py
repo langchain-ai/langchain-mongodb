@@ -16,6 +16,13 @@ from langchain_mongodb_deepagents_vfs.dtypes import (
     FileUploadResponse,
 )
 
+# Hard ceiling on the bytes any single read may materialise. Enforced by the
+# concrete backend's read() so *every* caller is covered — the public read()
+# API, InitialSync, the watchers, and download_files — rather than each call
+# site remembering to check. Ingest paths run unattended with a thread pool, so
+# an unguarded read there is a memory-exhaustion vector, not just a slow query.
+MAX_READ_BYTES = 64 * 1024 * 1024
+
 
 class ObjectStoreBackend(ABC):
     """Filesystem-like interface over an arbitrary object store."""
@@ -33,12 +40,27 @@ class ObjectStoreBackend(ABC):
             offset: Byte offset to start from (0 = beginning).
             limit: Maximum bytes to return (-1 = all remaining).
 
+        Implementations MUST refuse to materialise more than
+        ``MAX_READ_BYTES`` and raise ``AdapterError(E2002)`` instead.
+
         Returns:
             Raw bytes.
 
         Raises:
             AdapterError(E2001): Object not found.
-            AdapterError(E2002): Read failure.
+            AdapterError(E2002): Read failure, or object over MAX_READ_BYTES.
+        """
+
+    @abstractmethod
+    def get_size(self, path: str) -> int:
+        """Return the size of *path* in bytes without fetching its body.
+
+        Part of the contract because callers need a cheap pre-flight check
+        before committing to a full read.
+
+        Raises:
+            AdapterError(E2001): Object not found.
+            AdapterError(E2002): Lookup failure.
         """
 
     @abstractmethod

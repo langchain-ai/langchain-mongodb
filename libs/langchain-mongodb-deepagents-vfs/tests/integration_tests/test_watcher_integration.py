@@ -26,6 +26,32 @@ class TestPollingWatcherIntegration:
             )
             yield S3Backend(bucket_name="watch-bucket", region_name="us-east-1"), client
 
+    def test_oversized_object_is_not_ingested(
+        self, mongo_collection, mock_embedder, chunker, aws_credentials, monkeypatch
+    ):
+        """Watcher ingest must refuse an oversized object.
+
+        Regression for the Corridor finding: _ingest() called store.read()
+        with no size cap, so a large upload to the watched prefix would be
+        loaded whole into the background daemon thread, then chunked and
+        embedded. _ingest already handles AdapterError, so the guard in
+        S3Backend.read() makes it skip and log rather than crash the thread.
+        """
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="cap-watch")
+            client.put_object(Bucket="cap-watch", Key="bomb.txt", Body=b"word " * 200)
+            store = S3Backend(bucket_name="cap-watch", region_name="us-east-1")
+            watcher = PollingWatcher(store, chunker, mock_embedder, mongo_collection)
+
+            watcher.on_created("bomb.txt")  # must not raise
+
+            assert mongo_collection.count_documents({"source_path": "bomb.txt"}) == 0
+            mock_embedder.embed_batch.assert_not_called()
+
     def test_on_created_callback_inserts_chunks(
         self, live_store, mongo_collection, mock_embedder, chunker, aws_credentials
     ):

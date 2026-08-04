@@ -67,6 +67,32 @@ class TestInitialSyncBasic:
             assert report.failed == 1
             assert mongo_collection.count_documents({"source_path": "docs/b.txt"}) == 0
 
+    def test_oversized_object_is_skipped_not_ingested(
+        self, aws_credentials, mongo_collection, mock_embedder, chunker, monkeypatch
+    ):
+        """InitialSync must not pull an oversized object into memory.
+
+        Regression for the Corridor finding: the 64 MiB cap was enforced only
+        in MongoFilesystemBackend.read(), so the sync path could load an
+        arbitrarily large object across 16 concurrent workers.
+        """
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="cap-sync")
+            client.put_object(Bucket="cap-sync", Key="big.txt", Body=b"word " * 200)
+            client.put_object(Bucket="cap-sync", Key="ok.txt", Body=b"small body")
+            store = S3Backend(bucket_name="cap-sync", region_name="us-east-1")
+
+            report = InitialSync(store, chunker, mock_embedder, mongo_collection).run()
+
+            assert report.seen == 2
+            assert report.failed == 1  # the oversized key, counted not swallowed
+            assert mongo_collection.count_documents({"source_path": "big.txt"}) == 0
+            assert mongo_collection.count_documents({"source_path": "ok.txt"}) > 0
+
     def test_sync_is_idempotent(
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):

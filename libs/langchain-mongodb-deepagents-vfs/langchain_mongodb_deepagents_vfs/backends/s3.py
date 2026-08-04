@@ -9,7 +9,10 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from langchain_mongodb_deepagents_vfs.backends.base import ObjectStoreBackend
+from langchain_mongodb_deepagents_vfs.backends.base import (
+    MAX_READ_BYTES,
+    ObjectStoreBackend,
+)
 from langchain_mongodb_deepagents_vfs.dtypes import (
     FileDownloadResponse,
     FileUploadResponse,
@@ -86,7 +89,28 @@ class S3Backend(ObjectStoreBackend):
             response = self._client.get_object(
                 Bucket=self._bucket, Key=key, **range_header
             )
-            body: bytes = response["Body"].read()
+            # Enforce the cap here, not at the call sites: InitialSync, the
+            # watchers and download_files all funnel through this method, and
+            # only the public read() ever did its own pre-flight check.
+            # ContentLength reflects the ranged length when a Range was sent,
+            # and arrives with the headers, so this costs no extra round trip
+            # and rejects before any body bytes are transferred.
+            length = response.get("ContentLength")
+            if length is not None and length > MAX_READ_BYTES:
+                raise AdapterError(
+                    ErrorCode.E2002_OBJECT_READ_FAILED,
+                    f"Object '{key}' is {length} bytes, exceeds the "
+                    f"{MAX_READ_BYTES} byte read limit",
+                )
+            # Backstop for responses that omit ContentLength (chunked transfer):
+            # read one byte past the cap so an oversized body is detected
+            # without ever materialising more than the limit.
+            body: bytes = response["Body"].read(MAX_READ_BYTES + 1)
+            if len(body) > MAX_READ_BYTES:
+                raise AdapterError(
+                    ErrorCode.E2002_OBJECT_READ_FAILED,
+                    f"Object '{key}' exceeds the {MAX_READ_BYTES} byte read limit",
+                )
             return body
         except ClientError as exc:
             code = exc.response["Error"]["Code"]

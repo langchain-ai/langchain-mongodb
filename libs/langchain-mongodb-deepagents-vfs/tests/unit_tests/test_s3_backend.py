@@ -81,14 +81,12 @@ class TestS3BackendGetSize:
 class TestReadSizeCap:
     def test_read_rejects_oversized_object(self):
         """backend.read HEADs first and refuses objects past the memory cap."""
-        from langchain_mongodb_deepagents_vfs.backend import (
-            _MAX_READ_BYTES,
-            MongoFilesystemBackend,
-        )
+        from langchain_mongodb_deepagents_vfs.backend import MongoFilesystemBackend
+        from langchain_mongodb_deepagents_vfs.backends.base import MAX_READ_BYTES
 
         class _FakeStore:
             def get_size(self, path):
-                return _MAX_READ_BYTES + 1
+                return MAX_READ_BYTES + 1
 
             def read(self, path):  # pragma: no cover - must not be reached
                 raise AssertionError("read() called despite oversized object")
@@ -99,6 +97,48 @@ class TestReadSizeCap:
         with pytest.raises(AdapterError) as ei:
             backend.read("bomb.txt", limit=1)
         assert ei.value.code == ErrorCode.E2002_OBJECT_READ_FAILED
+
+    def test_store_read_enforces_cap_itself(self, aws_credentials, monkeypatch):
+        """The cap lives in S3Backend.read, so every caller is covered.
+
+        InitialSync, the watchers and download_files all call read() directly
+        and never did their own pre-flight check.
+        """
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="cap-bucket")
+            client.put_object(Bucket="cap-bucket", Key="big.txt", Body=b"x" * 500)
+            client.put_object(Bucket="cap-bucket", Key="small.txt", Body=b"x" * 50)
+            backend = S3Backend(bucket_name="cap-bucket", region_name="us-east-1")
+
+            with pytest.raises(AdapterError) as ei:
+                backend.read("big.txt")
+            assert ei.value.code == ErrorCode.E2002_OBJECT_READ_FAILED
+
+            assert backend.read("small.txt") == b"x" * 50
+
+    def test_download_files_reports_oversized_per_path(
+        self, aws_credentials, monkeypatch
+    ):
+        """download_files funnels through read(), so it inherits the cap."""
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="dl-bucket")
+            client.put_object(Bucket="dl-bucket", Key="big.txt", Body=b"x" * 500)
+            client.put_object(Bucket="dl-bucket", Key="ok.txt", Body=b"x" * 10)
+            backend = S3Backend(bucket_name="dl-bucket", region_name="us-east-1")
+
+            responses = backend.download_files(["big.txt", "ok.txt"])
+            by_path = {r.path: r for r in responses}
+            assert by_path["big.txt"].error is not None
+            assert by_path["ok.txt"].error is None
+            assert by_path["ok.txt"].content == b"x" * 10
 
 
 @pytest.mark.unit
