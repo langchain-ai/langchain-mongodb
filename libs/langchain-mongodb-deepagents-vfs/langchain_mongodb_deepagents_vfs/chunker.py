@@ -64,6 +64,11 @@ _MAX_OOXML_UNCOMPRESSED_BYTES = 500 * 1024 * 1024  # total inflated size
 _MAX_OOXML_ENTRIES = 10_000  # entry count (guards zip-of-many-files)
 _MAX_OOXML_EXPANSION_RATIO = 200  # uncompressed / compressed
 
+# PDF has no central directory to inspect ahead of time, so its bomb defence
+# bounds the extraction output instead of the archive metadata.
+_MAX_PDF_PAGES = 10_000
+_MAX_EXTRACTED_CHARS = 50_000_000  # ~50 MB of text; well past any real document
+
 
 class Chunker:
     """Converts raw bytes into a list of Chunk objects.
@@ -261,7 +266,22 @@ class Chunker:
 
         # strict=False: tolerate malformed float tokens (common in reportlab/graphics-heavy PDFs)
         reader = PdfReader(io.BytesIO(data), strict=False)
+
+        # PDF content streams are Flate-compressed, so a small file can inflate
+        # to gigabytes of text — the same class of bomb _guard_ooxml blocks for
+        # Office formats, which has no equivalent here. The archive-metadata
+        # trick doesn't transfer (there is no central directory to inspect), so
+        # bound the output instead: stop at a page count and a total character
+        # budget, whichever trips first.
+        page_count = len(reader.pages)
+        if page_count > _MAX_PDF_PAGES:
+            raise AdapterError(
+                ErrorCode.E9002_CHUNKER_FAILED,
+                f"PDF has {page_count} pages, exceeds {_MAX_PDF_PAGES} limit",
+            )
+
         pages: list[tuple[int, str]] = []
+        total_chars = 0
         for i, page in enumerate(reader.pages):
             text = ""
             try:
@@ -275,6 +295,13 @@ class Chunker:
                     text = page.extract_text() or ""
                 except Exception:
                     text = ""
+            total_chars += len(text)
+            if total_chars > _MAX_EXTRACTED_CHARS:
+                raise AdapterError(
+                    ErrorCode.E9002_CHUNKER_FAILED,
+                    f"PDF text exceeds the {_MAX_EXTRACTED_CHARS} character "
+                    "extraction limit",
+                )
             pages.append((i, text))
         return pages
 

@@ -107,6 +107,65 @@ class TestPollingWatcherIntegration:
 
 @pytest.mark.integration
 class TestSQSWatcherIntegration:
+    def test_sqs_watcher_enforces_prefix_scope(
+        self, aws_credentials, mongo_collection, mock_embedder, chunker
+    ):
+        """Events for keys outside the configured prefix must be discarded.
+
+        A queue can be subscribed to an entire shared bucket, so without this
+        filter an out-of-scope object is indexed into the shared collection and
+        becomes discoverable through grep/glob/ls.
+        """
+        with mock_aws():
+            s3 = boto3.client("s3", region_name="us-east-1")
+            s3.create_bucket(Bucket="tenant-bucket")
+            s3.put_object(
+                Bucket="tenant-bucket", Key="tenant_a/mine.txt", Body=b"in scope"
+            )
+            s3.put_object(
+                Bucket="tenant-bucket", Key="tenant_b/secret.txt", Body=b"out of scope"
+            )
+            sqs = boto3.client("sqs", region_name="us-east-1")
+            queue_url = sqs.create_queue(QueueName="scoped-queue")["QueueUrl"]
+
+            store = S3Backend(bucket_name="tenant-bucket", region_name="us-east-1")
+            watcher = SQSWatcher(
+                store=store,
+                chunker=chunker,
+                embedder=mock_embedder,
+                collection=mongo_collection,
+                queue_url=queue_url,
+                region_name="us-east-1",
+                prefix="tenant_a/",
+            )
+
+            # Both records in one message: the filter is per-record, and one
+            # long-poll keeps the test from costing two of them.
+            sqs.send_message(
+                QueueUrl=queue_url,
+                MessageBody=json.dumps(
+                    {
+                        "Records": [
+                            {
+                                "eventName": "ObjectCreated:Put",
+                                "s3": {"object": {"key": key}},
+                            }
+                            for key in ("tenant_a/mine.txt", "tenant_b/secret.txt")
+                        ]
+                    }
+                ),
+            )
+            watcher._receive_and_process()
+
+            assert (
+                mongo_collection.count_documents({"source_path": "tenant_a/mine.txt"})
+                > 0
+            )
+            assert (
+                mongo_collection.count_documents({"source_path": "tenant_b/secret.txt"})
+                == 0
+            )
+
     def test_sqs_watcher_processes_create_event(
         self, aws_credentials, mongo_collection, mock_embedder, chunker
     ):

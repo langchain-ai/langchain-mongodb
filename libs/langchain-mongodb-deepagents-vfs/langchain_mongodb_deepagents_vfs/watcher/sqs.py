@@ -49,6 +49,9 @@ class SQSWatcher(S3Watcher):
         visibility_timeout: How long (seconds) a received message stays
             invisible to other consumers while being processed.
         endpoint_url: Override for local testing (e.g. LocalStack).
+        prefix: Only ingest keys under this S3 prefix. Events for keys outside
+            it are discarded, so a queue subscribed to a whole shared bucket
+            cannot pull out-of-scope objects into the search index.
     """
 
     def __init__(
@@ -61,9 +64,11 @@ class SQSWatcher(S3Watcher):
         region_name: str | None = None,
         visibility_timeout: int = _VISIBILITY_TIMEOUT,
         endpoint_url: str | None = None,
+        prefix: str = "",
     ) -> None:
         super().__init__(store, chunker, embedder, collection)
         self._queue_url = queue_url
+        self._prefix = prefix
         self._visibility_timeout = visibility_timeout
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -155,6 +160,19 @@ class SQSWatcher(S3Watcher):
             except KeyError:
                 logger.warning(
                     "SQSWatcher: missing s3.object.key in record: %s", record
+                )
+                continue
+
+            # A queue can be subscribed to the whole bucket, so the prefix must
+            # be enforced here rather than assumed from the subscription.
+            # PollingWatcher gets this for free by passing the prefix to
+            # list_keys; event-driven ingest has to filter explicitly, or an
+            # out-of-scope object becomes searchable by every caller.
+            if self._prefix and not key.startswith(self._prefix):
+                logger.debug(
+                    "SQSWatcher: key '%s' outside prefix '%s', skipping.",
+                    key,
+                    self._prefix,
                 )
                 continue
 

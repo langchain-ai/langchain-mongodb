@@ -120,6 +120,43 @@ class TestReadSizeCap:
 
             assert backend.read("small.txt") == b"x" * 50
 
+    def test_edit_enforces_cap(self, aws_credentials, monkeypatch):
+        """edit() is a read-modify-write and needs the same ceiling as read()."""
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="edit-cap")
+            client.put_object(Bucket="edit-cap", Key="big.txt", Body=b"x" * 500)
+            client.put_object(Bucket="edit-cap", Key="ok.txt", Body=b"hello world")
+            backend = S3Backend(bucket_name="edit-cap", region_name="us-east-1")
+
+            with pytest.raises(AdapterError) as ei:
+                backend.edit("big.txt", "x", "y")
+            assert ei.value.code == ErrorCode.E2002_OBJECT_READ_FAILED
+
+            assert backend.edit("ok.txt", "hello", "goodbye") == 1
+
+    def test_write_refuses_oversized_content(self, aws_credentials, monkeypatch):
+        """Writing past the read cap would store an unreadable object."""
+        import langchain_mongodb_deepagents_vfs.backends.s3 as s3_mod
+
+        monkeypatch.setattr(s3_mod, "MAX_READ_BYTES", 100)
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="write-cap")
+            backend = S3Backend(bucket_name="write-cap", region_name="us-east-1")
+
+            with pytest.raises(AdapterError) as ei:
+                backend.write("bomb.txt", b"x" * 500)
+            assert ei.value.code == ErrorCode.E2003_OBJECT_WRITE_FAILED
+            # nothing was stored
+            assert client.list_objects_v2(Bucket="write-cap").get("KeyCount", 0) == 0
+
+            backend.write("ok.txt", b"x" * 10)
+            assert backend.read("ok.txt") == b"x" * 10
+
     def test_download_files_reports_oversized_per_path(
         self, aws_credentials, monkeypatch
     ):

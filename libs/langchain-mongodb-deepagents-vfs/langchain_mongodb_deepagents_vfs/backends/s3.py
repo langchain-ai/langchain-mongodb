@@ -122,6 +122,16 @@ class S3Backend(ObjectStoreBackend):
 
     def write(self, path: str, content: bytes) -> None:
         key = self._key(path)
+        # Refuse to store what we could never read back: read() and edit() both
+        # cap at MAX_READ_BYTES, so accepting a larger write would silently
+        # create an object this backend can only fail on. Also denies the write
+        # APIs as a way to plant oversized objects for other consumers.
+        if len(content) > MAX_READ_BYTES:
+            raise AdapterError(
+                ErrorCode.E2003_OBJECT_WRITE_FAILED,
+                f"Content is {len(content)} bytes, exceeds the "
+                f"{MAX_READ_BYTES} byte limit",
+            )
         try:
             self._client.put_object(Bucket=self._bucket, Key=key, Body=content)
         except ClientError as exc:
@@ -132,7 +142,24 @@ class S3Backend(ObjectStoreBackend):
         try:
             head = self._client.head_object(Bucket=self._bucket, Key=key)
             etag = head["ETag"]
-            body = self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
+            # edit() is a read-modify-write, so it materialises the body just
+            # like read() and needs the same ceiling. The HEAD above already
+            # carries ContentLength, so this check is free.
+            size = head.get("ContentLength")
+            if size is not None and size > MAX_READ_BYTES:
+                raise AdapterError(
+                    ErrorCode.E2002_OBJECT_READ_FAILED,
+                    f"Object '{key}' is {size} bytes, exceeds the "
+                    f"{MAX_READ_BYTES} byte read limit",
+                )
+            body = self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read(
+                MAX_READ_BYTES + 1
+            )
+            if len(body) > MAX_READ_BYTES:
+                raise AdapterError(
+                    ErrorCode.E2002_OBJECT_READ_FAILED,
+                    f"Object '{key}' exceeds the {MAX_READ_BYTES} byte read limit",
+                )
         except ClientError as exc:
             code = exc.response["Error"]["Code"]
             if code in ("NoSuchKey", "404"):

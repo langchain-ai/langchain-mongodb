@@ -150,6 +150,7 @@ class MongoFilesystemBackend(BackendProtocol):
                 collection=self._col,
                 queue_url=sqs_queue_url,  # type: ignore[arg-type]
                 region_name=aws_region,
+                prefix=s3_prefix,
             )
         else:
             self._watcher = PollingWatcher(

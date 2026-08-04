@@ -86,6 +86,31 @@ class TestChunkerPDF:
         for c in chunks:
             assert c.page_number >= 0
 
+    def test_pdf_page_count_bomb_rejected(self, chunker, sample_pdf_bytes, monkeypatch):
+        """A page-count bomb is refused before per-page extraction runs.
+
+        PDF content streams are Flate-compressed, so a small file can declare
+        enormous content — the same bomb class _guard_ooxml blocks for Office
+        formats, which has no archive metadata equivalent for PDF.
+        """
+        import langchain_mongodb_deepagents_vfs.chunker as chunker_mod
+
+        monkeypatch.setattr(chunker_mod, "_MAX_PDF_PAGES", 0)
+        with pytest.raises(AdapterError) as ei:
+            chunker.chunk("bomb.pdf", sample_pdf_bytes)
+        assert ei.value.code == ErrorCode.E9002_CHUNKER_FAILED
+
+    def test_pdf_text_expansion_bomb_rejected(
+        self, chunker, sample_pdf_bytes, monkeypatch
+    ):
+        """Extraction stops once the decompressed text passes the budget."""
+        import langchain_mongodb_deepagents_vfs.chunker as chunker_mod
+
+        monkeypatch.setattr(chunker_mod, "_MAX_EXTRACTED_CHARS", 1)
+        with pytest.raises(AdapterError) as ei:
+            chunker.chunk("bomb.pdf", sample_pdf_bytes)
+        assert ei.value.code == ErrorCode.E9002_CHUNKER_FAILED
+
 
 @pytest.mark.unit
 class TestChunkerMagicBytes:
