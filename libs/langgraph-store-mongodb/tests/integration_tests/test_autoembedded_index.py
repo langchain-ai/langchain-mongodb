@@ -31,8 +31,6 @@ COLLECTION_NAME = "semantic_search_autoembedded"
 INDEX_NAME = "auto_vector_index"
 TIMEOUT, INTERVAL = 60, 1  # timeout to index new data
 
-DIMENSIONS = -1
-
 
 def wait_until(
     predicate: Callable, timeout: int = TIMEOUT, interval: int = INTERVAL
@@ -71,8 +69,6 @@ def test_filters(collection: Collection) -> None:
 
     index_config = create_vector_index_config(
         name=INDEX_NAME,
-        dims=DIMENSIONS,
-        relevance_score_fn=None,
         fields=["product"],
         embed=AutoEmbeddings(model="voyage-4"),  # embedding
         filters=["metadata.available"],
