@@ -131,6 +131,11 @@ class TestSQSWatcherMessageParsing:
             embedder=mock_embedder,
             collection=mongo_collection,
             queue_url="https://sqs.us-east-1.amazonaws.com/123/test-queue",
+            # Explicit region: SQSWatcher builds a boto3 client in __init__, and
+            # these are pure message-parsing tests that make no AWS calls. Without
+            # this they pass only where the environment happens to supply a
+            # region, and fail on CI with NoRegionError.
+            region_name="us-east-1",
         )
         if sqs_client:
             watcher._sqs = sqs_client
