@@ -291,7 +291,7 @@ def real_env() -> dict[str, str]:
     return env
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def s3_access(real_env) -> None:
     """Fail early, with actionable guidance, if S3 is not usable.
 
@@ -300,6 +300,11 @@ def s3_access(real_env) -> None:
     bad or expired credential surfaces as a raw ClientError from deep inside
     the seeding step, which is hard to read and easy to mistake for a bug in
     the backend.
+
+    Requested explicitly by every fixture that touches the real bucket
+    (``real_backend`` here, ``watcher_setup`` in test_watcher_e2e.py) rather
+    than autouse: as an autouse fixture it also applied to ``test_e2e.py``,
+    which is moto-backed and needs no credentials at all.
     """
     bucket = real_env["S3_BUCKET_NAME"]
     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
@@ -333,7 +338,7 @@ def e2e_prefix(real_env) -> str:
 
 
 @pytest.fixture(scope="session")
-def real_backend(real_env, e2e_prefix):
+def real_backend(real_env, s3_access, e2e_prefix):
     """MongoFilesystemBackend connected to real Atlas, S3, and OpenAI.
 
     Seeds two files under *e2e_prefix*, waits for the initial sync, then

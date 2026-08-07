@@ -68,7 +68,7 @@ def watcher_col(real_env):
 
 
 @pytest.fixture(scope="module")
-def watcher_setup(real_env, watcher_prefix, watcher_col):
+def watcher_setup(real_env, s3_access, watcher_prefix, watcher_col):
     """Start a PollingWatcher with interval_seconds=10 against the real bucket.
 
     Injects tracking wrappers around on_created / on_updated / on_deleted so
