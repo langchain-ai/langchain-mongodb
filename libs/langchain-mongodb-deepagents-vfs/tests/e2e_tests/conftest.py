@@ -274,7 +274,7 @@ def real_env() -> dict[str, str]:
     """Skip session if any required credential is absent, or if the chosen
     embedding provider is missing its required env vars."""
     env = _require_env(*_REQUIRED)
-    provider = resolve_provider()  # TODO
+    provider = resolve_provider()
     required_for_provider = _PROVIDER_CHECKS.get(provider)
     if required_for_provider is None:
         pytest.skip(
