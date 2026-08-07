@@ -7,7 +7,10 @@ Provider is selected at construction time via the ``EMBEDDING_PROVIDER`` env var
              Default model: amazon.titan-embed-text-v2:0 @ 1024 dims
              Requires ``langchain-aws`` and Bedrock model access in the account
              whose credentials the boto3 chain resolves.
-  openai   — OpenAIEmbeddings (requires OPENAI_API_KEY)
+  openai   — OpenAIEmbeddings (requires OPENAI_API_KEY), or
+             AzureOpenAIEmbeddings when AZURE_OPENAI_ENDPOINT is set and
+             OPENAI_API_KEY is not.  OPENAI_API_KEY wins if both are present,
+             matching the sibling packages in this monorepo.
              Default model: text-embedding-3-small @ 1024 dims
              Requires ``langchain-openai``.
 
@@ -103,7 +106,28 @@ class Embedder:
     def _build_model(provider: str, model_name: str, dimensions: int) -> Embeddings:
         if provider == "openai":
             try:
-                from langchain_openai import OpenAIEmbeddings
+                from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+
+                # Azure is reached through the same "openai" provider rather than
+                # a separate EMBEDDING_PROVIDER value, matching the convention in
+                # the sibling packages of this monorepo (see
+                # libs/langchain-mongodb/tests/integration_tests/conftest.py).
+                # OPENAI_API_KEY takes precedence, as it does there, so a machine
+                # configured for both behaves identically across packages.
+                if not os.getenv("OPENAI_API_KEY") and os.getenv(
+                    "AZURE_OPENAI_ENDPOINT"
+                ):
+                    logger.info(
+                        "Embedder: provider=openai flavour=azure model=%s "
+                        "dimensions=%d endpoint=%s",
+                        model_name,
+                        dimensions,
+                        os.environ["AZURE_OPENAI_ENDPOINT"],
+                    )
+                    azure_embeddings: Embeddings = AzureOpenAIEmbeddings(
+                        model=model_name, dimensions=dimensions
+                    )
+                    return azure_embeddings
 
                 logger.info(
                     "Embedder: provider=openai model=%s dimensions=%d",

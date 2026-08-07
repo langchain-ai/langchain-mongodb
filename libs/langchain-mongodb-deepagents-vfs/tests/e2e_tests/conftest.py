@@ -31,12 +31,15 @@ _REQUIRED = {
     "S3_BUCKET_NAME": "S3 bucket name",
 }
 
-# Provider-specific credential check: at least one embedding provider must be configured.
+# Provider-specific credential check.  Each entry lists env vars of which *at
+# least one* must be set: the openai provider is satisfied by either a direct
+# OpenAI key or an Azure OpenAI endpoint, mirroring Embedder._build_model.
+#
 # NOTE: bedrock resolves credentials through the boto3 chain, so there is no env
 # var to assert on — a misconfigured Bedrock account cannot be caught here and
 # will surface as an initial-sync failure in the real_backend fixture instead.
 _PROVIDER_CHECKS: dict[str, list[str]] = {
-    "openai": ["OPENAI_API_KEY"],
+    "openai": ["OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     "bedrock": [],
 }
 
@@ -278,9 +281,13 @@ def real_env() -> dict[str, str]:
             f"Unknown EMBEDDING_PROVIDER '{provider}'. "
             f"Supported: {', '.join(_PROVIDER_CHECKS)}"
         )
-    missing = [k for k in required_for_provider if not os.getenv(k)]
-    if missing:
-        pytest.skip(f"EMBEDDING_PROVIDER={provider} requires: {', '.join(missing)}")
+    # At least one of the listed vars must be set (an empty list means the
+    # provider needs none, e.g. bedrock via the boto3 chain).
+    if required_for_provider and not any(os.getenv(k) for k in required_for_provider):
+        pytest.skip(
+            f"EMBEDDING_PROVIDER={provider} requires one of: "
+            f"{', '.join(required_for_provider)}"
+        )
     return env
 
 

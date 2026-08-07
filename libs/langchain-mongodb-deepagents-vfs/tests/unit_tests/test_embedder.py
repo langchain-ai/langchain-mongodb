@@ -92,3 +92,76 @@ class TestEmbedderRetry:
             embedder.embed_batch(make_chunks(1))
         assert exc_info.value.code == ErrorCode.E4001_EMBEDDING_API_FAILED
         assert mock_model.embed_documents.call_count == 1  # No retry
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Error code: 429 - {'error': {'type': 'insufficient_quota'}}",
+            "Error code: 429 - you have no credits remaining",
+            "429 credit_balance_exhausted",
+        ],
+    )
+    def test_quota_exhausted_is_not_retried(self, message: str):
+        """Quota/credit errors arrive as HTTP 429 but retrying cannot fix them."""
+        mock_model = MagicMock()
+        mock_model.embed_documents.side_effect = Exception(message)
+        embedder = Embedder(model=mock_model, dimensions=1024)
+
+        with patch("time.sleep") as sleep:
+            with pytest.raises(AdapterError) as exc_info:
+                embedder.embed_batch(make_chunks(1))
+
+        assert exc_info.value.code == ErrorCode.E4001_EMBEDDING_API_FAILED
+        assert mock_model.embed_documents.call_count == 1
+        sleep.assert_not_called()
+
+
+@pytest.mark.unit
+class TestEmbedderProviderSelection:
+    """EMBEDDING_PROVIDER=openai serves both OpenAI and Azure OpenAI.
+
+    Mirrors the convention in the sibling packages of this monorepo, where
+    AZURE_OPENAI_ENDPOINT selects Azure and OPENAI_API_KEY takes precedence.
+    """
+
+    @staticmethod
+    def _model_type(monkeypatch, **env: str) -> str:
+        for var in ("OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+        for key, value in env.items():
+            monkeypatch.setenv(key, value)
+        return type(Embedder()._model).__name__
+
+    def test_openai_key_selects_openai(self, monkeypatch):
+        assert (
+            self._model_type(monkeypatch, OPENAI_API_KEY="sk-test")
+            == "OpenAIEmbeddings"
+        )
+
+    def test_azure_endpoint_selects_azure(self, monkeypatch):
+        assert (
+            self._model_type(
+                monkeypatch,
+                AZURE_OPENAI_ENDPOINT="https://example.openai.azure.com/",
+                AZURE_OPENAI_API_KEY="azure-key",
+            )
+            == "AzureOpenAIEmbeddings"
+        )
+
+    def test_openai_key_takes_precedence_over_azure(self, monkeypatch):
+        assert (
+            self._model_type(
+                monkeypatch,
+                OPENAI_API_KEY="sk-test",
+                AZURE_OPENAI_ENDPOINT="https://example.openai.azure.com/",
+                AZURE_OPENAI_API_KEY="azure-key",
+            )
+            == "OpenAIEmbeddings"
+        )
+
+    def test_explicit_model_bypasses_env_lookup(self, monkeypatch):
+        """An injected Embeddings instance ignores provider env vars entirely."""
+        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/")
+        mock_model = MagicMock()
+        assert Embedder(model=mock_model)._model is mock_model
