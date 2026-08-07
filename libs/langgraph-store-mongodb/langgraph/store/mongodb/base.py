@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal, Optional, TypedDict, Union
 
 from bson import SON
@@ -421,7 +421,7 @@ class MongoDBStore(BaseStore):
         else:
             res = self.collection.find_one_and_update(
                 filter={"namespace_str": ns_str, "key": key},
-                update={"$set": {"updated_at": datetime.now(tz=timezone.utc)}},
+                update={"$set": {"updated_at": datetime.now(tz=UTC)}},
                 return_document=ReturnDocument.AFTER,
             )
         if res:
@@ -649,7 +649,7 @@ class MongoDBStore(BaseStore):
                 to_set = {
                     "namespace_str": ns_str,
                     "value": op.value,
-                    "updated_at": datetime.now(tz=timezone.utc),
+                    "updated_at": datetime.now(tz=UTC),
                 }
                 if self.index_config:
                     embed = texts[v] if self._is_autoembedding else vectors[v]
@@ -667,7 +667,7 @@ class MongoDBStore(BaseStore):
                             "$set": to_set,
                             "$setOnInsert": {
                                 "namespace": list(op.namespace),
-                                "created_at": datetime.now(tz=timezone.utc),
+                                "created_at": datetime.now(tz=UTC),
                             },
                         },
                         upsert=True,
