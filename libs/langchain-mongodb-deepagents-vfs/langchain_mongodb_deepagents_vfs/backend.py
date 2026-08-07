@@ -126,8 +126,13 @@ class MongoFilesystemBackend(BackendProtocol):
 
         # Build internal components
         self._store = S3Backend(bucket_name=s3_bucket_name, region_name=aws_region)
+        # aws_region reaches the Embedder too, not just S3/SQS: without it a
+        # caller passing aws_region= got S3 in that region and Bedrock in
+        # whatever the environment happened to resolve.
         self._embedder = Embedder(
-            model=embedding_model, dimensions=embedding_dimensions
+            model=embedding_model,
+            dimensions=embedding_dimensions,
+            region_name=aws_region,
         )
         self._chunker = Chunker()
 
@@ -222,7 +227,11 @@ class MongoFilesystemBackend(BackendProtocol):
             logger.info("Starting watcher…")
             self._watcher.start()
         except Exception as exc:
-            logger.error("Watcher start failed: %s", exc)
+            # Recorded like the two steps above, not just logged: a watcher that
+            # never starts leaves a collection that looks correct and silently
+            # goes stale, which is harder to spot than an empty one.
+            logger.error("Watcher start failed: %s", exc, exc_info=True)
+            self.init_errors.append(f"watcher start failed: {exc}")
 
     def _wait_ready(self) -> None:
         """Block until at least one sync pass has completed."""

@@ -165,3 +165,42 @@ class TestEmbedderProviderSelection:
         monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/")
         mock_model = MagicMock()
         assert Embedder(model=mock_model)._model is mock_model
+
+
+@pytest.mark.unit
+class TestEmbedderBedrockRegion:
+    """Bedrock must resolve its region the same way S3Backend does.
+
+    A hardcoded us-east-1 default meant a caller on another region got S3 in
+    theirs and Bedrock in us-east-1, with nothing to indicate the split.
+    """
+
+    @staticmethod
+    def _captured_region(monkeypatch, **kwargs) -> str | None:
+        monkeypatch.setenv("EMBEDDING_PROVIDER", "bedrock")
+        captured: dict[str, object] = {}
+
+        class _FakeBedrock:
+            def __init__(self, **kw):
+                captured.update(kw)
+
+        import langchain_aws
+
+        monkeypatch.setattr(langchain_aws, "BedrockEmbeddings", _FakeBedrock)
+        Embedder(**kwargs)
+        return captured.get("region_name")  # type: ignore[return-value]
+
+    def test_explicit_region_wins(self, monkeypatch):
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
+        assert (
+            self._captured_region(monkeypatch, region_name="eu-west-1") == "eu-west-1"
+        )
+
+    def test_falls_back_to_env(self, monkeypatch):
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "ap-south-1")
+        assert self._captured_region(monkeypatch) == "ap-south-1"
+
+    def test_unset_defers_to_boto3_chain(self, monkeypatch):
+        """None, not a hardcoded us-east-1 — boto3 resolves it like S3 does."""
+        monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+        assert self._captured_region(monkeypatch) is None

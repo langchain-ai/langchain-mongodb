@@ -86,7 +86,7 @@ with MongoFilesystemBackend(
 | `llm` | No | — | Reserved for future agent LLM integration |
 | `watcher` | No | `"polling"` | `"polling"` or `"sqs"` |
 | `sqs_queue_url` | If `watcher="sqs"` | — | Full SQS queue URL |
-| `aws_region` | No | `AWS_DEFAULT_REGION` env | AWS region for S3 and SQS clients |
+| `aws_region` | No | `AWS_DEFAULT_REGION` env, then the boto3 chain | AWS region for S3, SQS **and Bedrock embeddings** — all three resolve it the same way, so they cannot end up split across regions |
 | `s3_prefix` | No | `""` | Only sync/watch objects under this S3 prefix |
 | `debug` | No | `False` | Re-raise exceptions instead of returning error DTOs (local dev) |
 
@@ -97,7 +97,17 @@ The provider is resolved at construction time from the `EMBEDDING_PROVIDER` envi
 | `EMBEDDING_PROVIDER` | Default model | Required credential |
 |---|---|---|
 | `bedrock` (default) | `amazon.titan-embed-text-v2:0` | boto3 credential chain (IAM role, `~/.aws/credentials`, etc.) |
-| `openai` | `text-embedding-3-small` | `OPENAI_API_KEY` env var |
+| `openai` | `text-embedding-3-small` | `OPENAI_API_KEY`, or `AZURE_OPENAI_ENDPOINT` for Azure OpenAI |
+
+`openai` serves both OpenAI and Azure OpenAI — there is no separate `azure`
+provider, matching the convention in the sibling packages of this monorepo.
+Azure is selected when `AZURE_OPENAI_ENDPOINT` is set and `OPENAI_API_KEY` is
+not; if both are present, `OPENAI_API_KEY` wins.
+
+With `bedrock`, the region comes from `aws_region`, then `AWS_DEFAULT_REGION`,
+then the boto3 chain. There is no hardcoded fallback: if no region resolves you
+get an explicit `NoRegionError` rather than a silent default that may not have
+the model enabled.
 
 Pass a `LangChain Embeddings` instance directly to `embedding_model` to bypass provider lookup entirely.
 
@@ -186,6 +196,29 @@ If the embedding API is unavailable at query time, `grep` falls back to full-tex
 - **PollingWatcher** (default): ETag diff on a 10-second interval, zero AWS infra required. Backs off gracefully on S3 list failures.
 - **SQSWatcher** (production): S3 event notifications via SQS long-polling (20s), near real-time. Requires S3 → SQS event notifications configured in AWS.
 
+### Object size limit
+
+Every read is capped at **64 MiB** (`MAX_READ_BYTES` in
+`langchain_mongodb_deepagents_vfs.backends.base`). The cap is enforced inside
+`S3Backend.read()`, so it applies uniformly to `read`, `edit`,
+`download_files`, the initial sync and the watchers — not just the public
+`read` API. Ingest paths run unattended across a thread pool, so an unbounded
+read there is a memory-exhaustion vector rather than merely a slow query.
+
+`write` and `upload_files` refuse content over the same limit: accepting a
+larger write would store an object this backend could then only ever fail to
+read.
+
+An oversized object is skipped rather than fatal — the rest of the corpus
+still indexes. During the initial sync it is counted in
+`SyncReport.failed`; in the watchers it is logged and skipped, with no
+counter, so the log is the only record.
+
+Chunking applies its own bounds on top of the read cap: OOXML archives are
+checked for entry count, uncompressed size and expansion ratio before
+parsing, and PDF extraction is bounded by page count and total extracted
+characters.
+
 ### ETag-based idempotency
 
 Initial sync and every watcher ingest pass are idempotent: objects whose ETag hasn't changed since the last run are skipped. Restarting the backend after a partial failure resumes cheaply without re-embedding unchanged files.
@@ -203,6 +236,33 @@ if result.error:
 Enable `debug=True` during local development to re-raise the original exception with a full traceback instead.
 
 Every error carries a stable `[EXXXX]` code from the `ErrorCode` enum in `langchain_mongodb_deepagents_vfs.errors`.
+
+### Checking initialization outcome
+
+Index provisioning, initial sync and watcher startup all run in a background
+thread, so their failures cannot be raised from the constructor. They are
+recorded instead.
+
+A search call returning guarantees the index and sync stages have finished —
+the readiness gate is released between the sync and the watcher start, so
+those two entries are always present by then. A watcher-start failure is
+recorded a moment later and can be missed by a check made immediately after
+the first search.
+
+```python
+backend.grep("anything")          # blocks until initialization finishes
+
+if backend.init_errors:
+    print(backend.init_errors)    # e.g. ["3 of 50 objects failed to index"]
+
+report = backend.initial_sync_report   # None if the sync raised outright
+if report and report.failed:
+    print(f"{report.failed} of {report.seen} objects are not searchable")
+```
+
+Worth checking in any long-running deployment: a partially failed sync or a
+watcher that never started both leave a collection that looks healthy and is
+quietly incomplete, which is otherwise easy to mistake for a search bug.
 
 ## Requirements
 

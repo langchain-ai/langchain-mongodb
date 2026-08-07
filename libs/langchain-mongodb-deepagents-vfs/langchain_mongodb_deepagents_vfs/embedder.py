@@ -76,6 +76,10 @@ class Embedder:
             the ``EMBEDDING_MODEL`` env var, then the provider default.
         dimensions: Expected embedding vector size; validated on first call.
         batch_size: Number of chunk texts sent per API call.
+        region_name: AWS region for the bedrock provider. Falls back to
+            ``AWS_DEFAULT_REGION``, then the boto3 credential chain — the same
+            resolution order ``S3Backend`` uses, so both land in one region.
+            Ignored by the openai provider.
     """
 
     def __init__(
@@ -84,6 +88,7 @@ class Embedder:
         model_name: str | None = None,
         dimensions: int = _DEFAULT_DIMENSIONS,
         batch_size: int = _DEFAULT_BATCH_SIZE,
+        region_name: str | None = None,
     ) -> None:
         self._dimensions = dimensions
         self._batch_size = batch_size
@@ -100,10 +105,17 @@ class Embedder:
                     else _BEDROCK_DEFAULT_MODEL
                 )
             )
-            self._model = self._build_model(provider, resolved_name, dimensions)
+            self._model = self._build_model(
+                provider, resolved_name, dimensions, region_name
+            )
 
     @staticmethod
-    def _build_model(provider: str, model_name: str, dimensions: int) -> Embeddings:
+    def _build_model(
+        provider: str,
+        model_name: str,
+        dimensions: int,
+        region_name: str | None = None,
+    ) -> Embeddings:
         if provider == "openai":
             try:
                 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
@@ -148,11 +160,16 @@ class Embedder:
             try:
                 from langchain_aws import BedrockEmbeddings
 
-                region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+                # No hardcoded fallback: S3Backend passes region_name straight
+                # to boto3 and lets the credential chain resolve it, so
+                # defaulting to us-east-1 here meant a caller on another region
+                # silently got S3 in one region and Bedrock in another. Passing
+                # None resolves through the same chain S3 uses.
+                region = region_name or os.getenv("AWS_DEFAULT_REGION")
                 logger.info(
                     "Embedder: provider=bedrock model=%s region=%s dimensions=%d",
                     model_name,
-                    region,
+                    region or "<boto3 default>",
                     dimensions,
                 )
                 bedrock_embeddings: Embeddings = BedrockEmbeddings(
