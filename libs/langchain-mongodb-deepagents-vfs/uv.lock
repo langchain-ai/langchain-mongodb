@@ -1025,6 +1025,8 @@ openai = [
 [package.dev-dependencies]
 dev = [
     { name = "build" },
+    { name = "langchain-aws" },
+    { name = "langchain-openai" },
     { name = "mongomock" },
     { name = "moto", extra = ["s3"] },
     { name = "mypy" },
@@ -1062,6 +1064,8 @@ provides-extras = ["openai", "bedrock"]
 [package.metadata.requires-dev]
 dev = [
     { name = "build", specifier = ">=1.0.0" },
+    { name = "langchain-aws", specifier = ">=0.2.0" },
+    { name = "langchain-openai", specifier = ">=0.1.0" },
     { name = "mongomock", specifier = ">=4.1.0" },
     { name = "moto", extras = ["s3", "sqs"], specifier = ">=5.0.0" },
     { name = "mypy", specifier = ">=1.10.0" },

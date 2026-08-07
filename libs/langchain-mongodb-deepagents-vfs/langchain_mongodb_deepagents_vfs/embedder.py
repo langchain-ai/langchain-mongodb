@@ -5,8 +5,14 @@ Provider is selected at construction time via the ``EMBEDDING_PROVIDER`` env var
 
   bedrock  — BedrockEmbeddings via langchain-aws (uses boto3 credential chain)
              Default model: amazon.titan-embed-text-v2:0 @ 1024 dims
+             Requires ``langchain-aws`` and Bedrock model access in the account
+             whose credentials the boto3 chain resolves.
   openai   — OpenAIEmbeddings (requires OPENAI_API_KEY)
              Default model: text-embedding-3-small @ 1024 dims
+             Requires ``langchain-openai``.
+
+Use :func:`resolve_provider` rather than reading ``EMBEDDING_PROVIDER``
+directly, so callers cannot disagree with :class:`Embedder` about the default.
 
 Override the model name with ``EMBEDDING_MODEL``.  Any LangChain-compatible
 ``Embeddings`` instance can also be passed directly to bypass env-var lookup.
@@ -28,11 +34,33 @@ from langchain_mongodb_deepagents_vfs.errors import AdapterError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PROVIDER = "bedrock"
+DEFAULT_PROVIDER = "bedrock"
 _OPENAI_DEFAULT_MODEL = "text-embedding-3-small"
 _BEDROCK_DEFAULT_MODEL = "amazon.titan-embed-text-v2:0"
 _DEFAULT_DIMENSIONS = 1024
 _DEFAULT_BATCH_SIZE = 100
+
+# Substrings identifying provider errors that retrying can never resolve: the
+# account is out of credit or over its billing quota.  These arrive as HTTP 429
+# just like transient rate limits, so they must be matched *before* the
+# retry-on-429 check or every failure costs the full backoff sequence.
+_TERMINAL_QUOTA_MARKERS = (
+    "insufficient_quota",
+    "credit_balance_exhausted",
+    "no credits remaining",
+    "exceeded your current quota",
+    "billing",
+)
+
+
+def resolve_provider() -> str:
+    """Return the configured embedding provider name, lowercased.
+
+    Single source of truth for the ``EMBEDDING_PROVIDER`` default so callers
+    (including tests) cannot disagree with :class:`Embedder` about which
+    provider is actually in use.
+    """
+    return os.getenv("EMBEDDING_PROVIDER", DEFAULT_PROVIDER).lower()
 
 
 class Embedder:
@@ -59,7 +87,7 @@ class Embedder:
         if model is not None:
             self._model = model
         else:
-            provider = os.getenv("EMBEDDING_PROVIDER", _DEFAULT_PROVIDER).lower()
+            provider = resolve_provider()
             resolved_name = (
                 model_name
                 or os.getenv("EMBEDDING_MODEL")
@@ -163,6 +191,18 @@ class Embedder:
                 return self._model.embed_documents(texts)
             except Exception as exc:
                 exc_str = str(exc).lower()
+                if any(marker in exc_str for marker in _TERMINAL_QUOTA_MARKERS):
+                    logger.error(
+                        "Embedding quota exhausted — not retrying. provider=%s "
+                        "model=%s: %s",
+                        resolve_provider(),
+                        type(self._model).__name__,
+                        exc,
+                    )
+                    raise AdapterError(
+                        ErrorCode.E4001_EMBEDDING_API_FAILED,
+                        f"Embedding provider quota/credit exhausted (not retryable): {exc}",
+                    ) from exc
                 if "rate" in exc_str or "429" in exc_str:
                     logger.warning("Embedding rate-limited, retrying in %ds…", delay)
                     time.sleep(delay)

@@ -47,6 +47,40 @@ _patch_mongomock_sort_kwarg()
 
 
 # ---------------------------------------------------------------------------
+# AWS environment isolation
+#
+# The unit and integration suites mock S3/SQS in-process with moto, which
+# intercepts botocore calls.  botocore honours AWS_ENDPOINT_URL* natively, so a
+# developer whose shell points at a local S3-compatible server (MinIO,
+# LocalStack) silently redirects those calls past the mock and the tests fail
+# with real-server error codes instead of the mocked ones.  AWS_PROFILE leaks in
+# the same way.  Strip them for every mocked test so results do not depend on
+# the shell the suite was launched from.
+#
+# Only tests marked ``real_e2e`` are exempt — those deliberately talk to a real
+# (or local, S3-compatible) service.  Note that tests/e2e_tests/test_e2e.py is
+# marked ``e2e``, not ``real_e2e``: it is moto-backed and must be isolated, so
+# the exemption keys off the marker rather than the directory.
+# ---------------------------------------------------------------------------
+
+_LEAKY_AWS_VARS = (
+    "AWS_ENDPOINT_URL",
+    "AWS_ENDPOINT_URL_S3",
+    "AWS_ENDPOINT_URL_SQS",
+    "AWS_PROFILE",
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_aws_env(request, monkeypatch):
+    """Remove host AWS endpoint/profile config from moto-mocked tests."""
+    if request.node.get_closest_marker("real_e2e") is not None:
+        return
+    for var in _LEAKY_AWS_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+
+# ---------------------------------------------------------------------------
 # AWS / S3 fixtures (moto)
 # ---------------------------------------------------------------------------
 

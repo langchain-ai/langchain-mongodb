@@ -20,6 +20,8 @@ import boto3
 import pytest
 from pymongo import monitoring
 
+from langchain_mongodb_deepagents_vfs.embedder import resolve_provider
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -30,9 +32,12 @@ _REQUIRED = {
 }
 
 # Provider-specific credential check: at least one embedding provider must be configured.
+# NOTE: bedrock resolves credentials through the boto3 chain, so there is no env
+# var to assert on — a misconfigured Bedrock account cannot be caught here and
+# will surface as an initial-sync failure in the real_backend fixture instead.
 _PROVIDER_CHECKS: dict[str, list[str]] = {
     "openai": ["OPENAI_API_KEY"],
-    "bedrock": [],  # uses boto3 credential chain — no extra env vars needed
+    "bedrock": [],
 }
 
 _TEST_PREFIX = os.getenv("S3_TEST_PREFIX", "langchain_mongodb_deepagents_vfs_e2e_test/")
@@ -81,6 +86,37 @@ def _atlas_search_ready(backend: Any, keys: list[str], timeout: int = 60) -> Non
         remaining = still_missing
         if remaining:
             time.sleep(2)
+
+
+def _grep_index_ready(
+    backend: Any, probes: list[tuple[str, str]], timeout: int = 60
+) -> None:
+    """Poll until every (term, key) probe is findable via ``grep``.
+
+    ``_atlas_search_ready`` only gates on :meth:`glob`, which is served by the
+    native compound index and therefore goes live as soon as the upsert
+    commits.  ``grep`` is served by the Atlas Search / vector indexes, which
+    are updated asynchronously and lag behind.  Without this second gate the
+    search tests race the indexer and fail intermittently with empty results.
+    """
+    deadline = time.monotonic() + timeout
+    remaining = list(probes)
+    while remaining and time.monotonic() < deadline:
+        still_missing = []
+        for term, key in remaining:
+            result = backend.grep(term)
+            paths = {m["path"] for m in (result.matches or [])}
+            if key not in paths:
+                still_missing.append((term, key))
+        remaining = still_missing
+        if remaining:
+            time.sleep(2)
+    if remaining:
+        pytest.fail(
+            "Atlas Search indexes did not become queryable within "
+            f"{timeout}s — grep still returns no match for: "
+            + ", ".join(f"{term!r} -> {key}" for term, key in remaining)
+        )
 
 
 def _delete_prefix(bucket: str, prefix: str, region: str | None) -> None:
@@ -235,7 +271,7 @@ def real_env() -> dict[str, str]:
     """Skip session if any required credential is absent, or if the chosen
     embedding provider is missing its required env vars."""
     env = _require_env(*_REQUIRED)
-    provider = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
+    provider = resolve_provider()  # TODO
     required_for_provider = _PROVIDER_CHECKS.get(provider)
     if required_for_provider is None:
         pytest.skip(
@@ -246,6 +282,40 @@ def real_env() -> dict[str, str]:
     if missing:
         pytest.skip(f"EMBEDDING_PROVIDER={provider} requires: {', '.join(missing)}")
     return env
+
+
+@pytest.fixture(scope="session", autouse=True)
+def s3_access(real_env) -> None:
+    """Fail early, with actionable guidance, if S3 is not usable.
+
+    AWS credentials are resolved by the boto3 chain rather than read from a
+    named env var, so ``_require_env`` cannot check them.  Without this probe a
+    bad or expired credential surfaces as a raw ClientError from deep inside
+    the seeding step, which is hard to read and easy to mistake for a bug in
+    the backend.
+    """
+    bucket = real_env["S3_BUCKET_NAME"]
+    region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+    endpoint = os.getenv("AWS_ENDPOINT_URL_S3") or os.getenv("AWS_ENDPOINT_URL")
+    probe_key = f"{_TEST_PREFIX}_preflight_{uuid.uuid4().hex[:8]}"
+    client = boto3.client("s3", region_name=region)
+    try:
+        client.put_object(Bucket=bucket, Key=probe_key, Body=b"preflight")
+        client.delete_object(Bucket=bucket, Key=probe_key)
+    except Exception as exc:
+        hint = (
+            "A stale AWS_SESSION_TOKEN or AWS_PROFILE in your shell will be "
+            "rejected by a local S3 server; unset both when using "
+            f"AWS_ENDPOINT_URL_S3 (currently {endpoint})."
+            if endpoint
+            else "Check that the bucket exists, is in AWS_DEFAULT_REGION, and "
+            "that your credentials grant s3:PutObject/s3:DeleteObject."
+        )
+        pytest.fail(
+            f"S3 preflight failed for bucket '{bucket}' "
+            f"(region={region}, endpoint={endpoint or 'default AWS'}): "
+            f"{type(exc).__name__}: {exc}\n{hint}"
+        )
 
 
 @pytest.fixture(scope="session")
@@ -292,9 +362,33 @@ def real_backend(real_env, e2e_prefix):
             "Backend did not become ready within 300 s — check Atlas connectivity"
         )
 
+    # Background init swallows per-key errors; surface them here rather than
+    # letting every downstream test fail with a confusing empty result set.
+    if backend.init_errors:
+        report = backend.initial_sync_report
+        backend.stop()
+        pytest.fail(
+            "Backend initialization reported errors: "
+            + "; ".join(backend.init_errors)
+            + f" (report={report}). "
+            f"EMBEDDING_PROVIDER={resolve_provider()}. "
+            "See the WARNING/ERROR log lines above for the per-key cause."
+        )
+
     # Atlas Search indexes new documents asynchronously after MongoDB upsert.
     # Poll until every seeded file is visible in glob results (or timeout after 60 s).
     _atlas_search_ready(backend, list(seed.keys()), timeout=60)
+
+    # Second gate: the search indexes that grep depends on lag behind the
+    # upsert that glob sees.  Probe with terms the search tests actually use.
+    _grep_index_ready(
+        backend,
+        [
+            ("authentication", f"{e2e_prefix}docs/api.txt"),
+            ("installation", f"{e2e_prefix}docs/install.txt"),
+        ],
+        timeout=60,
+    )
 
     yield backend
 
@@ -320,8 +414,7 @@ def sync_ready(real_backend, e2e_prefix):
         {"source_path": {"$regex": f"^{e2e_prefix}"}}
     )
     if count == 0:
-        provider = os.getenv("EMBEDDING_PROVIDER", "openai")
-        pytest.skip(
-            f"Initial sync indexed 0 documents (EMBEDDING_PROVIDER={provider}). "
+        pytest.fail(
+            f"Initial sync indexed 0 documents (EMBEDDING_PROVIDER={resolve_provider()}). "
             "Check embedding API quota/credentials in the logs above."
         )

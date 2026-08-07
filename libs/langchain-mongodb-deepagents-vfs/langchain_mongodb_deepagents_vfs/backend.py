@@ -38,6 +38,7 @@ from langchain_mongodb_deepagents_vfs.dtypes import (
     GrepResult,
     LsResult,
     ReadResult,
+    SyncReport,
     WriteResult,
 )
 from langchain_mongodb_deepagents_vfs.embedder import Embedder
@@ -164,6 +165,13 @@ class MongoFilesystemBackend(BackendProtocol):
         # Gate that blocks grep/glob/ls until the first sync completes
         self._ready = threading.Event()
 
+        # Outcome of background initialization, readable once _ready is set.
+        # ``initial_sync_report`` is None if the sync raised outright; a report
+        # with failed > 0 means some files never made it into MongoDB and will
+        # be invisible to grep/glob.
+        self.initial_sync_report: SyncReport | None = None
+        self.init_errors: list[str] = []
+
         # Background init thread
         self._init_thread = threading.Thread(
             target=self._background_init, name="MongoFSInit", daemon=True
@@ -180,14 +188,33 @@ class MongoFilesystemBackend(BackendProtocol):
             self._index_manager.ensure_indexes()
             self._index_manager.wait_until_queryable()
         except Exception as exc:
-            logger.error("Index provisioning failed: %s", exc)
+            logger.error("Index provisioning failed: %s", exc, exc_info=True)
+            self.init_errors.append(f"index provisioning failed: {exc}")
 
         try:
             logger.info("Running initial sync…")
             report = self._sync.run(prefix=self._prefix)
-            logger.info("Initial sync complete: %s", report)
+            self.initial_sync_report = report
+            if report.failed:
+                # Not fatal — some files may have synced — but silence here is
+                # what makes an empty collection look like a search bug.
+                logger.error(
+                    "Initial sync: %d of %d objects FAILED to index and will not "
+                    "be searchable (processed=%d skipped=%d). See preceding "
+                    "warnings for the per-key cause.",
+                    report.failed,
+                    report.seen,
+                    report.processed,
+                    report.skipped,
+                )
+                self.init_errors.append(
+                    f"{report.failed} of {report.seen} objects failed to index"
+                )
+            else:
+                logger.info("Initial sync complete: %s", report)
         except Exception as exc:
-            logger.error("Initial sync failed: %s", exc)
+            logger.error("Initial sync failed: %s", exc, exc_info=True)
+            self.init_errors.append(f"initial sync failed: {exc}")
 
         self._ready.set()
 

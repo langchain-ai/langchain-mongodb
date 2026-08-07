@@ -48,6 +48,11 @@ dev = [
     "build>=1.0.0",
     "twine>=5.0.0",
     "types-boto3>=1.0.0",
+    # Both embedding providers, so `just tests` can exercise either path.
+    # Without these the real_e2e suite fails at Embedder construction no matter
+    # how the environment is configured.
+    "langchain-openai>=0.1.0",
+    "langchain-aws>=0.2.0",
 ]
 
 [tool.hatch.build.targets.wheel]
