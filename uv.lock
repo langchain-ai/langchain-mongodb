@@ -1272,7 +1272,7 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.1.0" },
     { name = "python-pptx", specifier = ">=0.6.21" },
     { name = "tenacity", specifier = ">=8.2.0" },
-    { name = "tiktoken", specifier = ">=0.7.0" },
+    { name = "tiktoken", specifier = ">=0.8.0" },
     { name = "wcmatch", specifier = ">=10.1" },
     { name = "xlrd", specifier = ">=2.0.1" },
 ]

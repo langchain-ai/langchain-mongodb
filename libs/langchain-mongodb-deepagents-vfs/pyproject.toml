@@ -27,7 +27,7 @@ dependencies = [
     "xlrd>=2.0.1",
     "python-pptx>=0.6.21",
     "olefile>=0.46",
-    "tiktoken>=0.7.0",
+    "tiktoken>=0.8.0",  # first release with cp313 wheels
     "tenacity>=8.2.0",
 ]
 
