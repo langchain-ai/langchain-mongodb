@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling>1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-mongodb-deepagents-vfs"
+version = "0.1.0"
+description = "MongoDB Atlas-backed virtual filesystem search adapter for LangChain DeepAgents"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["langchain", "mongodb", "atlas", "vector-search", "deepagents", "s3", "filesystem"]
+dependencies = [
+    # Source of the BackendProtocol and all result types this adapter returns.
+    "deepagents>=0.6.0",
+    # Same glob matcher deepagents' own backends use, so glob() semantics match
+    # the BackendProtocol exactly. Already an install-time dep of deepagents;
+    # declared explicitly because we import it directly.
+    "wcmatch>=10.1",
+    "boto3>=1.34.0",
+    "pymongo>=4.6.1",
+    "langchain-core>=0.2.0",
+    "langchain-mongodb>=0.11.0",
+    "pymongo-search-utils>=0.3.0",
+    "pypdf>=4.0.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
+    "xlrd>=2.0.1",
+    "python-pptx>=0.6.21",
+    "olefile>=0.46",
+    "tiktoken>=0.8.0",  # first release with cp313 wheels
+    "tenacity>=8.2.0",
+]
+
+[project.optional-dependencies]
+openai = ["langchain-openai>=0.1.0"]
+bedrock = ["langchain-aws>=0.2.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "moto[s3,sqs]>=5.0.0",
+    "xlwt>=1.3.0",       # write-side .xls generator used only to build test fixtures
+    "mongomock>=4.1.0",
+    "reportlab>=4.1.0",  # used only to build PDF test fixtures
+    "pre-commit>=4.0",
+    "mypy>=1.10.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+    "types-boto3>=1.0.0",
+    "langchain-openai>=0.1.0",
+    "langchain-aws>=0.2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["langchain_mongodb_deepagents_vfs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config --durations=5"
+markers = [
+    "unit: fast, no external services",
+    "integration: requires Atlas Local or mongomock + moto",
+    "e2e: full stack, moto + mongomock (no real credentials needed)",
+    "real_e2e: full stack against real Atlas + S3 + OpenAI; skipped if env vars absent",
+    "watcher_e2e: PollingWatcher E2E tests; subset of real_e2e; uses 10s poll interval",
+]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle
+  "F",  # Pyflakes
+  "UP", # pyupgrade
+  "B",  # flake8-bugbear
+  "I",  # isort
+]
+ignore = ["E501", "B008", "UP007", "UP006", "UP045"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true

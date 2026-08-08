@@ -6,6 +6,7 @@ LIB_DIRS = [
     "libs/langchain-mongodb",
     "libs/langgraph-checkpoint-mongodb",
     "libs/langgraph-store-mongodb",
+    "libs/langchain-mongodb-deepagents-vfs",
 ]
 
 if __name__ == "__main__":

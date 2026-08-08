@@ -16,6 +16,7 @@ on:
           - libs/langchain-mongodb
           - libs/langgraph-checkpoint-mongodb
           - libs/langgraph-store-mongodb
+          - libs/langchain-mongodb-deepagents-vfs
         default: libs/langchain-mongodb
         description: "From which folder this pipeline executes"
 

@@ -1,14 +1,13 @@
 import os
 from collections.abc import Generator
 from operator import add
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import StateSnapshot
 from pymongo import MongoClient
-from typing_extensions import NotRequired
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
 

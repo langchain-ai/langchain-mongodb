@@ -9,5 +9,9 @@ __pycache__
 .ipynb_checkpoints
 docs/langchain_mongodb
 docs/langgraph_checkpoint_mongodb
+docs/langgraph_store_mongodb
+docs/langchain_mongodb_deepagents_vfs
 docs/index.md
 .vscode
+mongo-e2e-*.log
+libs/langchain-mongodb-deepagents-vfs/demo/*
