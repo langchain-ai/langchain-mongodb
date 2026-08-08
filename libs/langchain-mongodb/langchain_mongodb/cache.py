@@ -13,6 +13,7 @@ from langchain_core.outputs import Generation
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
+from pymongo.errors import PyMongoError
 
 from langchain_mongodb.utils import DRIVER_METADATA
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
@@ -52,9 +53,13 @@ class MongoDBCache(BaseCache):
         self.__database_name = database_name
         self.__collection_name = collection_name
 
-        if self.__collection_name not in self.database.list_collection_names(
-            authorizedCollections=True
-        ):
+        try:
+            coll_names = self.database.list_collection_names(
+                authorizedCollections=True
+            )
+        except PyMongoError:
+            coll_names = self.database.list_collection_names()
+        if self.__collection_name not in coll_names:
             self.database.create_collection(self.__collection_name)
             # Create an index on key and llm_string
             self.collection.create_index([self.PROMPT, self.LLM])
