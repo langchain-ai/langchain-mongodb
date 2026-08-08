@@ -34,7 +34,7 @@
 
 ## Changes in version 0.10.0 (2026/01/05)
 
-- Bump langchain-core dependency for [CVE-2025-68664](https://nvd.nist.gov/vuln/detail/CVE-2025-68664).
+- Bump langchain-core dependency for [CVE-2025-68664](https://github.com/advisories/GHSA-c67j-w6g6-q2cm).
 - Add script to migrate checkpoint collections created before v0.2.2.
 - Remove dependency of mongomock package.
 
