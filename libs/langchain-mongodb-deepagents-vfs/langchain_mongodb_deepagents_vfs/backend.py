@@ -177,6 +177,14 @@ class MongoFilesystemBackend(BackendProtocol):
         self.initial_sync_report: SyncReport | None = None
         self.init_errors: list[str] = []
 
+        # Fatal init failures: when either is True, the collection state is
+        # not trustworthy enough to search, so grep/glob/ls must raise
+        # instead of silently returning empty results. A watcher-start
+        # failure alone does not set these — already-synced data is still
+        # valid to search.
+        self._index_provisioning_failed = False
+        self._initial_sync_failed = False
+
         # Background init thread
         self._init_thread = threading.Thread(
             target=self._background_init, name="MongoFSInit", daemon=True
@@ -195,6 +203,7 @@ class MongoFilesystemBackend(BackendProtocol):
         except Exception as exc:
             logger.error("Index provisioning failed: %s", exc, exc_info=True)
             self.init_errors.append(f"index provisioning failed: {exc}")
+            self._index_provisioning_failed = True
 
         try:
             logger.info("Running initial sync…")
@@ -220,6 +229,7 @@ class MongoFilesystemBackend(BackendProtocol):
         except Exception as exc:
             logger.error("Initial sync failed: %s", exc, exc_info=True)
             self.init_errors.append(f"initial sync failed: {exc}")
+            self._initial_sync_failed = True
 
         self._ready.set()
 
@@ -234,8 +244,25 @@ class MongoFilesystemBackend(BackendProtocol):
             self.init_errors.append(f"watcher start failed: {exc}")
 
     def _wait_ready(self) -> None:
-        """Block until at least one sync pass has completed."""
+        """Block until at least one sync pass has completed.
+
+        Raises if provisioning or the initial sync failed outright: the
+        collection state is not trustworthy, so callers must see an error
+        rather than results that look like a legitimate empty match.
+        """
         self._ready.wait()
+        if self._index_provisioning_failed:
+            raise AdapterError(
+                ErrorCode.E1004_INDEX_PROVISION_FAILED,
+                "Index provisioning failed during initialization; "
+                "search results would be unreliable.",
+            )
+        if self._initial_sync_failed:
+            raise AdapterError(
+                ErrorCode.E1005_INITIAL_SYNC_FAILED,
+                "Initial sync failed during initialization; "
+                "search results would be incomplete or empty.",
+            )
 
     # ------------------------------------------------------------------
     # Search operations (route through SearchRouter after sync)
