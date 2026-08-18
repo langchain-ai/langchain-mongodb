@@ -92,6 +92,40 @@ class TestPollingWatcher:
         watcher._poll()
         assert "docs/a.txt" in deleted_keys
 
+    def test_loop_survives_callback_exception_and_records_health(
+        self, mongo_collection, mock_embedder, chunker
+    ):
+        """A crash inside on_created must not silently kill the poll loop.
+
+        Before this fix, _poll() only guarded the list_keys() call; an
+        exception raised from on_created (e.g. a pymongo error, not an
+        AdapterError) propagated out of _poll and out of _loop, so the
+        background thread died with no visible signal to the caller.
+        """
+        store = MagicMock()
+        store.list_keys.return_value = iter([("docs/a.txt", "etag1")])
+
+        class CrashingWatcher(PollingWatcher):
+            def on_created(self, key):
+                raise RuntimeError("boom")
+
+        watcher = CrashingWatcher(
+            store=store,
+            chunker=chunker,
+            embedder=mock_embedder,
+            collection=mongo_collection,
+            interval_seconds=0,
+        )
+
+        # Run exactly one loop iteration: stop_event.wait() returns False
+        # once (so the loop body runs) then True (so the loop exits).
+        watcher._stop_event.wait = MagicMock(side_effect=[False, True])
+
+        watcher._loop()  # must not raise despite on_created crashing
+
+        assert watcher.last_error is not None
+        assert "boom" in str(watcher.last_error)
+
     def test_detects_updated_key(self, mongo_collection, mock_embedder, chunker):
         store = MagicMock()
         store.read.return_value = b"updated"
