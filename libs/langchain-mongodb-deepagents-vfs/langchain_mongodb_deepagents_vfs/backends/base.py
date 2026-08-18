@@ -23,6 +23,13 @@ from langchain_mongodb_deepagents_vfs.dtypes import (
 # an unguarded read there is a memory-exhaustion vector, not just a slow query.
 MAX_READ_BYTES = 64 * 1024 * 1024
 
+# Default prefix when a deployment doesn't configure one. A blank default
+# would scope every operation to the whole bucket, which is unsafe the moment
+# that bucket is shared with anything else — the trailing slash matters too,
+# since a bare "mongodb_vfs" prefix would also match an unrelated key like
+# "mongodb_vfs2/other.txt".
+DEFAULT_PREFIX = "mongodb_vfs/"
+
 
 class ObjectStoreBackend(ABC):
     """Filesystem-like interface over an arbitrary object store."""

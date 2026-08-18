@@ -119,7 +119,7 @@ def s3_backend(s3_bucket):
     from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 
     with mock_aws():
-        yield S3Backend(bucket_name=s3_bucket, region_name="us-east-1")
+        yield S3Backend(bucket_name=s3_bucket, region_name="us-east-1", prefix="")
 
 
 @pytest.fixture(scope="function")

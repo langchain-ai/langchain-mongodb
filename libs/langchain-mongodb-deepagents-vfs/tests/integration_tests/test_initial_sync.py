@@ -29,7 +29,9 @@ class TestInitialSyncBasic:
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run()
             assert report.seen == 2
@@ -42,7 +44,9 @@ class TestInitialSyncBasic:
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run()
             assert report.seen == 2
@@ -53,7 +57,9 @@ class TestInitialSyncBasic:
     ):
         """A key we could not fetch is reported as failed, not silently dropped."""
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             original_read = store.read
 
             def flaky_read(path, *args, **kwargs):
@@ -84,7 +90,9 @@ class TestInitialSyncBasic:
             client.create_bucket(Bucket="cap-sync")
             client.put_object(Bucket="cap-sync", Key="big.txt", Body=b"word " * 200)
             client.put_object(Bucket="cap-sync", Key="ok.txt", Body=b"small body")
-            store = S3Backend(bucket_name="cap-sync", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="cap-sync", region_name="us-east-1", prefix=""
+            )
 
             report = InitialSync(store, chunker, mock_embedder, mongo_collection).run()
 
@@ -98,7 +106,9 @@ class TestInitialSyncBasic:
     ):
         """Running sync twice doesn't create duplicate chunks."""
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             sync.run()
             count_after_first = mongo_collection.count_documents({})
@@ -112,7 +122,9 @@ class TestInitialSyncBasic:
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             sync.run()
             embed_call_count_first = mock_embedder.embed_batch.call_count
@@ -125,7 +137,9 @@ class TestInitialSyncBasic:
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run(dry_run=True)
             mock_embedder.embed_batch.assert_not_called()
@@ -136,7 +150,9 @@ class TestInitialSyncBasic:
         self, setup_bucket, mongo_collection, mock_embedder, chunker
     ):
         with mock_aws():
-            store = S3Backend(bucket_name=setup_bucket, region_name="us-east-1")
+            store = S3Backend(
+                bucket_name=setup_bucket, region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             sync.run()
             doc = mongo_collection.find_one({})
@@ -161,7 +177,9 @@ class TestInitialSyncBasic:
             client.put_object(
                 Bucket="prefixed-bucket", Key="images/b.png", Body=b"PNG data"
             )
-            store = S3Backend(bucket_name="prefixed-bucket", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="prefixed-bucket", region_name="us-east-1", prefix=""
+            )
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run(prefix="docs/")
             assert report.seen == 1

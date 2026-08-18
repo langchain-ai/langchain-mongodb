@@ -10,6 +10,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from langchain_mongodb_deepagents_vfs.backends.base import (
+    DEFAULT_PREFIX,
     MAX_READ_BYTES,
     ObjectStoreBackend,
 )
@@ -38,6 +39,13 @@ class S3Backend(ObjectStoreBackend):
         bucket_name: Name of the S3 bucket.
         region_name: AWS region (defaults to AWS_DEFAULT_REGION env var).
         endpoint_url: Override endpoint for local testing (e.g. LocalStack).
+        prefix: Restrict every operation to keys under this prefix. Defaults
+            to ``DEFAULT_PREFIX`` rather than the whole bucket — a bucket
+            shared across tenants/scopes relies on this as an isolation
+            boundary, so it is enforced here, the one place every key-level
+            operation (read/write/edit/upload/download) funnels through,
+            rather than left to callers to check. Pass ``""`` to opt into
+            whole-bucket access.
         **boto_kwargs: Forwarded verbatim to ``boto3.client``.
     """
 
@@ -46,9 +54,11 @@ class S3Backend(ObjectStoreBackend):
         bucket_name: str,
         region_name: str | None = None,
         endpoint_url: str | None = None,
+        prefix: str = DEFAULT_PREFIX,
         **boto_kwargs: Any,
     ) -> None:
         self._bucket = bucket_name
+        self._prefix = prefix
         self._client: Any = boto3.client(
             "s3",
             region_name=region_name,
@@ -73,7 +83,13 @@ class S3Backend(ObjectStoreBackend):
             raise AdapterError(ErrorCode.E2002_OBJECT_READ_FAILED, str(exc)) from exc
 
     def _key(self, path: str) -> str:
-        return self.normalize_key(path).lstrip("/")
+        key = self.normalize_key(path).lstrip("/")
+        if self._prefix and not key.startswith(self._prefix):
+            raise AdapterError(
+                ErrorCode.E2009_PATH_OUTSIDE_PREFIX,
+                f"Path '{path}' is outside the configured prefix '{self._prefix}'",
+            )
+        return key
 
     # ------------------------------------------------------------------
     # ObjectStoreBackend implementation
