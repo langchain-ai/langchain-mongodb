@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from langchain_mongodb_deepagents_vfs.dtypes import GlobResult, GrepResult, LsResult
@@ -212,3 +214,36 @@ class TestSearchRouterGrep:
         assert result.matches
         for m in result.matches:
             assert set(m) == {"path", "line", "text"}
+
+
+@pytest.mark.unit
+class TestGrepHybridPipelineShape:
+    """The $rankFusion pipeline's two branches must be bounded the same way.
+
+    vector_search_stage() already caps the vector branch via the
+    $vectorSearch stage's own numCandidates/limit fields. The fulltext
+    branch is hand-built rather than going through the text_search_stage()
+    helper this same module already uses for the no-vector fallback, and
+    without its own $limit it can rank an unbounded candidate set before
+    the single $limit trailing the whole $rankFusion ever trims it.
+    """
+
+    def _captured_pipeline(self, mock_embedder, **grep_kwargs):
+        col = MagicMock()
+        col.aggregate.return_value = []
+        router = SearchRouter(col, mock_embedder, atlas_available=True)
+        router.grep("query", **grep_kwargs)
+        (pipeline,), _ = col.aggregate.call_args
+        return pipeline
+
+    def test_fulltext_branch_has_its_own_limit(self, mock_embedder):
+        pipeline = self._captured_pipeline(mock_embedder)
+        fulltext_stages = pipeline[0]["$rankFusion"]["input"]["pipelines"]["fulltext"]
+        assert any("$limit" in stage for stage in fulltext_stages)
+
+    def test_fulltext_limit_matches_vector_branch_top_k(self, mock_embedder):
+        pipeline = self._captured_pipeline(mock_embedder)
+        stages = pipeline[0]["$rankFusion"]["input"]["pipelines"]
+        vector_top_k = stages["vector"][0]["$vectorSearch"]["limit"]
+        fulltext_limit = next(s["$limit"] for s in stages["fulltext"] if "$limit" in s)
+        assert fulltext_limit == vector_top_k
