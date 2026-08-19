@@ -271,11 +271,18 @@ class SearchRouter:
         pre_filter: dict[str, Any] = {"$and": path_filter} if path_filter else {}
 
         if query_vector is not None:
+            # Both branches feed the same combination step, so both need a
+            # comparable bound: $vectorSearch already caps itself via its own
+            # limit/numCandidates fields, but $search has no such built-in cap
+            # — without an explicit $limit here, the fulltext branch could
+            # rank an unbounded number of candidates before the single $limit
+            # trailing the whole $rankFusion ever gets a chance to trim it.
+            top_k = self._grep_limit * 2
             vs_stage = vector_search_stage(
                 query_vector,
                 "embedding",
                 "vector_search_embedding",
-                top_k=self._grep_limit * 2,
+                top_k=top_k,
                 # $vectorSearch filter only supports comparison operators ($eq, $in, etc.),
                 # not $regex — apply path/glob filtering as a $match stage after the ANN search
                 filter=None,
@@ -297,6 +304,7 @@ class SearchRouter:
                                             },
                                         }
                                     },
+                                    {"$limit": top_k},
                                     *([{"$match": pre_filter}] if pre_filter else []),
                                 ],
                                 "vector": [
