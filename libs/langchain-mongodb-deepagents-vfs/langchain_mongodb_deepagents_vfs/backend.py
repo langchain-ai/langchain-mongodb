@@ -26,7 +26,10 @@ from deepagents.backends.protocol import BackendProtocol
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
 
-from langchain_mongodb_deepagents_vfs.backends.base import MAX_READ_BYTES
+from langchain_mongodb_deepagents_vfs.backends.base import (
+    DEFAULT_PREFIX,
+    MAX_READ_BYTES,
+)
 from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 from langchain_mongodb_deepagents_vfs.chunker import Chunker
 from langchain_mongodb_deepagents_vfs.dtypes import (
@@ -90,7 +93,9 @@ class MongoFilesystemBackend(BackendProtocol):
         watcher: ``"polling"`` (default) or ``"sqs"``.
         sqs_queue_url: Required when ``watcher="sqs"``.
         aws_region: AWS region for S3 and SQS clients.
-        s3_prefix: Only sync/watch objects under this S3 prefix.
+        s3_prefix: Restrict every operation (read/write/edit/sync/watch) to
+            keys under this prefix. Defaults to ``DEFAULT_PREFIX`` rather than
+            the whole bucket — pass ``""`` to opt into whole-bucket access.
         debug: If True, re-raise exceptions after logging (local dev only).
     """
 
@@ -104,7 +109,7 @@ class MongoFilesystemBackend(BackendProtocol):
         watcher: WatcherType = "polling",
         sqs_queue_url: str | None = None,
         aws_region: str | None = None,
-        s3_prefix: str = "",
+        s3_prefix: str = DEFAULT_PREFIX,
         debug: bool = False,
     ) -> None:
         if not s3_bucket_name:
@@ -125,7 +130,9 @@ class MongoFilesystemBackend(BackendProtocol):
         self._prefix = s3_prefix
 
         # Build internal components
-        self._store = S3Backend(bucket_name=s3_bucket_name, region_name=aws_region)
+        self._store = S3Backend(
+            bucket_name=s3_bucket_name, region_name=aws_region, prefix=s3_prefix
+        )
         # aws_region reaches the Embedder too, not just S3/SQS: without it a
         # caller passing aws_region= got S3 in that region and Bedrock in
         # whatever the environment happened to resolve.

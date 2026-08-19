@@ -87,7 +87,7 @@ with MongoFilesystemBackend(
 | `watcher` | No | `"polling"` | `"polling"` or `"sqs"` |
 | `sqs_queue_url` | If `watcher="sqs"` | — | Full SQS queue URL |
 | `aws_region` | No | `AWS_DEFAULT_REGION` env, then the boto3 chain | AWS region for S3, SQS **and Bedrock embeddings** — all three resolve it the same way, so they cannot end up split across regions |
-| `s3_prefix` | No | `""` | Only sync/watch objects under this S3 prefix |
+| `s3_prefix` | No | `"mongodb_vfs/"` | Restricts every operation (read/write/edit/sync/watch) to keys under this prefix. Pass `""` to opt into whole-bucket access |
 | `debug` | No | `False` | Re-raise exceptions instead of returning error DTOs (local dev) |
 
 ### Embedding provider selection

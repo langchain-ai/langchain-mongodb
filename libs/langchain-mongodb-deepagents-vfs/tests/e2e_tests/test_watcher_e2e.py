@@ -82,7 +82,10 @@ def watcher_setup(real_env, s3_access, watcher_prefix, watcher_col):
     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
     s3 = boto3.client("s3", region_name=region)
 
-    store = S3Backend(bucket_name=bucket, region_name=region)
+    # Watcher-level prefix isolation is what this suite exercises (see
+    # test_prefix_isolation below); the store itself is left unscoped so it
+    # doesn't add a second, redundant boundary on top of it.
+    store = S3Backend(bucket_name=bucket, region_name=region, prefix="")
     embedder = Embedder()
     chunker = Chunker()
 

@@ -24,7 +24,12 @@ class TestPollingWatcherIntegration:
             client.put_object(
                 Bucket="watch-bucket", Key="docs/a.txt", Body=b"initial content"
             )
-            yield S3Backend(bucket_name="watch-bucket", region_name="us-east-1"), client
+            yield (
+                S3Backend(
+                    bucket_name="watch-bucket", region_name="us-east-1", prefix=""
+                ),
+                client,
+            )
 
     def test_oversized_object_is_not_ingested(
         self, mongo_collection, mock_embedder, chunker, aws_credentials, monkeypatch
@@ -44,7 +49,9 @@ class TestPollingWatcherIntegration:
             client = boto3.client("s3", region_name="us-east-1")
             client.create_bucket(Bucket="cap-watch")
             client.put_object(Bucket="cap-watch", Key="bomb.txt", Body=b"word " * 200)
-            store = S3Backend(bucket_name="cap-watch", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="cap-watch", region_name="us-east-1", prefix=""
+            )
             watcher = PollingWatcher(store, chunker, mock_embedder, mongo_collection)
 
             watcher.on_created("bomb.txt")  # must not raise
@@ -61,7 +68,9 @@ class TestPollingWatcherIntegration:
             client.put_object(
                 Bucket="watch-bucket", Key="docs/new.txt", Body=b"new doc content here"
             )
-            store2 = S3Backend(bucket_name="watch-bucket", region_name="us-east-1")
+            store2 = S3Backend(
+                bucket_name="watch-bucket", region_name="us-east-1", prefix=""
+            )
             watcher = PollingWatcher(store2, chunker, mock_embedder, mongo_collection)
             watcher.on_created("docs/new.txt")
             count = mongo_collection.count_documents({"source_path": "docs/new.txt"})
@@ -76,7 +85,9 @@ class TestPollingWatcherIntegration:
             client.put_object(
                 Bucket="del-bucket", Key="docs/a.txt", Body=b"will be deleted"
             )
-            store = S3Backend(bucket_name="del-bucket", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="del-bucket", region_name="us-east-1", prefix=""
+            )
             watcher = PollingWatcher(store, chunker, mock_embedder, mongo_collection)
             # Ingest first
             watcher.on_created("docs/a.txt")
@@ -92,7 +103,9 @@ class TestPollingWatcherIntegration:
             client = boto3.client("s3", region_name="us-east-1")
             client.create_bucket(Bucket="upd-bucket")
             client.put_object(Bucket="upd-bucket", Key="f.txt", Body=b"original")
-            store = S3Backend(bucket_name="upd-bucket", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="upd-bucket", region_name="us-east-1", prefix=""
+            )
             watcher = PollingWatcher(store, chunker, mock_embedder, mongo_collection)
             watcher.on_created("f.txt")
             count_before = mongo_collection.count_documents({"source_path": "f.txt"})
@@ -128,7 +141,9 @@ class TestSQSWatcherIntegration:
             sqs = boto3.client("sqs", region_name="us-east-1")
             queue_url = sqs.create_queue(QueueName="scoped-queue")["QueueUrl"]
 
-            store = S3Backend(bucket_name="tenant-bucket", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="tenant-bucket", region_name="us-east-1", prefix=""
+            )
             watcher = SQSWatcher(
                 store=store,
                 chunker=chunker,
@@ -182,7 +197,9 @@ class TestSQSWatcherIntegration:
             q = sqs.create_queue(QueueName="events-queue")
             queue_url = q["QueueUrl"]
 
-            store = S3Backend(bucket_name="sqs-bucket", region_name="us-east-1")
+            store = S3Backend(
+                bucket_name="sqs-bucket", region_name="us-east-1", prefix=""
+            )
             watcher = SQSWatcher(
                 store=store,
                 chunker=chunker,

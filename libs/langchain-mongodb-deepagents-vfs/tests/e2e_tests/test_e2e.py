@@ -21,6 +21,7 @@ import pytest
 from moto import mock_aws
 
 from langchain_mongodb_deepagents_vfs.backend import MongoFilesystemBackend
+from langchain_mongodb_deepagents_vfs.backends.base import DEFAULT_PREFIX
 from langchain_mongodb_deepagents_vfs.dtypes import (
     EditResult,
     GlobResult,
@@ -40,15 +41,19 @@ def backend_env(aws_credentials):
         client = boto3.client("s3", region_name="us-east-1")
         client.create_bucket(Bucket="e2e-bucket")
         client.put_object(
-            Bucket="e2e-bucket", Key="docs/api.txt", Body=b"authentication flow diagram"
+            Bucket="e2e-bucket",
+            Key=f"{DEFAULT_PREFIX}docs/api.txt",
+            Body=b"authentication flow diagram",
         )
         client.put_object(
             Bucket="e2e-bucket",
-            Key="docs/install.txt",
+            Key=f"{DEFAULT_PREFIX}docs/install.txt",
             Body=b"installation prerequisites",
         )
         client.put_object(
-            Bucket="e2e-bucket", Key="images/logo.png", Body=b"PNG data here"
+            Bucket="e2e-bucket",
+            Key=f"{DEFAULT_PREFIX}images/logo.png",
+            Body=b"PNG data here",
         )
 
         # Patch pymongo.MongoClient to use mongomock
@@ -83,33 +88,35 @@ def backend_env(aws_credentials):
 @pytest.mark.e2e
 class TestMongoFilesystemBackendE2E:
     def test_read_existing_file(self, backend_env):
-        result = backend_env.read("docs/api.txt")
+        result = backend_env.read(f"{DEFAULT_PREFIX}docs/api.txt")
         assert isinstance(result, ReadResult)
         assert result.error is None
         assert "authentication" in result.file_data["content"]
 
     def test_read_missing_file_returns_error(self, backend_env):
-        result = backend_env.read("docs/nonexistent.txt")
+        result = backend_env.read(f"{DEFAULT_PREFIX}docs/nonexistent.txt")
         assert result.error is not None
 
     def test_write_and_read_roundtrip(self, backend_env):
-        result = backend_env.write("docs/new.txt", "brand new content")
+        result = backend_env.write(f"{DEFAULT_PREFIX}docs/new.txt", "brand new content")
         assert isinstance(result, WriteResult)
         assert result.error is None
-        read_result = backend_env.read("docs/new.txt")
+        read_result = backend_env.read(f"{DEFAULT_PREFIX}docs/new.txt")
         assert "brand new content" in read_result.file_data["content"]
 
     def test_edit_file(self, backend_env):
-        backend_env.write("docs/edit_me.txt", "hello world")
-        result = backend_env.edit("docs/edit_me.txt", "hello", "goodbye")
+        backend_env.write(f"{DEFAULT_PREFIX}docs/edit_me.txt", "hello world")
+        result = backend_env.edit(
+            f"{DEFAULT_PREFIX}docs/edit_me.txt", "hello", "goodbye"
+        )
         assert isinstance(result, EditResult)
         assert result.error is None
         assert result.occurrences == 1
-        read_result = backend_env.read("docs/edit_me.txt")
+        read_result = backend_env.read(f"{DEFAULT_PREFIX}docs/edit_me.txt")
         assert "goodbye" in read_result.file_data["content"]
 
     def test_ls_returns_result(self, backend_env):
-        result = backend_env.ls("docs")
+        result = backend_env.ls(f"{DEFAULT_PREFIX}docs")
         assert isinstance(result, LsResult)
         assert result.error is None
 
@@ -133,13 +140,17 @@ class TestMongoFilesystemBackendE2E:
 
     def test_upload_and_download(self, backend_env):
         upload_result = backend_env.upload_files(
-            [("docs/uploaded.txt", b"uploaded bytes")]
+            [(f"{DEFAULT_PREFIX}docs/uploaded.txt", b"uploaded bytes")]
         )
-        assert [r.path for r in upload_result] == ["docs/uploaded.txt"]
+        assert [r.path for r in upload_result] == [f"{DEFAULT_PREFIX}docs/uploaded.txt"]
         assert all(r.error is None for r in upload_result)
 
-        download_result = backend_env.download_files(["docs/uploaded.txt"])
-        assert [r.path for r in download_result] == ["docs/uploaded.txt"]
+        download_result = backend_env.download_files(
+            [f"{DEFAULT_PREFIX}docs/uploaded.txt"]
+        )
+        assert [r.path for r in download_result] == [
+            f"{DEFAULT_PREFIX}docs/uploaded.txt"
+        ]
         assert download_result[0].content == b"uploaded bytes"
 
     def test_constructor_validates_missing_bucket(self):

@@ -42,6 +42,7 @@ class ErrorCode(StrEnum):
     E2006_UPLOAD_FAILED = "E2006"
     E2007_DOWNLOAD_FAILED = "E2007"
     E2008_EDIT_CONFLICT = "E2008"
+    E2009_PATH_OUTSIDE_PREFIX = "E2009"
 
     # E3xxx — MongoDB errors
     E3001_CONNECTION_FAILED = "E3001"
@@ -87,6 +88,7 @@ _CODE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.E2006_UPLOAD_FAILED: "One or more file uploads failed.",
     ErrorCode.E2007_DOWNLOAD_FAILED: "One or more file downloads failed.",
     ErrorCode.E2008_EDIT_CONFLICT: "Edit conflict: the object was modified concurrently.",
+    ErrorCode.E2009_PATH_OUTSIDE_PREFIX: "The requested path is outside the configured S3 prefix.",
     ErrorCode.E3001_CONNECTION_FAILED: "Could not connect to MongoDB.",
     ErrorCode.E3002_QUERY_FAILED: "MongoDB query failed.",
     ErrorCode.E3003_UPSERT_FAILED: "MongoDB upsert operation failed.",
@@ -131,6 +133,7 @@ def user_message(code: ErrorCode, detail: str = "") -> str:
 _FILE_OPERATION_ERRORS: dict[ErrorCode, str] = {
     ErrorCode.E2001_OBJECT_NOT_FOUND: FILE_NOT_FOUND,
     ErrorCode.E1002_INVALID_BUCKET: PERMISSION_DENIED,
+    ErrorCode.E2009_PATH_OUTSIDE_PREFIX: PERMISSION_DENIED,
 }
 
 
