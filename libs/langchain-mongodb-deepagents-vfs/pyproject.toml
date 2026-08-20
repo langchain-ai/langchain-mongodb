@@ -20,6 +20,7 @@ dependencies = [
     "pymongo>=4.6.1",
     "langchain-core>=0.2.0",
     "langchain-mongodb>=0.11.0",
+    "pydantic>=2.13.0",
     "pymongo-search-utils>=0.3.0",
     "pypdf>=6.15.0",
     "python-docx>=1.1.0",
