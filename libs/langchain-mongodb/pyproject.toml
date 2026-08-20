@@ -13,6 +13,7 @@ dependencies = [
     "langchain-core>=1.2.5",
     "langchain>=1.0",
     "langchain-classic>=1.0",
+    "pydantic>=2.13.0",
     "pymongo>=4.6.1",
     "langchain-text-splitters>=1.0",
     "numpy>=1.26",
