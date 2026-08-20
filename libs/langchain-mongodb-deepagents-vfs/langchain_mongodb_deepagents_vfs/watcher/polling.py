@@ -53,6 +53,10 @@ class PollingWatcher(S3Watcher):
         self._thread: threading.Thread | None = None
         # key → etag snapshot of last poll
         self._state: dict[str, str] = {}
+        # Health signal: last exception raised out of a poll iteration, if
+        # any. The background thread swallows it to stay alive, so this is
+        # the only way a caller can tell the watcher stopped syncing.
+        self.last_error: Exception | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -89,13 +93,22 @@ class PollingWatcher(S3Watcher):
 
     def _loop(self) -> None:
         while not self._stop_event.wait(timeout=self._interval):
-            self._poll()
+            try:
+                self._poll()
+            except Exception as exc:
+                # A crash here (e.g. from on_created/on_updated issuing a
+                # MongoDB command) must not silently end the background
+                # thread — log it and record it so the caller can detect a
+                # watcher that has stopped syncing.
+                logger.error("PollingWatcher: unhandled error during poll: %s", exc)
+                self.last_error = exc
 
     def _poll(self) -> None:
         try:
             current: dict[str, str] = dict(self._store.list_keys(self._prefix))
         except AdapterError as exc:
             logger.error("PollingWatcher: list_keys failed: %s", exc)
+            self.last_error = exc
             return
 
         prev = self._state
