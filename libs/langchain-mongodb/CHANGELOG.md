@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.12.0 (XXXX/XX/XX)
+## Changes in version 0.12.0 (2026/08/24)
 
 - Fix MongoDBStructuredQueryTranslator to convert LangChain's internal ISO 8601
   date/datetime representations ({"date": "YYYY-MM-DD", "type": "date"}) to
