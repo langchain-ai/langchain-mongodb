@@ -10,7 +10,11 @@ description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "langchain-core>=1.2.5",
+    # 1.4.2 is the lowest version anything is ever tested against: langchain-tests
+    # is pinned in the dev group and requires >=1.4.0, so no dev or CI environment
+    # can resolve lower. Declaring a floor below that would ship users a version
+    # range we never exercise.
+    "langchain-core>=1.4.2",
     "langchain>=1.0",
     "langchain-classic>=1.0",
     "pymongo>=4.6.1",
@@ -28,7 +32,8 @@ dependencies = [
 dev = [
     "freezegun>=1.2.2",
     "langchain>=1.0",
-    # tests/unit_tests/test_cache.py calls llm.asdict(), added in 1.4.2
+    # kept in sync with the runtime floor; tests/unit_tests/test_cache.py calls
+    # llm.asdict(), which landed in 1.4.2
     "langchain-core>=1.4.2",
     "langchain-text-splitters>=1.0",
     "pytest-mock>=3.10.0",
@@ -47,7 +52,9 @@ dev = [
     "flaky>=3.8.1",
     "langchain-tests==1.1.9",
     "pip>=25.0.1",
-    "typing-extensions>=4.12.2",
+    # langchain-protocol (via langchain-core) uses PEP 728 TypedDict extra_items,
+    # added in 4.13.0, but declares only >=4.7.0 — so our floor has to carry it.
+    "typing-extensions>=4.13.0",
 ]
 
 [project.optional-dependencies]

@@ -1032,7 +1032,7 @@ requires-dist = [
     { name = "holoviews", marker = "extra == 'viz'", specifier = ">=1.19" },
     { name = "langchain", specifier = ">=1.0" },
     { name = "langchain-classic", specifier = ">=1.0" },
-    { name = "langchain-core", specifier = ">=1.2.5" },
+    { name = "langchain-core", specifier = ">=1.4.2" },
     { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
     { name = "networkx", marker = "extra == 'viz'", specifier = ">=3.0" },
@@ -1065,7 +1065,7 @@ dev = [
     { name = "pytest-watcher", specifier = ">=0.3.4" },
     { name = "simsimd", specifier = ">=6.5.0" },
     { name = "syrupy", specifier = ">=4.0.2" },
-    { name = "typing-extensions", specifier = ">=4.12.2" },
+    { name = "typing-extensions", specifier = ">=4.13.0" },
 ]
 
 [[package]]
