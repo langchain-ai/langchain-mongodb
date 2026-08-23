@@ -17,6 +17,7 @@ dependencies = [
     "langchain-core>=1.4.2",
     "langchain>=1.0",
     "langchain-classic>=1.0",
+    "pydantic>=2.13.0",
     "pymongo>=4.6.1",
     "langchain-text-splitters>=1.0",
     # 2.3.2 is the first numpy with cp314 wheels; earlier ones fall back to a
