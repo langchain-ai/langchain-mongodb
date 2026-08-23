@@ -15,7 +15,11 @@ dependencies = [
     "langchain-classic>=1.0",
     "pymongo>=4.6.1",
     "langchain-text-splitters>=1.0",
-    "numpy>=1.26",
+    # 2.3.2 is the first numpy with cp314 wheels; earlier ones fall back to a
+    # source build that fails to compile. Split so 3.11-3.13 users keep the
+    # lower floor rather than being forced onto numpy 2.3+.
+    "numpy>=1.26; python_version < '3.14'",
+    "numpy>=2.3.2; python_version >= '3.14'",
     "lark<2.0.0,>=1.1.9",
     "pymongo-search-utils>=0.3.0",
 ]
@@ -24,7 +28,8 @@ dependencies = [
 dev = [
     "freezegun>=1.2.2",
     "langchain>=1.0",
-    "langchain-core>=1.2.5",
+    # tests/unit_tests/test_cache.py calls llm.asdict(), added in 1.4.2
+    "langchain-core>=1.4.2",
     "langchain-text-splitters>=1.0",
     "pytest-mock>=3.10.0",
     "pytest>=7.3.0",
