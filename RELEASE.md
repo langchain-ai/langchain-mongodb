@@ -14,6 +14,7 @@
 
 - Create a PR to bump the version and update the changelog, including today's date.
   Bump the minor version for new features, patch for a bug fix.
+- If this is the first release of any new library, see TRUSTED_PUBLISHING.md.
 
 - Merge the PR.
 
