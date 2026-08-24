@@ -13,9 +13,8 @@ import re
 from collections.abc import Iterable
 from typing import Any
 
-from langchain_mongodb.pipelines import text_search_stage
 from pymongo.collection import Collection
-from pymongo_search_utils import vector_search_stage
+from pymongo_search_utils import text_search_stage, vector_search_stage
 from wcmatch.glob import BRACE, GLOBSTAR, globmatch
 
 from langchain_mongodb_deepagents_vfs.dtypes import (
