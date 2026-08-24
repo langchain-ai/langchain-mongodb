@@ -59,8 +59,17 @@ jobs:
       # > It is strongly advised to separate jobs for building [...]
       # > from the publish job.
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
+      - name: Validate pyproject.toml
+        run: uvx --from 'validate-pyproject[all]' validate-pyproject pyproject.toml
+
       - name: Build project for distribution
         run: uv build
+
+      # Local stand-in for the metadata validation the TestPyPI round-trip used
+      # to provide. twine <7 cannot parse Metadata-Version 2.5, which hatchling
+      # now emits, so the floor is required.
+      - name: Check distribution metadata
+        run: uvx --from 'twine>=7' twine check --strict dist/*
 
       - name: Upload build
         uses: actions/upload-artifact@v7
@@ -76,21 +85,9 @@ jobs:
           echo pkg-name="$(uvx hatch project metadata | jq -r .name)" >> $GITHUB_OUTPUT
           echo version="$(uvx hatch version)" >> $GITHUB_OUTPUT
 
-  test-pypi-publish:
-    needs:
-      - build
-    uses:
-      ./.github/workflows/_test_release.yml
-    permissions:
-      id-token: write
-    with:
-      working-directory: ${{ inputs.working-directory }}
-    secrets: inherit
-
   pre-release-checks:
     needs:
       - build
-      - test-pypi-publish
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -117,30 +114,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Import published package
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: ${{ inputs.working-directory }}/dist/
+
+      - name: Import built package
         shell: bash
         env:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
-          VERSION: ${{ needs.build.outputs.version }}
-        # Here we use:
-        # - The default regular PyPI index as the *primary* index, meaning
-        #   that it takes priority (https://pypi.org/simple)
-        # - The test PyPI index as an extra index, so that any dependencies that
-        #   are not found on test PyPI can be resolved and installed anyway.
-        #   (https://test.pypi.org/simple). This will include the PKG_NAME==VERSION
-        #   package because VERSION will not have been uploaded to regular PyPI yet.
-        # - attempt install again after 5 seconds if it fails because there is
-        #   sometimes a delay in availability on test pypi
+        # The built wheel is installed straight from the `dist` artifact rather
+        # than round-tripped through an index. Dependencies still resolve from
+        # real PyPI, so this is a closer match to what a consumer gets than the
+        # previous TestPyPI/PyPI hybrid.
         run: |
-          uv run pip install \
-            --extra-index-url https://test.pypi.org/simple/ \
-            "$PKG_NAME==$VERSION" || \
-          ( \
-            sleep 5 && \
-            uv run pip install \
-              --extra-index-url https://test.pypi.org/simple/ \
-              "$PKG_NAME==$VERSION" \
-          )
+          uv run pip install dist/*.whl
 
           # For langchain-mongodb, replace dashes in the package name with underscores.
           IMPORT_NAME="${PKG_NAME//-/_}"
@@ -154,16 +142,10 @@ jobs:
       - name: Import test dependencies
         run: just install
 
-      # Overwrite the local version of the package with the test PyPI version.
-      - name: Import published package (again)
-        shell: bash
-        env:
-          PKG_NAME: ${{ needs.build.outputs.pkg-name }}
-          VERSION: ${{ needs.build.outputs.version }}
-        run: |
-          uv run pip install \
-            --extra-index-url https://test.pypi.org/simple/ \
-            "$PKG_NAME==$VERSION"
+      # `just install` puts an editable install of the local source in place;
+      # overwrite it so the tests run against the built artifact.
+      - name: Reinstall built package over the editable install
+        run: uv run pip install --force-reinstall --no-deps dist/*.whl
 
       - name: Start local Atlas
         working-directory: .
@@ -193,7 +175,6 @@ jobs:
   publish:
     needs:
       - build
-      - test-pypi-publish
       - pre-release-checks
     runs-on: ubuntu-latest
     permissions:
@@ -236,7 +217,6 @@ jobs:
   mark-release:
     needs:
       - build
-      - test-pypi-publish
       - pre-release-checks
       - publish
     runs-on: ubuntu-latest
