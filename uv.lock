@@ -1185,7 +1185,7 @@ wheels = [
 
 [[package]]
 name = "langchain-mongodb"
-version = "0.11.0"
+version = "0.12.0"
 source = { editable = "libs/langchain-mongodb" }
 dependencies = [
     { name = "langchain" },
