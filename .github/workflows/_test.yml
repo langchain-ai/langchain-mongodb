@@ -77,4 +77,10 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
-          just unit_tests
+          # Deliberately not `just unit_tests`: that recipe is `uv run pytest`,
+          # and `uv run` re-syncs from the lockfile, silently discarding the
+          # lowest-direct resolution above ("Ignoring existing lockfile due to
+          # change in resolution mode"). --no-sync is what makes this step
+          # actually test minimum versions.
+          uv pip list
+          uv run --no-sync pytest tests/unit_tests
