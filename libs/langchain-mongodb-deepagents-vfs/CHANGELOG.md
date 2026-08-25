@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.1  (2026/08/23)
+## 0.1.0  (2026/08/24)
 
 - Initial release of `langchain-mongodb-deepagents-vfs`.
 - Implements DeepAgents' `BackendProtocol`, routing `grep`, `glob`, and `ls`
