@@ -34,6 +34,11 @@ vectorstore = MongoDBAtlasVectorSearch.from_connection_string(
     namespace=DB_NAME + "." + COLLECTION_NAME,
     embedding=OpenAIEmbeddings(model=MODEL_NAME),
     index_name=VECTOR_SEARCH_INDEX_NAME,
+    # The field in your documents that holds the page content. Defaults to
+    # "text" — if your collection stores it under a different field name
+    # (e.g. "text_clean" or "content"), set this explicitly or
+    # similarity_search will silently return no results.
+    text_key="text",
 )
 
 retrieved_docs = vectorstore.similarity_search(
