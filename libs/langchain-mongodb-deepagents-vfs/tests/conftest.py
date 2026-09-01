@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import os
 import textwrap
 from unittest.mock import MagicMock
 
@@ -86,22 +85,22 @@ def _isolate_aws_env(request, monkeypatch):
 
 
 @pytest.fixture(scope="function")
-def aws_credentials():
-    """Fake AWS creds so moto doesn't hit real AWS."""
-    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
-    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
-    os.environ["AWS_SECURITY_TOKEN"] = "testing"
-    os.environ["AWS_SESSION_TOKEN"] = "testing"
-    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+def aws_credentials(monkeypatch):
+    """Fake AWS creds so moto doesn't hit real AWS.
+
+    Uses ``monkeypatch`` rather than assigning to ``os.environ`` directly so
+    that any pre-existing values are *restored* on teardown instead of being
+    deleted.  Deleting them breaks the real-service suites when both run in one
+    pytest process (``pytest tests/e2e_tests``): CI supplies assumed-role
+    credentials as environment variables, and once they are gone botocore falls
+    through to the EC2 instance metadata role.
+    """
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_SECURITY_TOKEN", "testing")
+    monkeypatch.setenv("AWS_SESSION_TOKEN", "testing")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     yield
-    for k in (
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SECURITY_TOKEN",
-        "AWS_SESSION_TOKEN",
-        "AWS_DEFAULT_REGION",
-    ):
-        os.environ.pop(k, None)
 
 
 @pytest.fixture(scope="function")
