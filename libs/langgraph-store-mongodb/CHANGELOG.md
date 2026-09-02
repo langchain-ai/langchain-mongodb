@@ -4,6 +4,8 @@
 
 ## Changes in version 0.4.0 (XXXX/XX/XX)
 
+- Fix `create_vector_index_config` so `AutoEmbeddings` indexes can be configured
+  without explicitly passing dimensions or similarity.
 - Add native reranking (`$rerank`) support to `MongoDBStore.search()`. Pass a
   `RerankConfig` to the `MongoDBStore` constructor to enable reranking of vector
   search results using the Voyage AI reranker. Requires MongoDB Atlas 8.3+,

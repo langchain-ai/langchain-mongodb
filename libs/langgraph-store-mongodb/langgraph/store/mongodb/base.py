@@ -119,7 +119,8 @@ class VectorIndexConfig(IndexConfig, total=False):
     It is designed to have one vector per document.
 
     NOTE: If using AutoEmbeddings, the vectors are not explicitly stored in the Collection.
-    Set dims to -1, relevance_score_fn to None.
+    The factory function automatically configures dimensions and similarity for
+    auto-embedding indexes.
     The embedding_key will not store vectors. Instead, it will be the texts to be embedded.
     """
 
@@ -139,27 +140,45 @@ class VectorIndexConfig(IndexConfig, total=False):
 
 
 def create_vector_index_config(
-    dims: int | None,
-    embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
+    dims: int | None = None,
+    embed: Optional[Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str]] = None,
     fields: Optional[list[str]] = None,
     name: str = "vector_index",
-    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = "cosine",
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = None,
     embedding_key: str | None = "embedding",
     filters: Optional[list[str]] = None,
 ) -> VectorIndexConfig:
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
 
     Args:
-        dims: Dimensions of the embedding vectors.
+        dims: Dimensions of the embedding vectors. Required unless using
+            AutoEmbeddings.
         embed: Embedding model.
         fields: Field to extract text from for embedding generation (list of length 1).
         name: Arbitrary name to give to the index in Atlas.
         relevance_score_fn: Function used to establish similarity of vectors.
+            Defaults to cosine for manual embeddings and must be omitted for
+            AutoEmbeddings.
         embedding_key: Name of the field used in the collection to store vectors.
         filters: List of (possibly nested) fields to index allowing filtering.
 
     Returns: VectorIndexConfig to be passed to MongoDBStore constructor.
     """
+
+    if embed is None:
+        raise ValueError("embed is required.")
+
+    if isinstance(embed, AutoEmbeddings):
+        if dims not in (None, -1):
+            raise ValueError("dimensions cannot be set when using AutoEmbeddings.")
+        if relevance_score_fn is not None:
+            raise ValueError("similarity cannot be set when using AutoEmbeddings.")
+        dims = -1
+    else:
+        if dims is None:
+            raise ValueError("dims is required when using manual embeddings.")
+        if relevance_score_fn is None:
+            relevance_score_fn = "cosine"
 
     MongoDBStore.ensure_index_filters(filters)
     if filters and "namespace_prefix" not in filters:
