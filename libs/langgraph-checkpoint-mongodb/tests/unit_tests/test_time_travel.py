@@ -93,7 +93,7 @@ def test(checkpointer: MongoDBSaver) -> None:
     graph = workflow.compile(checkpointer=checkpointer)
 
     # Run the graph
-    graph.invoke(input=initial_state, config=config, stream_mode="checkpoints")  # type:ignore[call-overload]
+    graph.invoke(input=initial_state, config=config, stream_mode="checkpoints")
 
     # Check to see whether the final state is approved
     final_state = graph.get_state(config=config)

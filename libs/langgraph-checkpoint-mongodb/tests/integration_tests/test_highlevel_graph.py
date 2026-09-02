@@ -144,9 +144,9 @@ async def test_fanout(
         config: RunnableConfig = {"configurable": {"thread_id": cname}}
         start = time.monotonic()
         if "async" in cname:
-            out = [c async for c in graphc.astream(joke_subjects, config=config)]  # type: ignore[arg-type]
+            out = [c async for c in graphc.astream(joke_subjects, config=config)]
         else:
-            out = [c for c in graphc.stream(joke_subjects, config=config)]  # type: ignore[arg-type]
+            out = [c for c in graphc.stream(joke_subjects, config=config)]
         assert len(out) == N_SUBJECTS
         assert isinstance(out[0], dict)
         assert out[0].keys() == {"generate_joke"}
@@ -180,7 +180,7 @@ async def test_custom_properties_async(checkpointer_mongodb: MongoDBSaver) -> No
     compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb)
 
     # Invoke the compiled state graph with user input
-    await compiled_state_graph.ainvoke(  # type:ignore[call-overload]
+    await compiled_state_graph.ainvoke(
         input={"subjects": [], "step": 0},
         config=config,
         stream_mode="values",
@@ -212,7 +212,7 @@ def test_custom_properties(checkpointer_mongodb: MongoDBSaver) -> None:
     compiled_state_graph = state_graph.compile(checkpointer=checkpointer_mongodb)
 
     # Invoke the compiled state graph with user input
-    compiled_state_graph.invoke(  # type:ignore[call-overload]
+    compiled_state_graph.invoke(
         input={"subjects": [], "step": 0},
         config=config,
         stream_mode="values",

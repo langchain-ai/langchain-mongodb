@@ -1423,8 +1423,8 @@ dev = [
     { name = "langgraph", specifier = ">=1.0.0" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pytest", specifier = ">=7.2.1" },
-    { name = "pytest-asyncio", specifier = ">=0.21.1" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.8" },
     { name = "pytest-mock", specifier = ">=3.11.1" },
     { name = "pytest-repeat", specifier = ">=0.9.3" },
     { name = "pytest-watch", specifier = ">=4.2.0" },
@@ -1482,8 +1482,8 @@ dev = [
     { name = "langchain-openai", specifier = ">=0.3.0" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pytest", specifier = ">=7.2.1" },
-    { name = "pytest-asyncio", specifier = ">=0.21.1" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.8" },
 ]
 
 [[package]]
