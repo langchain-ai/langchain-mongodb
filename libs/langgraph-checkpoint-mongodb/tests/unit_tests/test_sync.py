@@ -264,7 +264,9 @@ def test_init_creates_indexes() -> None:
 
 
 def test_list_rejects_mql_operator_keys() -> None:
-    with MongoDBSaver.from_conn_string(MONGODB_URI) as saver:
+    with MongoDBSaver.from_conn_string(
+        MONGODB_URI, DB_NAME, "reject_mql_operator_keys"
+    ) as saver:
         # nested operator value — $exists bypass leaks all checkpoints
         with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
             list(saver.list(None, filter={"user_id": {"$exists": True}}))
