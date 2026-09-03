@@ -49,6 +49,14 @@ jobs:
         working-directory: .
         run: bash scripts/start_local_atlas.sh
 
+      # just's dotenv-load only applies inside just's own process, so steps
+      # that call uv directly (the minimum-dependency-versions step below)
+      # never see the dynamic port start_local_atlas.sh assigned. Exporting
+      # it to $GITHUB_ENV makes it visible to every step in this job.
+      - name: Export local Atlas connection string
+        working-directory: .
+        run: cat .local_atlas_uri >> "$GITHUB_ENV"
+
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
 
