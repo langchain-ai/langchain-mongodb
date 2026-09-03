@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.4.0 (XXXX/XX/XX)
+## Changes in version 0.4.0 (2026/09/03)
 
 - Add native reranking (`$rerank`) support to `MongoDBStore.search()`. Pass a
   `RerankConfig` to the `MongoDBStore` constructor to enable reranking of vector
@@ -10,6 +10,7 @@
   Native Reranking enabled in Atlas Project Settings, and a Voyage AI API key
   configured in Atlas. Runs entirely server-side — no Voyage AI client dependency
   is needed.
+- Require Python >=3.11 (dropped support for Python 3.10, which reached End of Life this Fall).
 
 ## Changes in version 0.3.0 (2026/05/11)
 - Fix possible multikey index collision on namespace arrays.
