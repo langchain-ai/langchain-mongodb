@@ -28,6 +28,7 @@ def test_search(input_data: dict[str, Any]) -> None:
     db = client[DB_NAME]
     for clxn_name in db.list_collection_names():
         db.drop_collection(clxn_name)
+    client.close()
 
     with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:
         # save checkpoints
@@ -187,6 +188,8 @@ def test_ttl(input_data: dict[str, Any]) -> None:
     except OperationFailure:
         # For remote, we've adjusted manually via Atlas Administration API.
         pass
+    finally:
+        client.close()
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, collection_name, ttl=ttl
@@ -257,6 +260,7 @@ def test_init_creates_indexes() -> None:
 
     db.drop_collection(checkpoint_coll)
     db.drop_collection(writes_coll)
+    client.close()
 
 
 def test_list_rejects_mql_operator_keys() -> None:
