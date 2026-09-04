@@ -2,7 +2,7 @@
 
 ---
 
-## Changes in version 0.5.0 (2026/09/03)
+## Changes in version 0.5.0 (2026/09/04)
 - Require Python >=3.11 (dropped support for Python 3.10, which reached End of Life this Fall).
 
 ## Changes in version 0.4.0 (2026/05/11)
