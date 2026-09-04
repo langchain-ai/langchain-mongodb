@@ -208,7 +208,14 @@ def test_ttl(input_data: dict[str, Any]) -> None:
             assert len(search_results_2) == 1
             assert search_results_2[0].metadata == input_data["metadata_2"]
 
-            sleep(ttl + monitor_period)
+            # ttlMonitorSleepSecs sets the interval between TTL sweeps, not a
+            # deadline: worst case, a sweep just finished as the document
+            # became eligible, so the next one is up to a full monitor_period
+            # away. sleep(ttl + monitor_period) asserted almost exactly that
+            # worst case with zero room for the delete's own execution time,
+            # so it raced the background thread. +1s covers that latency -
+            # a small fixed allowance, not a multiple of ttl or monitor_period.
+            sleep(ttl + monitor_period + 1)
             assert len(list(saver.list(None, filter=query))) == 0
 
         finally:
