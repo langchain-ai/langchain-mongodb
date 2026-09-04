@@ -20,6 +20,16 @@ from langchain_mongodb.utils import DRIVER_METADATA, _append_client_metadata
 NUM_DOCUMENTS_TO_SAMPLE = 4
 MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE = 20
 
+_BLOCKED_AGGREGATION_OPERATORS = {
+    "$accumulator",
+    "$function",
+    "$merge",
+    "$out",
+    "$where",
+}
+_COLLECTION_AGGREGATION_STAGES = {"$graphLookup", "$lookup", "$unionWith"}
+_FUSION_AGGREGATION_STAGES = {"$rankFusion", "$scoreFusion"}
+
 _BSON_LOOKUP = {
     str: "String",
     int: "Number",
@@ -183,6 +193,93 @@ class MongoDBDatabase:
             ):
                 doc[key] = value[: MAX_STRING_LENGTH_OF_SAMPLE_DOCUMENT_VALUE + 1]
 
+    def _validate_pipeline(self, pipeline: Any) -> None:
+        if not isinstance(pipeline, list):
+            raise ValueError("Aggregation pipeline must be a list of stages.")
+
+        for stage in pipeline:
+            if not isinstance(stage, dict) or len(stage) != 1:
+                raise ValueError(
+                    "Each aggregation stage must contain exactly one operator."
+                )
+
+            stage_name, stage_value = next(iter(stage.items()))
+            if not isinstance(stage_name, str) or not stage_name.startswith("$"):
+                raise ValueError("Each aggregation stage must use a valid operator.")
+            if stage_name in _BLOCKED_AGGREGATION_OPERATORS:
+                raise ValueError(f"Aggregation operator {stage_name} is not allowed.")
+
+            if stage_name in _COLLECTION_AGGREGATION_STAGES:
+                self._validate_collection_stage(stage_name, stage_value)
+            elif stage_name == "$facet":
+                if not isinstance(stage_value, dict):
+                    raise ValueError("$facet must contain named pipelines.")
+                for nested_pipeline in stage_value.values():
+                    self._validate_pipeline(nested_pipeline)
+            elif stage_name in _FUSION_AGGREGATION_STAGES:
+                self._validate_fusion_stage(stage_name, stage_value)
+
+            self._validate_aggregation_expression(stage_value)
+
+    def _validate_collection_stage(self, stage_name: str, stage_value: Any) -> None:
+        collection: Any
+        nested_pipeline: Any = None
+        if stage_name == "$unionWith" and isinstance(stage_value, str):
+            collection = stage_value
+        elif isinstance(stage_value, dict):
+            collection = stage_value.get(
+                "from" if stage_name != "$unionWith" else "coll"
+            )
+            nested_pipeline = stage_value.get("pipeline")
+            if nested_pipeline is not None:
+                self._validate_pipeline(nested_pipeline)
+        else:
+            raise ValueError(f"{stage_name} must specify a collection.")
+
+        if collection is None and stage_name in {"$lookup", "$unionWith"}:
+            if self._starts_with_documents_stage(nested_pipeline):
+                return
+            raise ValueError(
+                f"{stage_name} without a collection must start with $documents."
+            )
+        if not isinstance(collection, str) or not collection:
+            raise ValueError(f"{stage_name} must specify a collection.")
+        if collection not in self.get_usable_collection_names():
+            raise ValueError(f"Collection {collection} is not available.")
+
+    @staticmethod
+    def _starts_with_documents_stage(pipeline: Any) -> bool:
+        return bool(
+            isinstance(pipeline, list)
+            and pipeline
+            and isinstance(pipeline[0], dict)
+            and next(iter(pipeline[0]), None) == "$documents"
+        )
+
+    def _validate_fusion_stage(self, stage_name: str, stage_value: Any) -> None:
+        if not isinstance(stage_value, dict):
+            raise ValueError(f"{stage_name} must contain named input pipelines.")
+        input_value = stage_value.get("input")
+        if not isinstance(input_value, dict):
+            raise ValueError(f"{stage_name} must contain named input pipelines.")
+        inputs = input_value.get("pipelines")
+        if not isinstance(inputs, dict):
+            raise ValueError(f"{stage_name} must contain named input pipelines.")
+        for nested_pipeline in inputs.values():
+            self._validate_pipeline(nested_pipeline)
+
+    def _validate_aggregation_expression(self, value: Any) -> None:
+        if isinstance(value, dict):
+            for key, nested_value in value.items():
+                if key in _BLOCKED_AGGREGATION_OPERATORS:
+                    raise ValueError(f"Aggregation operator {key} is not allowed.")
+                if key == "$literal":
+                    continue
+                self._validate_aggregation_expression(nested_value)
+        elif isinstance(value, list):
+            for item in value:
+                self._validate_aggregation_expression(item)
+
     def run(self, command: str) -> Union[str, Cursor]:
         """Execute a MongoDB aggregation command and return a string representing the results.
 
@@ -207,15 +304,15 @@ class MongoDBDatabase:
         if ".aggregate(" not in command:
             raise ValueError("Only aggregate(...) queries are currently supported.")
 
-        # Parse pipeline using helper
         agg_pipeline = parse_command(command)
+        self._validate_pipeline(agg_pipeline)
 
         try:
             coll = self._db[col_name]
             result = coll.aggregate(agg_pipeline)
             return dumps(list(result), indent=2)
-        except Exception as e:
-            raise ValueError(f"Error executing aggregation: {e}") from e
+        except PyMongoError as e:
+            raise ValueError("Error executing aggregation.") from e
 
     def get_collection_info_no_throw(
         self, collection_names: Optional[List[str]] = None
@@ -232,9 +329,9 @@ class MongoDBDatabase:
         try:
             return self.get_collection_info(collection_names)
         except ValueError as e:
-            """Format the error message"""
-            raise e
             return f"Error: {e}"
+        except PyMongoError:
+            return "Error: collection information could not be retrieved."
 
     def run_no_throw(self, command: str) -> Union[str, Cursor]:
         """Execute a MongoDB command and return a string representing the results.
@@ -246,9 +343,10 @@ class MongoDBDatabase:
         """
         try:
             return self.run(command)
-        except PyMongoError as e:
-            """Format the error message"""
+        except ValueError as e:
             return f"Error: {e}"
+        except PyMongoError:
+            return "Error: aggregation could not be executed."
 
     def get_context(self) -> Dict[str, Any]:
         """Return db context that you may want in agent prompt."""
