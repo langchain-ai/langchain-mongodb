@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Dict, Generator, List
 
 import pytest  # type: ignore[import-not-found]
@@ -27,11 +26,11 @@ from ..utils import (
 
 DIMENSIONS = 5
 
-COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
+# COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
 
-pytestmark = pytest.mark.skipif(
-    COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
-)
+# pytestmark = pytest.mark.skipif(
+#     COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
+# )
 
 
 @pytest.fixture(scope="module")
@@ -55,7 +54,9 @@ def collection(client: MongoClient) -> Collection:
             auto_embedding_model=AUTOEMBED_MODEL,
         )
 
-    return clxn
+    # return clxn  # todo - confirm
+    yield clxn
+    clxn.drop()
 
 
 @pytest.fixture(scope="module")

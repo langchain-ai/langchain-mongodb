@@ -1,4 +1,3 @@
-import os
 from time import sleep
 from typing import Generator
 
@@ -12,11 +11,13 @@ from langchain_mongodb import index
 DIMENSION = 5
 TIMEOUT = 120
 
-if os.getenv("COMMUNITY_WITH_SEARCH"):
-    pytest.skip(
-        "COMMUNITY_WITH_SEARCH set. Skipping unit_tests/test_index as this community has search available",
-        allow_module_level=True,
-    )
+# todo - check behavior when we remove COMMUNITY_WITH_SEARCH
+
+# if os.getenv("COMMUNITY_WITH_SEARCH"):
+#     pytest.skip(
+#         "COMMUNITY_WITH_SEARCH set. Skipping unit_tests/test_index as this community has search available",
+#         allow_module_level=True,
+#     )
 
 
 @pytest.fixture

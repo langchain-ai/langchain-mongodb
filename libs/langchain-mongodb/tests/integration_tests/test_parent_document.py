@@ -40,7 +40,9 @@ TIMEOUT = 60.0
 def embedding_param(request, embedding):
     if request.param == "auto":
         if not os.environ.get("COMMUNITY_WITH_SEARCH", ""):
-            raise pytest.skip("Only run if COMMUNITY_WITH_SEARCH is set")
+            raise pytest.skip(
+                "Only run if COMMUNITY_WITH_SEARCH is set"
+            )  # todo - investigate these tests
         return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding
 

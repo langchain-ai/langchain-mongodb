@@ -69,26 +69,14 @@ class PatchedMongoDBAtlasVectorSearch(MongoDBAtlasVectorSearch):
         n_docs = self.collection.count_documents({})
         start = monotonic()
 
-        if self._is_autoembedding:
-            while monotonic() - start <= TIMEOUT:
-                for idx in list(self.collection.list_search_indexes()):
-                    if idx["name"] == self._index_name:
-                        if idx["numDocs"] == n_docs:
-                            return ids_inserted
+        while monotonic() - start <= TIMEOUT:
+            if (
+                len(self.similarity_search("sandwich", k=n_docs, oversampling_factor=1))
+                == n_docs
+            ):
+                return ids_inserted
+            else:
                 sleep(INTERVAL)
-        else:
-            while monotonic() - start <= TIMEOUT:
-                if (
-                    len(
-                        self.similarity_search(
-                            "sandwich", k=n_docs, oversampling_factor=1
-                        )
-                    )
-                    == n_docs
-                ):
-                    return ids_inserted
-                else:
-                    sleep(INTERVAL)
 
         raise TimeoutError(f"Failed to embed, insert, and index texts in {TIMEOUT}s.")
 

@@ -1,4 +1,3 @@
-import os
 from typing import Generator, List, Optional
 
 import pytest
@@ -16,11 +15,11 @@ VECTOR_INDEX_NAME = "vector_index"
 TIMEOUT = 120
 DIMENSIONS = 10
 
-if os.getenv("COMMUNITY_WITH_SEARCH"):
-    pytest.skip(
-        "COMMUNITY_WITH_SEARCH set. Skipping unit_tests/test_index as this community has search available",
-        allow_module_level=True,
-    )
+# if os.getenv("COMMUNITY_WITH_SEARCH"):
+#     pytest.skip(
+#         "COMMUNITY_WITH_SEARCH set. Skipping unit_tests/test_index as this community has search available",
+#         allow_module_level=True,
+#     )
 
 
 @pytest.fixture
