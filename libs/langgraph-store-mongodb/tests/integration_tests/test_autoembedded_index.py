@@ -1,4 +1,4 @@
-"""Test semnatic search of store when using an AutoEmbedded Vector Search Index."""
+"""Test semantic search of store when using an AutoEmbedded Vector Search Index."""
 
 import os
 from collections.abc import Callable, Generator
@@ -15,13 +15,6 @@ from langgraph.store.mongodb import (
     MongoDBStore,
     create_vector_index_config,
 )
-
-if not os.environ.get("COMMUNITY_WITH_SEARCH"):
-    pytest.skip(
-        "AutoEmbedded Vector Search Index is only available in MongoDB Community with Search.",
-        allow_module_level=True,
-    )
-
 
 MONGODB_URI = os.environ.get(
     "MONGODB_URI", "mongodb://localhost:27017?directConnection=true"
