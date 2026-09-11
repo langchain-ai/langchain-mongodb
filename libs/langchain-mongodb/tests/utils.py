@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import os
 from copy import deepcopy
+from functools import lru_cache
 from time import monotonic, sleep
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Union, cast
 
+import pytest
 from bson import ObjectId
 from langchain_core.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
@@ -24,12 +26,14 @@ from pydantic import model_validator
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.driver_info import DriverInfo
+from pymongo.errors import OperationFailure
 from pymongo.operations import SearchIndexModel
 from pymongo.results import BulkWriteResult, DeleteResult, InsertManyResult
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
 from langchain_mongodb.cache import MongoDBAtlasSemanticCache
+from langchain_mongodb.index import create_vector_search_index
 
 TIMEOUT = 120
 INTERVAL = 0.5
@@ -39,6 +43,68 @@ AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 
 DB_NAME = "langchain_test_db"
+
+AUTOEMBED_PROBE_COLLECTION = "langchain_test_autoembed_probe"
+AUTOEMBED_PROBE_IDX_NAME = "langchain-test-index-autoembed-probe"
+
+# Substring of the server error raised when the deployment has no embedding
+# model registered.  The accompanying code is a generic ``UnknownError`` (8),
+# so the message is the only thing that distinguishes this from a real fault.
+_MODEL_NOT_REGISTERED = "not registered yet"
+
+
+@lru_cache(maxsize=1)
+def autoembedding_available() -> bool:
+    """Whether this deployment can build an ``autoEmbed`` vector search index.
+
+    Auto-embedding is evaluated entirely server-side: the deployment calls
+    Voyage AI itself, so there is no client-side key and nothing in the
+    connection string reveals whether a model is registered.  A deployment
+    without one rejects the index with ``CanonicalModel: <model> not
+    registered yet, supported models are: []``.
+
+    The probe creates and drops a throwaway index.  It deliberately does not
+    wait for READY: an unregistered model is refused by ``createSearchIndexes``
+    itself, so a single round trip settles the question.
+    """
+    client = MongoClient(CONNECTION_STRING)
+    clxn = client[DB_NAME][AUTOEMBED_PROBE_COLLECTION]
+    try:
+        create_vector_search_index(
+            collection=clxn,
+            index_name=AUTOEMBED_PROBE_IDX_NAME,
+            path="text",
+            dimensions=-1,
+            similarity=None,
+            auto_embedding_model=AUTOEMBED_MODEL,
+        )
+    except OperationFailure as exc:
+        if _MODEL_NOT_REGISTERED in str(exc):
+            return False
+        raise
+    else:
+        return True
+    finally:
+        clxn.drop()
+        client.close()
+
+
+def skip_unless_autoembedding() -> None:
+    """Skip the calling test unless the deployment supports auto-embedding.
+
+    Deployments expected to support it should set ``AUTOEMBED_REQUIRED``, which
+    turns the skip into a failure.  Without that, a deployment that quietly
+    loses its registered model leaves the suite green while covering nothing.
+    """
+    if autoembedding_available():
+        return
+    reason = (
+        f"Deployment has no '{AUTOEMBED_MODEL}' embedding model registered, "
+        "so autoEmbed indexes cannot be created"
+    )
+    if os.environ.get("AUTOEMBED_REQUIRED"):
+        pytest.fail(f"{reason} (AUTOEMBED_REQUIRED is set)")
+    pytest.skip(reason)
 
 
 def create_database() -> MongoDBDatabase:
