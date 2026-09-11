@@ -1,0 +1,24 @@
+name: Label issue package
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  label-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Apply the selected package label
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const { default: labelIssuePackage } = await import(
+              `${process.env.GITHUB_WORKSPACE}/.github/scripts/label_issue_package.js`,
+            );
+            await labelIssuePackage({ github, context });
