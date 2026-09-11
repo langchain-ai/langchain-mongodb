@@ -247,3 +247,35 @@ class TestGrepHybridPipelineShape:
         vector_top_k = stages["vector"][0]["$vectorSearch"]["limit"]
         fulltext_limit = next(s["$limit"] for s in stages["fulltext"] if "$limit" in s)
         assert fulltext_limit == vector_top_k
+
+
+@pytest.mark.unit
+class TestSearchRouterLeadingSlash:
+    """deepagents' file tools pass absolute paths ("/docs"); S3 keys are relative,
+    so ls/glob/grep must normalize the leading slash or they match nothing."""
+
+    def test_ls_tolerates_leading_slash(self, mongo_collection, mock_embedder):
+        _seed(mongo_collection, [_make_doc("docs/a.txt"), _make_doc("docs/b.txt")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        with_slash = [e["path"] for e in router.ls("/docs").entries]
+        without = [e["path"] for e in router.ls("docs").entries]
+        assert with_slash == without
+        assert with_slash  # empty before the fix
+
+    def test_glob_tolerates_leading_slash(self, mongo_collection, mock_embedder):
+        _seed(mongo_collection, [_make_doc("docs/a.pdf", filename="a.pdf")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        with_slash = [m["path"] for m in router.glob("*.pdf", path="/docs/").matches]
+        without = [m["path"] for m in router.glob("*.pdf", path="docs/").matches]
+        assert with_slash == without == ["docs/a.pdf"]
+
+    def test_grep_tolerates_leading_slash(self, mongo_collection, mock_embedder):
+        _seed(
+            mongo_collection,
+            [_make_doc("docs/api.txt", content="authentication flow diagram")],
+        )
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        with_slash = [m["path"] for m in router.grep("authentication", path="/docs").matches]
+        without = [m["path"] for m in router.grep("authentication", path="docs").matches]
+        assert with_slash == without
+        assert with_slash  # empty before the fix
