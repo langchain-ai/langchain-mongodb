@@ -26,6 +26,8 @@ from ..utils import (
 
 DIMENSIONS = 5
 
+pytestmark = pytest.mark.usefixtures("autoembedding_or_skip")
+
 
 @pytest.fixture(scope="module")
 def collection(client: MongoClient) -> Collection:

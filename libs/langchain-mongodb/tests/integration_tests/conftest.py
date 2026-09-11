@@ -10,7 +10,7 @@ from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from pymongo import MongoClient
 
-from ..utils import CONNECTION_STRING
+from ..utils import CONNECTION_STRING, skip_unless_autoembedding
 
 
 @pytest.fixture(scope="session")
@@ -49,3 +49,9 @@ def dimensions() -> int:
     if os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return 1536
     return 384
+
+
+@pytest.fixture(scope="session")
+def autoembedding_or_skip() -> None:
+    """Skip the requesting test unless the deployment supports auto-embedding."""
+    skip_unless_autoembedding()

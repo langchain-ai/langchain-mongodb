@@ -20,6 +20,7 @@ from ..utils import (
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
+    skip_unless_autoembedding,
 )
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
@@ -38,6 +39,7 @@ TIMEOUT = 60.0
 @pytest.fixture
 def embedding_param(request, embedding):
     if request.param == "auto":
+        skip_unless_autoembedding()
         return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding
 
