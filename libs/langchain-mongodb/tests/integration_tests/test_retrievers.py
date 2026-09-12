@@ -1,4 +1,3 @@
-from time import sleep, time
 from typing import Generator, List
 
 import pytest
@@ -7,7 +6,6 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo_search_utils import drop_vector_search_index
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_mongodb.embeddings import AutoEmbeddings
@@ -27,6 +25,8 @@ from ..utils import (
     ConsistentFakeEmbeddings,
     MockCollection,
     PatchedMongoDBAtlasVectorSearch,
+    drop_search_index_and_wait,
+    wait_for_fulltext_index,
 )
 
 COLLECTION_NAME = "langchain_test_retrievers"
@@ -233,6 +233,45 @@ def indexed_nested_vectorstore(
     vectorstore.collection.delete_many({})
 
 
+# Ensure FullText indexes contain all documents.
+# A similar wait for Vector indexes is built into PatchedMongoDBAtlasVectorSearch.
+# These fixtures are added below not to affect existing test times.
+
+
+@pytest.fixture(scope="module")
+def fulltext_indexed(indexed_vectorstore: MongoDBAtlasVectorSearch) -> None:
+    """Wait for the fulltext index to contain the documents the fixture inserted."""
+    wait_for_fulltext_index(
+        indexed_vectorstore.collection, SEARCH_INDEX_NAME, PAGE_CONTENT_FIELD, TIMEOUT
+    )
+
+
+@pytest.fixture(scope="module")
+def fulltext_indexed_autoembed(
+    indexed_vectorstore_autoembed: MongoDBAtlasVectorSearch,
+) -> None:
+    """Wait for the fulltext index to contain the documents the fixture inserted."""
+    wait_for_fulltext_index(
+        indexed_vectorstore_autoembed.collection,
+        SEARCH_INDEX_NAME,
+        PAGE_CONTENT_FIELD,
+        TIMEOUT,
+    )
+
+
+@pytest.fixture(scope="module")
+def fulltext_indexed_nested(
+    indexed_nested_vectorstore: MongoDBAtlasVectorSearch,
+) -> None:
+    """Wait for the fulltext index to contain the documents the fixture inserted."""
+    wait_for_fulltext_index(
+        indexed_nested_vectorstore.collection,
+        SEARCH_INDEX_NAME_NESTED,
+        PAGE_CONTENT_FIELD_NESTED,
+        TIMEOUT,
+    )
+
+
 def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
     """Test VectorStoreRetriever"""
     retriever = indexed_vectorstore.as_retriever()
@@ -247,7 +286,9 @@ def test_vector_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     assert "New Orleans" in results[0].page_content
 
 
-def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) -> None:
+def test_hybrid_retriever(
+    indexed_vectorstore: PatchedMongoDBAtlasVectorSearch, fulltext_indexed: None
+) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
@@ -267,6 +308,7 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
 
 def test_hybrid_retriever_autoembed(
     indexed_vectorstore_autoembed: PatchedMongoDBAtlasVectorSearch,
+    fulltext_indexed_autoembed: None,
 ) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
@@ -287,6 +329,7 @@ def test_hybrid_retriever_autoembed(
 
 def test_hybrid_retriever_deprecated_top_k(
     indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+    fulltext_indexed: None,
 ) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
@@ -310,6 +353,7 @@ def test_hybrid_retriever_deprecated_top_k(
 @flaky(max_runs=5, min_passes=4)
 def test_hybrid_retriever_nested(
     indexed_nested_vectorstore: PatchedMongoDBAtlasVectorSearch,
+    fulltext_indexed_nested: None,
 ) -> None:
     """Test basic usage of MongoDBAtlasHybridSearchRetriever"""
     retriever = MongoDBAtlasHybridSearchRetriever(
@@ -330,6 +374,7 @@ def test_hybrid_retriever_nested(
 
 def test_hybrid_search_weighted_rrf(
     indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+    fulltext_indexed: None,
 ):
     vec_only_retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=indexed_vectorstore,
@@ -381,6 +426,7 @@ def test_hybrid_search_weighted_rrf(
 
 def test_fulltext_retriever(
     indexed_vectorstore: PatchedMongoDBAtlasVectorSearch,
+    fulltext_indexed: None,
 ) -> None:
     """Test result of performing fulltext search.
 
@@ -396,23 +442,6 @@ def test_fulltext_retriever(
         search_field=PAGE_CONTENT_FIELD,
     )
 
-    # Wait for the search index to complete.
-    search_content = dict(
-        index=SEARCH_INDEX_NAME,
-        wildcard=dict(query="*", path=PAGE_CONTENT_FIELD, allowAnalyzedField=True),
-    )
-    n_docs = collection.count_documents({})
-    t0 = time()
-    while True:
-        if (time() - t0) > TIMEOUT:
-            raise TimeoutError(
-                f"Search index {SEARCH_INDEX_NAME} did not complete in {TIMEOUT}"
-            )
-        cursor = collection.aggregate([{"$search": search_content}])
-        if len(list(cursor)) == n_docs:
-            break
-        sleep(INTERVAL)
-
     query = "When was the last time I visited new orleans?"
     results = retriever.invoke(query)
     assert "New Orleans" in results[0].page_content
@@ -426,7 +455,7 @@ def test_fulltext_retriever_auto_create_index(
     clxn.delete_many({})
 
     if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
-        drop_vector_search_index(clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT)
+        drop_search_index_and_wait(clxn, SEARCH_INDEX_NAME, TIMEOUT)
 
     index_names_before = [ix["name"] for ix in clxn.list_search_indexes()]
     assert SEARCH_INDEX_NAME not in index_names_before
@@ -451,7 +480,7 @@ def test_hybrid_retriever_auto_create_index(
     clxn.delete_many({})
 
     if any(ix["name"] == SEARCH_INDEX_NAME for ix in clxn.list_search_indexes()):
-        drop_vector_search_index(clxn, SEARCH_INDEX_NAME, wait_until_complete=TIMEOUT)
+        drop_search_index_and_wait(clxn, SEARCH_INDEX_NAME, TIMEOUT)
 
     # Vector index only (no full-text index yet)
     if not any([VECTOR_INDEX_NAME == ix["name"] for ix in clxn.list_search_indexes()]):
