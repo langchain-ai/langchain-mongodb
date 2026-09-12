@@ -49,6 +49,54 @@ def create_database() -> MongoDBDatabase:
     return MongoDBDatabase(client, DB_NAME)
 
 
+def wait_for_fulltext_index(
+    collection: Collection,
+    index_name: str,
+    path: str,
+    timeout: float = TIMEOUT,
+) -> None:
+    """Wait until the fulltext index contains every document in the collection.
+
+    ``create_fulltext_search_index(wait_until_complete=...)`` waits for the index
+    to be created, and it only runs when the index does not exist yet. Neither
+    case waits for documents inserted later to become searchable. Tests that
+    query a fulltext index must wait for mongot to catch up, or they see an
+    empty result set.
+    """
+    n_docs = collection.count_documents({})
+    pipeline: List[Dict[str, Any]] = [
+        {"$search": {"index": index_name, "exists": {"path": path}}},
+        {"$count": "count"},
+    ]
+    start = monotonic()
+    while monotonic() - start <= timeout:
+        result = list(collection.aggregate(pipeline))
+        if result and result[0]["count"] == n_docs:
+            return
+        sleep(INTERVAL)
+    raise TimeoutError(f"{index_name} did not index {n_docs} documents in {timeout}s.")
+
+
+def drop_search_index_and_wait(
+    collection: Collection,
+    index_name: str,
+    timeout: float = TIMEOUT,
+) -> None:
+    """Drop one search index and wait until that index is gone.
+
+    ``pymongo_search_utils.drop_vector_search_index`` waits for the collection to
+    hold *zero* search indexes, so it never succeeds on a collection that keeps
+    another index. Wait for the named index only.
+    """
+    collection.drop_search_index(index_name)
+    start = monotonic()
+    while monotonic() - start <= timeout:
+        if not any(ix["name"] == index_name for ix in collection.list_search_indexes()):
+            return
+        sleep(INTERVAL)
+    raise TimeoutError(f"Index {index_name} did not drop in {timeout}s.")
+
+
 def create_llm() -> BaseChatModel:
     if os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return AzureChatOpenAI(model="o4-mini", timeout=60, cache=False, seed=12345)

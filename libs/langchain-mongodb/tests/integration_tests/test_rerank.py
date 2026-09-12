@@ -43,7 +43,11 @@ from langchain_mongodb.retrievers import (
     MongoDBAtlasHybridSearchRetriever,
 )
 
-from ..utils import DB_NAME, PatchedMongoDBAtlasVectorSearch
+from ..utils import (
+    DB_NAME,
+    PatchedMongoDBAtlasVectorSearch,
+    wait_for_fulltext_index,
+)
 
 COLLECTION_NAME = "langchain_test_rerank"
 INDEX_NAME = "langchain-test-index-rerank"
@@ -127,6 +131,17 @@ def vectorstore(
         index_name=INDEX_NAME,
     )
     yield vs
+
+
+@pytest.fixture(scope="module")
+def fulltext_indexed(
+    vectorstore: MongoDBAtlasVectorSearch, collection: Collection
+) -> None:
+    """Wait for the fulltext index to contain the documents the vectorstore inserted.
+
+    A similar wait for Vector indexes is built into PatchedMongoDBAtlasVectorSearch.
+    """
+    wait_for_fulltext_index(collection, FULLTEXT_INDEX_NAME, "text")
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +293,9 @@ def test_rerank_changes_ordering_vs_vector_search(
 
 
 def test_fulltext_retriever_rerank(
-    vectorstore: MongoDBAtlasVectorSearch, collection: Collection
+    vectorstore: MongoDBAtlasVectorSearch,
+    collection: Collection,
+    fulltext_indexed: None,
 ) -> None:
     """FullTextSearchRetriever returns k reranked Documents with no errors."""
     retriever = MongoDBAtlasFullTextSearchRetriever(
@@ -297,7 +314,9 @@ def test_fulltext_retriever_rerank(
     assert results[0].page_content == CLUB_SANDWICH
 
 
-def test_hybrid_retriever_rerank(vectorstore: MongoDBAtlasVectorSearch) -> None:
+def test_hybrid_retriever_rerank(
+    vectorstore: MongoDBAtlasVectorSearch, fulltext_indexed: None
+) -> None:
     """HybridSearchRetriever returns k reranked Documents with no errors."""
     retriever = MongoDBAtlasHybridSearchRetriever(
         vectorstore=vectorstore,
