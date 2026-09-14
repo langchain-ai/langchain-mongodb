@@ -1,0 +1,68 @@
+name: "💡 Improvement request"
+description: Suggest a new capability or an improvement to an existing one.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve the project. Tell us what you are trying to do and what would make it easier. Include a short code example if it helps explain the request. Do not include credentials, connection strings, or private data.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package is this request about?
+      options:
+        - langchain-mongodb
+        - langgraph-checkpoint-mongodb
+        - langgraph-store-mongodb
+        - langchain-mongodb-deepagents-vfs
+        - Cross-package / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What are you trying to do, and what is difficult or missing today?
+      placeholder: I am trying to ..., but ...
+    validations:
+      required: true
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: Solution description
+      description: Describe what you would expect to be able to do. Include the result or output you expect when relevant.
+      placeholder: I would like to be able to ...
+    validations:
+      required: true
+  - type: textarea
+    id: example-usage
+    attributes:
+      label: Example usage
+      description: If code would make the request clearer, show how you would like to use this capability. Pseudocode is welcome for APIs that do not exist yet.
+      placeholder: |
+        ```python
+        # Example of how you would like to use this capability
+        ...
+        ```
+
+        Expected result:
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: If you have a workaround, describe it and what makes it inconvenient or incomplete.
+      placeholder: Today I ..., but ...
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add anything else that would help us understand the request, such as related issues, documentation, screenshots, or examples. Do not include credentials, connection strings, or private data.
+      placeholder: Add any other helpful context here.
+    validations:
+      required: false
