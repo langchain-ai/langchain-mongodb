@@ -19,6 +19,7 @@ def test_delete_thread() -> None:
     db = client[DB_NAME]
     db[CHKPT_COLLECTION_NAME].delete_many({})
     db[WRITES_COLLECTION_NAME].delete_many({})
+    client.close()
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, CHKPT_COLLECTION_NAME, WRITES_COLLECTION_NAME
@@ -97,6 +98,7 @@ async def test_adelete_thread() -> None:
     db = client[DB_NAME]
     db[CHKPT_COLLECTION_NAME].delete_many({})
     db[WRITES_COLLECTION_NAME].delete_many({})
+    client.close()
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, CHKPT_COLLECTION_NAME, WRITES_COLLECTION_NAME

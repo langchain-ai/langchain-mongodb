@@ -28,6 +28,7 @@ def test_search(input_data: dict[str, Any]) -> None:
     db = client[DB_NAME]
     for clxn_name in db.list_collection_names():
         db.drop_collection(clxn_name)
+    client.close()
 
     with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, COLLECTION_NAME) as saver:
         # save checkpoints
@@ -175,11 +176,21 @@ def test_nested_filter() -> None:
 
 
 def test_ttl(input_data: dict[str, Any]) -> None:
+    """Checkpoints past their TTL are swept and removed.
+
+    ttl: seconds a checkpoint may live before it's eligible for deletion.
+    monitor_period: ttlMonitorSleepSecs, the interval between MongoDB's
+        background TTL sweeps - a scheduling interval, not a deadline.
+        Worst case, a sweep just finished as the document became
+        eligible, so the next one is up to a full monitor_period away.
+    some_latency: small fixed allowance for the sweep's own execution
+        time to make this test reliable.
+    """
     collection_name = "ttl_test"
     ttl = 1
-
-    # Set period between background task runs.
     monitor_period = 2
+    some_latency = 1
+
     client: MongoClient = MongoClient(MONGODB_URI)
     try:
         # This works for local Atlas CLI.
@@ -187,6 +198,8 @@ def test_ttl(input_data: dict[str, Any]) -> None:
     except OperationFailure:
         # For remote, we've adjusted manually via Atlas Administration API.
         pass
+    finally:
+        client.close()
 
     with MongoDBSaver.from_conn_string(
         MONGODB_URI, DB_NAME, collection_name, ttl=ttl
@@ -205,7 +218,7 @@ def test_ttl(input_data: dict[str, Any]) -> None:
             assert len(search_results_2) == 1
             assert search_results_2[0].metadata == input_data["metadata_2"]
 
-            sleep(ttl + monitor_period)
+            sleep(ttl + monitor_period + some_latency)
             assert len(list(saver.list(None, filter=query))) == 0
 
         finally:
@@ -257,10 +270,13 @@ def test_init_creates_indexes() -> None:
 
     db.drop_collection(checkpoint_coll)
     db.drop_collection(writes_coll)
+    client.close()
 
 
 def test_list_rejects_mql_operator_keys() -> None:
-    with MongoDBSaver.from_conn_string(MONGODB_URI) as saver:
+    with MongoDBSaver.from_conn_string(
+        MONGODB_URI, DB_NAME, "reject_mql_operator_keys"
+    ) as saver:
         # nested operator value — $exists bypass leaks all checkpoints
         with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
             list(saver.list(None, filter={"user_id": {"$exists": True}}))

@@ -5,17 +5,26 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-mongodb"
-version = "0.11.0"
+version = "0.12.0"
 description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "langchain-core>=1.2.5",
+    # 1.4.2 is the lowest version anything is ever tested against: langchain-tests
+    # is pinned in the dev group and requires >=1.4.0, so no dev or CI environment
+    # can resolve lower. Declaring a floor below that would ship users a version
+    # range we never exercise.
+    "langchain-core>=1.4.2",
     "langchain>=1.0",
     "langchain-classic>=1.0",
+    "pydantic>=2.13.0",
     "pymongo>=4.6.1",
     "langchain-text-splitters>=1.0",
-    "numpy>=1.26",
+    # 2.3.2 is the first numpy with cp314 wheels; earlier ones fall back to a
+    # source build that fails to compile. Split so 3.11-3.13 users keep the
+    # lower floor rather than being forced onto numpy 2.3+.
+    "numpy>=1.26; python_version < '3.14'",
+    "numpy>=2.3.2; python_version >= '3.14'",
     "lark<2.0.0,>=1.1.9",
     "pymongo-search-utils>=0.3.0",
 ]
@@ -24,13 +33,18 @@ dependencies = [
 dev = [
     "freezegun>=1.2.2",
     "langchain>=1.0",
-    "langchain-core>=1.2.5",
+    # kept in sync with the runtime floor; tests/unit_tests/test_cache.py calls
+    # llm.asdict(), which landed in 1.4.2
+    "langchain-core>=1.4.2",
     "langchain-text-splitters>=1.0",
     "pytest-mock>=3.10.0",
     "pytest>=7.3.0",
     "syrupy>=4.0.2",
     "pytest-watcher>=0.3.4",
-    "pytest-asyncio>=0.21.1",
+    # 0.24.0 introduced asyncio_default_fixture_loop_scope, set below; older
+    # versions reject it as an unknown config option, which --strict-config
+    # turns into a hard error. Previously masked by the langchain-tests pin.
+    "pytest-asyncio>=0.24.0",
     "pre-commit>=4.0",
     "mypy>=1.10",
     "simsimd>=6.5.0",
@@ -40,9 +54,16 @@ dev = [
     "pypdf>=5.0.1",
     "langgraph>=1.0.0",
     "flaky>=3.8.1",
-    "langchain-tests==1.1.9",
+    # Range, not ==: an exact pin propagates this package's own requirements
+    # as hard floors across the whole project. Pinned at 1.1.9 it forced
+    # langchain-core>=1.4.0 and pytest-asyncio>=1.3.0, so our declared floors
+    # for both were unreachable and never tested. Upper bound keeps the
+    # protection against a minor release adding new required test methods.
+    "langchain-tests>=1.1.0,<1.2",
     "pip>=25.0.1",
-    "typing-extensions>=4.12.2",
+    # langchain-protocol (via langchain-core) uses PEP 728 TypedDict extra_items,
+    # added in 4.13.0, but declares only >=4.7.0 — so our floor has to carry it.
+    "typing-extensions>=4.13.0",
 ]
 
 [project.optional-dependencies]

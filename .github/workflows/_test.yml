@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.10"
+          - "3.11"
           - "3.13"
     name: "run test #${{ matrix.python-version }}"
     steps:
@@ -26,7 +26,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -48,6 +48,14 @@ jobs:
       - name: Start local Atlas
         working-directory: .
         run: bash scripts/start_local_atlas.sh
+
+      # just's dotenv-load only applies inside just's own process, so steps
+      # that call uv directly (the minimum-dependency-versions step below)
+      # never see the dynamic port start_local_atlas.sh assigned. Exporting
+      # it to $GITHUB_ENV makes it visible to every step in this job.
+      - name: Export local Atlas connection string
+        working-directory: .
+        run: cat .local_atlas_uri >> "$GITHUB_ENV"
 
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
@@ -77,4 +85,10 @@ jobs:
       - name: Run unit tests with minimum dependency versions
         run: |
           uv sync --python=${{ matrix.python-version }} --resolution=lowest-direct
-          just unit_tests
+          # Deliberately not `just unit_tests`: that recipe is `uv run pytest`,
+          # and `uv run` re-syncs from the lockfile, silently discarding the
+          # lowest-direct resolution above ("Ignoring existing lockfile due to
+          # change in resolution mode"). --no-sync is what makes this step
+          # actually test minimum versions.
+          uv pip list
+          uv run --no-sync pytest tests/unit_tests

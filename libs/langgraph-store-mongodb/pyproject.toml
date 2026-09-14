@@ -7,7 +7,7 @@ name = "langgraph-store-mongodb"
 version = "0.4.0"
 description = "MongoDB implementation of the LangGraph long-term memory store."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "langgraph-checkpoint>=3.0.0",
     "pymongo-search-utils>=0.2.1",
@@ -17,8 +17,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest-asyncio>=0.21.1",
-    "pytest>=7.2.1",
+    "pytest-asyncio>=0.23.8",
+    "pytest>=8.0.0",
     "pre-commit>=4.0",
     "mypy>=1.10.0",
     "langchain-openai>=0.3.0",

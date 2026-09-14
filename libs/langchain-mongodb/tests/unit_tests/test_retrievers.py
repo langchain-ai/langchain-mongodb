@@ -166,7 +166,7 @@ def test_visit_comparison_iso8601_datetime(translator):
     result_z = translator.visit_comparison(
         _comparison("created_at", Comparator.LT, iso_dt_z)
     )
-    expected_z = datetime.datetime(2025, 6, 15, 12, 30, 0, tzinfo=datetime.timezone.utc)
+    expected_z = datetime.datetime(2025, 6, 15, 12, 30, 0, tzinfo=datetime.UTC)
     assert result_z == {"created_at": {"$lt": expected_z}}
 
 
