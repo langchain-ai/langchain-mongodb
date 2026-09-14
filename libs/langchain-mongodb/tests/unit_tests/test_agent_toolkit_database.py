@@ -2,6 +2,7 @@ from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
+from bson.errors import InvalidDocument
 from pymongo.errors import OperationFailure
 
 from langchain_mongodb.agent_toolkit.database import MongoDBDatabase
@@ -199,6 +200,65 @@ def test_collection_info_no_throw_hides_driver_error_details(
         db,
         "get_collection_info",
         side_effect=OperationFailure("private document details"),
+    ):
+        result = db.get_collection_info_no_throw()
+
+    assert result == "Error: collection information could not be retrieved."
+    assert "private document details" not in result
+
+
+def test_run_no_throw_handles_non_pymongo_error(db: MongoDBDatabase) -> None:
+    """`InvalidDocument` is a `BSONError`, not a `PyMongoError`."""
+    _aggregate_mock(db).side_effect = InvalidDocument(
+        "cannot encode object: private value"
+    )
+
+    with patch(
+        "langchain_mongodb.agent_toolkit.database.parse_command",
+        return_value=[],
+    ):
+        result = db.run_no_throw("db.allowed.aggregate([])")
+
+    assert result == "Error: aggregation could not be executed."
+    assert "private value" not in result
+
+
+def test_run_no_throw_handles_unexpected_parse_error(db: MongoDBDatabase) -> None:
+    with patch(
+        "langchain_mongodb.agent_toolkit.database.parse_command",
+        side_effect=RuntimeError("private parser internals"),
+    ):
+        result = db.run_no_throw("db.allowed.aggregate([])")
+
+    assert result == "Error: aggregation could not be executed."
+    assert "private parser internals" not in result
+
+
+def test_run_no_throw_handles_validation_recursion_error(db: MongoDBDatabase) -> None:
+    with (
+        patch(
+            "langchain_mongodb.agent_toolkit.database.parse_command",
+            return_value=[],
+        ),
+        patch.object(
+            db,
+            "_validate_pipeline",
+            side_effect=RecursionError("maximum depth exceeded"),
+        ),
+    ):
+        result = db.run_no_throw("db.allowed.aggregate([])")
+
+    assert result == "Error: aggregation could not be executed."
+    _aggregate_mock(db).assert_not_called()
+
+
+def test_collection_info_no_throw_handles_unexpected_error(
+    db: MongoDBDatabase,
+) -> None:
+    with patch.object(
+        db,
+        "get_collection_info",
+        side_effect=RuntimeError("private document details"),
     ):
         result = db.get_collection_info_no_throw()
 
