@@ -330,7 +330,7 @@ class MongoDBDatabase:
             return self.get_collection_info(collection_names)
         except ValueError as e:
             return f"Error: {e}"
-        except PyMongoError:
+        except Exception:
             return "Error: collection information could not be retrieved."
 
     def run_no_throw(self, command: str) -> Union[str, Cursor]:
@@ -345,7 +345,7 @@ class MongoDBDatabase:
             return self.run(command)
         except ValueError as e:
             return f"Error: {e}"
-        except PyMongoError:
+        except Exception:
             return "Error: aggregation could not be executed."
 
     def get_context(self) -> Dict[str, Any]:
