@@ -142,6 +142,16 @@ class TestVectorSearch:
         assert isinstance(result, GrepResult)
         assert result.error is None
 
+    def test_grep_path_with_no_indexed_files_is_error(self, real_backend, e2e_prefix):
+        # GH #462: exercises the $rankFusion path, which unit tests can't reach.
+        result = real_backend.grep(
+            "authentication", path=f"{e2e_prefix}does-not-exist/"
+        )
+        assert isinstance(result, GrepResult)
+        assert result.matches is None
+        assert result.error is not None
+        assert "E5005" in result.error
+
 
 @pytest.mark.real_e2e
 class TestUploadDownload:
