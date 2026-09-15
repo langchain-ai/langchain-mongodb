@@ -61,6 +61,7 @@ class ErrorCode(StrEnum):
     E5002_GLOB_FAILED = "E5002"
     E5003_LS_FAILED = "E5003"
     E5004_VECTOR_SEARCH_UNAVAILABLE = "E5004"
+    E5005_GREP_EMPTY_SCOPE = "E5005"
 
     # E6xxx — watcher errors
     E6001_SQS_RECEIVE_FAILED = "E6001"
@@ -101,6 +102,7 @@ _CODE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.E5002_GLOB_FAILED: "The glob search operation failed.",
     ErrorCode.E5003_LS_FAILED: "The ls operation failed.",
     ErrorCode.E5004_VECTOR_SEARCH_UNAVAILABLE: "Atlas Vector Search is not available on this cluster.",
+    ErrorCode.E5005_GREP_EMPTY_SCOPE: "No indexed files under the requested path/glob scope.",
     ErrorCode.E6001_SQS_RECEIVE_FAILED: "Failed to receive messages from SQS queue.",
     ErrorCode.E6002_EVENT_PARSE_FAILED: "Could not parse an S3 event notification from SQS.",
     ErrorCode.E6003_WATCHER_CRASHED: "The background watcher thread crashed unexpectedly.",
