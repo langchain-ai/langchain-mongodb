@@ -25,7 +25,11 @@ from langchain_mongodb_deepagents_vfs.dtypes import (
     LsResult,
 )
 from langchain_mongodb_deepagents_vfs.embedder import Embedder
-from langchain_mongodb_deepagents_vfs.errors import AdapterError, ErrorCode
+from langchain_mongodb_deepagents_vfs.errors import (
+    AdapterError,
+    ErrorCode,
+    user_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -234,14 +238,35 @@ class SearchRouter:
 
         Returns:
             GrepResult with matches deduplicated by (source_path, line_start).
+            ``error=None, matches=[]`` means files were searched and nothing
+            matched. ``error=[E5005]..., matches=None`` means *path*/*glob*
+            selected no indexed files at all, so nothing was searched.
 
         Raises:
             AdapterError(E5001): Search failure.
         """
         try:
             if self._is_atlas_available():
-                return self._grep_hybrid(pattern, path, glob)
-            return self._grep_regex(pattern, path, glob)
+                result = self._grep_hybrid(pattern, path, glob)
+            else:
+                result = self._grep_regex(pattern, path, glob)
+            # Only probe the scope when the search came back empty, so the hit
+            # path costs nothing extra. An unscoped grep over an empty
+            # collection genuinely searched everything, so it stays matches=[].
+            scope = self._scope_filter(path, glob)
+            if (
+                not result.matches
+                and scope
+                and self._col.find_one(scope, {"_id": 1}) is None
+            ):
+                return GrepResult(
+                    error=user_message(
+                        ErrorCode.E5005_GREP_EMPTY_SCOPE,
+                        f"path={path!r} glob={glob!r}",
+                    ),
+                    matches=None,
+                )
+            return result
         except AdapterError:
             raise
         except Exception as exc:
@@ -261,13 +286,7 @@ class SearchRouter:
             )
             query_vector = None
 
-        path_filter: list[dict[str, Any]] = []
-        if path:
-            path_filter.append({"source_path": {"$regex": f"^{re.escape(path)}"}})
-        if glob:
-            path_filter.append({"filename": {"$regex": fnmatch.translate(glob)}})
-
-        pre_filter: dict[str, Any] = {"$and": path_filter} if path_filter else {}
+        pre_filter = self._scope_filter(path, glob)
 
         if query_vector is not None:
             # Both branches feed the same combination step, so both need a
@@ -354,12 +373,9 @@ class SearchRouter:
         # catastrophic-backtracking inputs like "(a+)+$". max_time_ms bounds the
         # scan server-side as a second line of defence.
         query: dict[str, Any] = {
-            "content": {"$regex": re.escape(pattern), "$options": "i"}
+            "content": {"$regex": re.escape(pattern), "$options": "i"},
+            **self._scope_filter(path, glob),
         }
-        if path:
-            query["source_path"] = {"$regex": f"^{re.escape(path)}"}
-        if glob:
-            query["filename"] = {"$regex": fnmatch.translate(glob)}
         cursor = (
             self._col.find(
                 query,
@@ -369,6 +385,16 @@ class SearchRouter:
             .max_time_ms(_GREP_MAX_TIME_MS)
         )
         return self._dedupe_to_grep_result(list(cursor))
+
+    @staticmethod
+    def _scope_filter(path: str, glob: str) -> dict[str, Any]:
+        """Match stage restricting chunks to *path* prefix and *glob* filename."""
+        scope: dict[str, Any] = {}
+        if path:
+            scope["source_path"] = {"$regex": f"^{re.escape(path)}"}
+        if glob:
+            scope["filename"] = {"$regex": fnmatch.translate(glob)}
+        return scope
 
     @staticmethod
     def _dedupe_to_grep_result(docs: list[dict[str, Any]]) -> GrepResult:

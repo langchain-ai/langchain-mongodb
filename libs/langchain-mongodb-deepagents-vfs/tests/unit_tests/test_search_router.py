@@ -175,6 +175,45 @@ class TestSearchRouterGrep:
         assert router.grep("a+").matches == []
         assert any("a.txt" in m["path"] for m in router.grep("aaa").matches)
 
+    def test_grep_no_match_in_populated_scope_is_empty_not_error(
+        self, mongo_collection, mock_embedder
+    ):
+        _seed(mongo_collection, [_make_doc("docs/a.txt", content="hello")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        result = router.grep("zzz", path="docs/")
+        assert result.error is None
+        assert result.matches == []
+
+    def test_grep_path_with_no_indexed_files_is_error(
+        self, mongo_collection, mock_embedder
+    ):
+        # GH #462: an empty scope must not look like a successful empty search.
+        _seed(mongo_collection, [_make_doc("docs/a.txt", content="hello")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        result = router.grep("hello", path="nope/")
+        assert result.matches is None
+        assert result.error is not None
+        assert "E5005" in result.error
+        assert "nope/" in result.error
+
+    def test_grep_glob_with_no_indexed_files_is_error(
+        self, mongo_collection, mock_embedder
+    ):
+        _seed(mongo_collection, [_make_doc("docs/a.txt", content="hello")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        result = router.grep("hello", path="docs/", glob="*.pdf")
+        assert result.matches is None
+        assert "E5005" in result.error
+
+    def test_grep_unscoped_on_empty_collection_is_empty_not_error(
+        self, mongo_collection, mock_embedder
+    ):
+        # No path/glob → nothing to be "missing"; searched everything, found nothing.
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        result = router.grep("hello")
+        assert result.error is None
+        assert result.matches == []
+
     def test_grep_deduplication(self, mongo_collection, mock_embedder):
         # Two chunks from the same file with same line_start → should be deduped
         _seed(
