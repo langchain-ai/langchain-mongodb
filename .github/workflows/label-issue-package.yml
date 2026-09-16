@@ -2,7 +2,7 @@ name: Label issue package
 
 on:
   issues:
-    types: [opened, edited]
+    types: [opened]
 
 permissions:
   issues: write
