@@ -7,9 +7,14 @@ on:
         required: true
         type: string
         description: "From which folder this pipeline executes"
+    secrets:
+      VOYAGE_API_KEY:
+        required: false
 
 jobs:
   build:
+    env:
+      REQUIRE_AUTO_EMBEDDING: ${{ inputs.working-directory == 'libs/langchain-mongodb' || inputs.working-directory == 'libs/langgraph-store-mongodb' }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -47,6 +52,9 @@ jobs:
 
       - name: Start local Atlas
         working-directory: .
+        env:
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          EMBEDDING_PROVIDER_ENDPOINT: ${{ vars.EMBEDDING_PROVIDER_ENDPOINT }}
         run: bash scripts/start_local_atlas.sh
 
       # just's dotenv-load only applies inside just's own process, so steps

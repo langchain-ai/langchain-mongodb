@@ -38,11 +38,26 @@ just unit_tests
 In order to run the integration tests, you'll also need a `MONGODB_URI` for MongoDB Atlas, as well
 as either an `OPENAI_API_KEY` or a configured local version of [ollama](https://ollama.com/download).
 
-We have a convenience script to start a local Atlas instance, which requires `podman`:
+We have a convenience script to start a local Atlas instance, which requires Docker or Podman:
 
 ```bash
 scripts/start_local_atlas.sh
 ```
+
+Auto-embedding integration tests in `langchain-mongodb` and `langgraph-store-mongodb`
+require the pinned preview image used by this script and an exported `VOYAGE_API_KEY`
+with access to `voyage-4`. Set `REQUIRE_AUTO_EMBEDDING=true` to fail early when the key
+is missing. For a key issued directly by Voyage AI, also export
+`EMBEDDING_PROVIDER_ENDPOINT=https://api.voyageai.com/v1/embeddings`; leave it unset
+for an Atlas-issued key. The script passes these variables into the container without
+putting their values in command arguments. The server needs outbound access to the
+provider, and embedding requests incur provider charges.
+
+CI requires a `VOYAGE_API_KEY` repository secret for both Actions and Dependabot.
+For direct Voyage AI keys, set the `EMBEDDING_PROVIDER_ENDPOINT` repository variable
+as above. Runs without the required key fail rather than skip auto-embedding tests.
+Container health only establishes startup readiness; the integration tests verify
+model registration, indexing, and querying. See the [MongoDB provisioning guide](https://www.mongodb.com/docs/search/self-managed/current/configuration/automated-embedding/).
 
 This will create a `.local_atlas_uri` file that has the `MONGODB_URI` set.  The `justfiles` are configured
 to read the environment variable from this file.
