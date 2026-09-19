@@ -22,10 +22,7 @@ from ..utils import (
     DB_NAME,
     TIMEOUT,
     PatchedMongoDBAtlasVectorSearch,
-    requires_auto_embeddings,
 )
-
-pytestmark = requires_auto_embeddings
 
 DIMENSIONS = 5
 

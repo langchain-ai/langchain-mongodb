@@ -5,7 +5,6 @@ from copy import deepcopy
 from time import monotonic, sleep
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Union, cast
 
-import pytest
 from bson import ObjectId
 from langchain_core.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
@@ -35,11 +34,6 @@ from langchain_mongodb.cache import MongoDBAtlasSemanticCache
 TIMEOUT = 120
 INTERVAL = 0.5
 CONNECTION_STRING = os.environ.get("MONGODB_URI", "")
-requires_auto_embeddings = pytest.mark.skipif(
-    not CONNECTION_STRING
-    or any(host in CONNECTION_STRING for host in ("localhost", "127.0.0.1", "[::1]")),
-    reason="Auto-embedding requires an Atlas cluster with embedding models configured",
-)
 AUTOEMBED_MODEL = "voyage-4"
 AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"

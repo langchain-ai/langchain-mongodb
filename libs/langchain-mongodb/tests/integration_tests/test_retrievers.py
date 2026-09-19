@@ -27,7 +27,6 @@ from ..utils import (
     ConsistentFakeEmbeddings,
     MockCollection,
     PatchedMongoDBAtlasVectorSearch,
-    requires_auto_embeddings,
 )
 
 COLLECTION_NAME = "langchain_test_retrievers"
@@ -266,7 +265,6 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     assert "New Orleans" in results[0].page_content
 
 
-@requires_auto_embeddings
 def test_hybrid_retriever_autoembed(
     indexed_vectorstore_autoembed: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
