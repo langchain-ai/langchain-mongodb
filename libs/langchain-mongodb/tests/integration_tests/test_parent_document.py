@@ -20,6 +20,7 @@ from ..utils import (
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
+    requires_auto_embeddings,
 )
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
@@ -42,7 +43,11 @@ def embedding_param(request, embedding):
     return embedding
 
 
-@pytest.mark.parametrize("embedding_param", ["auto", "manual"], indirect=True)
+@pytest.mark.parametrize(
+    "embedding_param",
+    [pytest.param("auto", marks=requires_auto_embeddings), "manual"],
+    indirect=True,
+)
 def test_1clxn_retriever(
     technical_report_pages: List[Document],
     embedding_param: Embeddings,
