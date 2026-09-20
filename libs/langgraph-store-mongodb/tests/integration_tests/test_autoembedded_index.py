@@ -19,6 +19,10 @@ from langgraph.store.mongodb import (
 MONGODB_URI = os.environ.get(
     "MONGODB_URI", "mongodb://localhost:27017?directConnection=true"
 )
+pytestmark = pytest.mark.skipif(
+    os.environ.get("SKIP_AUTO_EMBEDDING_TESTS") == "1",
+    reason="Local CI MongoDB has no auto-embedding models configured",
+)
 DB_NAME = os.environ.get("DB_NAME", "langgraph-test")
 COLLECTION_NAME = "semantic_search_autoembedded"
 INDEX_NAME = "auto_vector_index"
