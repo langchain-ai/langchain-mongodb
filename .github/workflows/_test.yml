@@ -68,9 +68,6 @@ jobs:
           bash scripts/setup_ollama.sh
 
       - name: Run integration tests
-        env:
-          # This local Atlas container has no Voyage auto-embedding configuration.
-          SKIP_AUTO_EMBEDDING_TESTS: "1"
         run: just integration_tests
 
       - name: Ensure the tests did not create any additional files
