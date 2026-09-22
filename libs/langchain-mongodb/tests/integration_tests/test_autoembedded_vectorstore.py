@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, Generator, List
 
 import pytest  # type: ignore[import-not-found]
@@ -23,6 +24,9 @@ from ..utils import (
     TIMEOUT,
     PatchedMongoDBAtlasVectorSearch,
 )
+
+if "AUTOEMBEDDING" not in os.environ:
+    pytest.skip("autoembedding not configured", allow_module_level=True)
 
 DIMENSIONS = 5
 
