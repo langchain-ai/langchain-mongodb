@@ -1,3 +1,4 @@
+import os
 from time import sleep, time
 from typing import Generator, List
 
@@ -136,6 +137,8 @@ def collection_nested(client: MongoClient, dimensions: int) -> Collection:
 
 @pytest.fixture(scope="module")
 def collection_autoembed(client: MongoClient) -> Collection:
+    if "AUTOEMBEDDING" not in os.environ:
+        pytest.skip("autoembedding not configured")
     if COLLECTION_NAME_AUTOEMBED not in client[DB_NAME].list_collection_names():
         clxn = client[DB_NAME].create_collection(COLLECTION_NAME_AUTOEMBED)
     else:

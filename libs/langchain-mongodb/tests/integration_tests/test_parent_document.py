@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 import pytest
@@ -37,6 +38,8 @@ TIMEOUT = 60.0
 
 @pytest.fixture
 def embedding_param(request, embedding):
+    if "AUTOEMBEDDING" not in os.environ:
+        pytest.skip("autoembedding not configured")
     if request.param == "auto":
         return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding

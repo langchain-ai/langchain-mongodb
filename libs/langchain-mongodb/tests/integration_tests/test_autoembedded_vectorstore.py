@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, Generator, List
 
 import pytest  # type: ignore[import-not-found]
@@ -68,6 +69,8 @@ def metadatas() -> List[Dict]:
 
 @pytest.fixture(scope="module")
 def autoembeddings() -> Embeddings:
+    if "AUTOEMBEDDING" not in os.environ:
+        pytest.skip("autoembedding not configured")
     return AutoEmbeddings(model=AUTOEMBED_MODEL)
 
 
