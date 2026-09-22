@@ -26,7 +26,7 @@ from ..utils import (
 )
 
 if "AUTOEMBEDDING" not in os.environ:
-    pytest.skip("autoembedding not configured")
+    pytest.skip("autoembedding not configured", allow_module_level=True)
 
 DIMENSIONS = 5
 
