@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 from typing import Any, Dict, Sequence, Tuple, Union
 
 from langchain_classic.chains.query_constructor.schema import (
@@ -81,7 +82,11 @@ class MongoDBStructuredQueryTranslator(Visitor):
         """
         if isinstance(value, dict):
             if value.get("type") == "date" and "date" in value:
-                return datetime.datetime.strptime(value["date"], "%Y-%m-%d")
+                # MongoDB BSON requires timezone-aware datetimes; treat date-only
+                # strings as midnight UTC so Atlas filter comparisons work correctly.
+                return datetime.datetime.strptime(value["date"], "%Y-%m-%d").replace(
+                    tzinfo=timezone.utc
+                )
             if value.get("type") == "datetime" and "datetime" in value:
                 dt_str = value["datetime"].replace("Z", "+00:00")
                 return datetime.datetime.fromisoformat(dt_str)

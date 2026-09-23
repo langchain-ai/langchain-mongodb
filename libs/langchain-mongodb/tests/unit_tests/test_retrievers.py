@@ -146,12 +146,15 @@ def _comparison(attribute: str, comparator: Comparator, value) -> Comparison:
 
 
 def test_visit_comparison_iso8601_date(translator):
-    """ISO8601Date dicts from the query parser are converted to datetime objects."""
+    """ISO8601Date dicts are converted to UTC-aware datetimes for BSON compatibility."""
     iso_date = {"date": "2025-01-01", "type": "date"}
     result = translator.visit_comparison(
         _comparison("timestamp", Comparator.GTE, iso_date)
     )
-    assert result == {"timestamp": {"$gte": datetime.datetime(2025, 1, 1)}}
+    expected = datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
+    assert result == {"timestamp": {"$gte": expected}}
+    # Must be timezone-aware — naive datetimes cause incorrect Atlas filter comparisons.
+    assert result["timestamp"]["$gte"].tzinfo is not None
 
 
 def test_visit_comparison_iso8601_datetime(translator):
@@ -184,8 +187,8 @@ def test_visit_comparison_date_range(translator):
     result = translator.visit_operation(op)
     assert result == {
         "$and": [
-            {"timestamp": {"$gte": datetime.datetime(2025, 1, 1)}},
-            {"timestamp": {"$lte": datetime.datetime(2025, 12, 31)}},
+            {"timestamp": {"$gte": datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)}},
+            {"timestamp": {"$lte": datetime.datetime(2025, 12, 31, tzinfo=datetime.timezone.utc)}},
         ]
     }
 
