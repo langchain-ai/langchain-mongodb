@@ -151,14 +151,12 @@ def create_vector_index_config(
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
 
     Args:
-        dims: Dimensions of the embedding vectors. Must be None when using
-            AutoEmbeddings.
+        dims: Dimensions of the embedding vectors. Must be None for AutoEmbeddings.
         embed: Embedding model.
         fields: Field to extract text from for embedding generation (list of length 1).
         name: Arbitrary name to give to the index in Atlas.
         relevance_score_fn: Function used to establish similarity of vectors.
-            Defaults to cosine for manual embeddings and must be omitted for
-            AutoEmbeddings.
+            Defaults to cosine. Must be None for AutoEmbeddings.
         embedding_key: Name of the field used in the collection to store vectors.
         filters: List of (possibly nested) fields to index allowing filtering.
 
