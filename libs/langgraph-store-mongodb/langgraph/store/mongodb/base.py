@@ -140,8 +140,8 @@ class VectorIndexConfig(IndexConfig, total=False):
 
 
 def create_vector_index_config(
-    dims: int | None = None,
-    embed: Optional[Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str]] = None,
+    dims: int | None,
+    embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
     fields: Optional[list[str]] = None,
     name: str = "vector_index",
     relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = None,
@@ -151,7 +151,7 @@ def create_vector_index_config(
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
 
     Args:
-        dims: Dimensions of the embedding vectors. Required unless using
+        dims: Dimensions of the embedding vectors. Must be None when using
             AutoEmbeddings.
         embed: Embedding model.
         fields: Field to extract text from for embedding generation (list of length 1).
@@ -164,9 +164,6 @@ def create_vector_index_config(
 
     Returns: VectorIndexConfig to be passed to MongoDBStore constructor.
     """
-
-    if embed is None:
-        raise ValueError("embed is required.")
 
     if isinstance(embed, AutoEmbeddings):
         if dims not in (None, -1):

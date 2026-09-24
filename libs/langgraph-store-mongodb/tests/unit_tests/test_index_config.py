@@ -6,6 +6,7 @@ from langgraph.store.mongodb import create_vector_index_config
 
 def test_create_vector_index_config_with_autoembeddings() -> None:
     config = create_vector_index_config(
+        dims=None,
         embed=AutoEmbeddings("voyage-4"),
         fields=["question"],
     )
@@ -23,7 +24,7 @@ def test_create_vector_index_config_with_manual_embeddings() -> None:
 
 def test_create_vector_index_config_requires_manual_embedding_dimensions() -> None:
     with pytest.raises(ValueError, match="dims is required"):
-        create_vector_index_config(embed="openai:text-embedding-3-small")
+        create_vector_index_config(dims=None, embed="openai:text-embedding-3-small")
 
 
 def test_create_vector_index_config_rejects_autoembedding_dimensions() -> None:
@@ -37,6 +38,7 @@ def test_create_vector_index_config_rejects_autoembedding_dimensions() -> None:
 def test_create_vector_index_config_rejects_autoembedding_similarity() -> None:
     with pytest.raises(ValueError, match="similarity"):
         create_vector_index_config(
+            dims=None,
             embed=AutoEmbeddings("voyage-4"),
             relevance_score_fn="cosine",
         )
