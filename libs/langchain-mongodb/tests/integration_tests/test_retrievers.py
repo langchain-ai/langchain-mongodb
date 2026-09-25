@@ -268,6 +268,7 @@ def test_hybrid_retriever(indexed_vectorstore: PatchedMongoDBAtlasVectorSearch) 
     assert "New Orleans" in results[0].page_content
 
 
+@pytest.mark.usefixtures("autoembedding_or_skip")
 def test_hybrid_retriever_autoembed(
     indexed_vectorstore_autoembed: PatchedMongoDBAtlasVectorSearch,
 ) -> None:
