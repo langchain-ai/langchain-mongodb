@@ -26,6 +26,8 @@ TIMEOUT, INTERVAL = 60, 1  # timeout to index new data
 
 DIMENSIONS = -1
 
+pytestmark = pytest.mark.usefixtures("autoembedding_or_skip")
+
 
 def wait_until(
     predicate: Callable, timeout: int = TIMEOUT, interval: int = INTERVAL

@@ -5,6 +5,7 @@ from copy import deepcopy
 from time import monotonic, sleep
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Union, cast
 
+import pytest
 from bson import ObjectId
 from langchain_core.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
@@ -39,6 +40,20 @@ AUTOEMBED_IDX_NAME = "langchain-test-index-from-texts-autoEmbed"
 AUTOEMBED_COLLECTION_NAME = "langchain_test_from_texts-autoEmbed"
 
 DB_NAME = "langchain_test_db"
+
+# Set by scripts/start_local_atlas.sh, whose container registers no embedding
+# model.  Deployments that support auto-embedding leave it unset, so a new one
+# runs these tests by default rather than silently opting out of them.
+AUTOEMBED_UNSUPPORTED = "AUTOEMBED_UNSUPPORTED"
+
+
+def skip_unless_autoembedding() -> None:
+    """Skip the calling test unless the deployment supports auto-embedding."""
+    if os.environ.get(AUTOEMBED_UNSUPPORTED):
+        pytest.skip(
+            f"Deployment has no '{AUTOEMBED_MODEL}' embedding model registered, "
+            "so autoEmbed indexes cannot be created"
+        )
 
 
 def create_database() -> MongoDBDatabase:

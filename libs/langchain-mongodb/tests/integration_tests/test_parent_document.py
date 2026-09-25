@@ -21,6 +21,7 @@ from ..utils import (
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
+    skip_unless_autoembedding,
 )
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
@@ -41,6 +42,7 @@ def embedding_param(request, embedding):
     if "AUTOEMBEDDING" not in os.environ:
         pytest.skip("autoembedding not configured")
     if request.param == "auto":
+        skip_unless_autoembedding()
         return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding
 
