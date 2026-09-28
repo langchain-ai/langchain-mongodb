@@ -52,7 +52,7 @@ repos:
   rev: v3.12.2
   hooks:
     - id: markdown-link-check
-      args: [-q]
+      args: [-q, -c, .markdown-link-check.json]
 
 - repo: local
   hooks:
