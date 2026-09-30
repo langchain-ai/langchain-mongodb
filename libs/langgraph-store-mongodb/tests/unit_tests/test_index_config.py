@@ -42,3 +42,28 @@ def test_create_vector_index_config_rejects_autoembedding_similarity() -> None:
             embed=AutoEmbeddings("voyage-4"),
             relevance_score_fn="cosine",
         )
+
+
+def test_store_creates_autoembedding_index_from_raw_config() -> None:
+    from unittest.mock import MagicMock, patch
+
+    from langgraph.store.mongodb import MongoDBStore
+
+    collection = MagicMock()
+    collection.list_search_indexes.return_value = []
+    with patch("langgraph.store.mongodb.base.create_vector_search_index") as create:
+        MongoDBStore(
+            collection,
+            index_config={
+                "dims": None,
+                "embed": AutoEmbeddings("voyage-4"),
+                "fields": ["question"],
+                "filters": [],
+            },
+        )
+
+    kwargs = create.call_args.kwargs
+    assert kwargs["dimensions"] == -1
+    assert kwargs["similarity"] is None
+    assert kwargs["auto_embedding_model"] == "voyage-4"
+

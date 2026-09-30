@@ -119,8 +119,6 @@ class VectorIndexConfig(IndexConfig, total=False):
     It is designed to have one vector per document.
 
     NOTE: If using AutoEmbeddings, the vectors are not explicitly stored in the Collection.
-    The factory function automatically configures dimensions and similarity for
-    auto-embedding indexes.
     The embedding_key will not store vectors. Instead, it will be the texts to be embedded.
     """
 
@@ -322,9 +320,13 @@ class MongoDBStore(BaseStore):
             self._embedding_key = self.index_config.get("embedding_key", "embedding")
             auto_embedding_model = None
             self._is_autoembedding = False
+            dimensions = self.index_config.get("dims")
             if isinstance(self.embeddings, AutoEmbeddings):
                 self._is_autoembedding = True
                 auto_embedding_model = self.embeddings.model
+                # Atlas determines dimensions and similarity for auto-embedding indexes
+                dimensions = -1
+                self._relevance_score_fn = None
                 self.query_model = (
                     self.embeddings.model if query_model is None else query_model
                 )
@@ -339,7 +341,7 @@ class MongoDBStore(BaseStore):
                 create_vector_search_index(
                     collection=collection,
                     index_name=self._index_name,
-                    dimensions=self.index_config["dims"],
+                    dimensions=dimensions,
                     path=self._embedding_key,
                     similarity=self._relevance_score_fn,
                     filters=self.index_filters,
