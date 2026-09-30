@@ -119,7 +119,6 @@ class VectorIndexConfig(IndexConfig, total=False):
     It is designed to have one vector per document.
 
     NOTE: If using AutoEmbeddings, the vectors are not explicitly stored in the Collection.
-    Set dims to -1, relevance_score_fn to None.
     The embedding_key will not store vectors. Instead, it will be the texts to be embedded.
     """
 
@@ -143,23 +142,36 @@ def create_vector_index_config(
     embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
     fields: Optional[list[str]] = None,
     name: str = "vector_index",
-    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = "cosine",
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = None,
     embedding_key: str | None = "embedding",
     filters: Optional[list[str]] = None,
 ) -> VectorIndexConfig:
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
 
     Args:
-        dims: Dimensions of the embedding vectors.
+        dims: Dimensions of the embedding vectors. Must be None for AutoEmbeddings.
         embed: Embedding model.
         fields: Field to extract text from for embedding generation (list of length 1).
         name: Arbitrary name to give to the index in Atlas.
         relevance_score_fn: Function used to establish similarity of vectors.
+            Defaults to cosine. Must be None for AutoEmbeddings.
         embedding_key: Name of the field used in the collection to store vectors.
         filters: List of (possibly nested) fields to index allowing filtering.
 
     Returns: VectorIndexConfig to be passed to MongoDBStore constructor.
     """
+
+    if isinstance(embed, AutoEmbeddings):
+        if dims not in (None, -1):
+            raise ValueError("dimensions cannot be set when using AutoEmbeddings.")
+        if relevance_score_fn is not None:
+            raise ValueError("similarity cannot be set when using AutoEmbeddings.")
+        dims = -1
+    else:
+        if dims is None:
+            raise ValueError("dims is required when using manual embeddings.")
+        if relevance_score_fn is None:
+            relevance_score_fn = "cosine"
 
     MongoDBStore.ensure_index_filters(filters)
     if filters and "namespace_prefix" not in filters:
@@ -308,9 +320,13 @@ class MongoDBStore(BaseStore):
             self._embedding_key = self.index_config.get("embedding_key", "embedding")
             auto_embedding_model = None
             self._is_autoembedding = False
+            dimensions = self.index_config.get("dims")
             if isinstance(self.embeddings, AutoEmbeddings):
                 self._is_autoembedding = True
                 auto_embedding_model = self.embeddings.model
+                # Atlas determines dimensions and similarity for auto-embedding indexes
+                dimensions = -1
+                self._relevance_score_fn = None
                 self.query_model = (
                     self.embeddings.model if query_model is None else query_model
                 )
@@ -325,7 +341,7 @@ class MongoDBStore(BaseStore):
                 create_vector_search_index(
                     collection=collection,
                     index_name=self._index_name,
-                    dimensions=self.index_config["dims"],
+                    dimensions=dimensions,
                     path=self._embedding_key,
                     similarity=self._relevance_score_fn,
                     filters=self.index_filters,
