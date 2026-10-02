@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "pymongo>=4.6,<5",
+#   "pymongo>=4.18.2,<5",
 #   "langgraph-checkpoint-mongodb>=0.2.2",
 # ]
 # ///
