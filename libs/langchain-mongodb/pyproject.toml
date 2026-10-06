@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-mongodb"
-version = "0.12.0"
+version = "0.12.1"
 description = "An integration package connecting MongoDB and LangChain"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,7 +18,7 @@ dependencies = [
     "langchain>=1.0",
     "langchain-classic>=1.0",
     "pydantic>=2.13.0",
-    "pymongo>=4.6.1",
+    "pymongo>=4.18.2",
     "langchain-text-splitters>=1.0",
     # 2.3.2 is the first numpy with cp314 wheels; earlier ones fall back to a
     # source build that fails to compile. Split so 3.11-3.13 users keep the
@@ -26,7 +26,7 @@ dependencies = [
     "numpy>=1.26; python_version < '3.14'",
     "numpy>=2.3.2; python_version >= '3.14'",
     "lark<2.0.0,>=1.1.9",
-    "pymongo-search-utils>=0.3.0",
+    "pymongo-search-utils>=0.3.1",
 ]
 
 [dependency-groups]

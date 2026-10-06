@@ -21,6 +21,7 @@ from ..utils import (
     CONNECTION_STRING,
     DB_NAME,
     PatchedMongoDBAtlasVectorSearch,
+    skip_unless_autoembedding,
 )
 
 COLLECTION_NAME = "langchain_test_parent_document_combined"
@@ -38,9 +39,10 @@ TIMEOUT = 60.0
 
 @pytest.fixture
 def embedding_param(request, embedding):
+    if "AUTOEMBEDDING" not in os.environ:
+        pytest.skip("autoembedding not configured")
     if request.param == "auto":
-        if not os.environ.get("COMMUNITY_WITH_SEARCH", ""):
-            raise pytest.skip("Only run if COMMUNITY_WITH_SEARCH is set")
+        skip_unless_autoembedding()
         return AutoEmbeddings(model=AUTOEMBED_MODEL)
     return embedding
 

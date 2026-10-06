@@ -24,7 +24,18 @@ EXPOSED_PORT=$($DOCKER inspect --format='{{ (index (index .NetworkSettings.Ports
 export MONGODB_URI="mongodb://127.0.0.1:$EXPOSED_PORT/?directConnection=true"
 SCRIPT_DIR=$(realpath "$(dirname ${BASH_SOURCE[0]})")
 ROOT_DIR=$(dirname $SCRIPT_DIR)
-echo "MONGODB_URI=$MONGODB_URI" > $ROOT_DIR/.local_atlas_uri
+# Auto-embedding needs a Voyage API key forwarded into the container, and the
+# :preview image tag. This script passes neither, so mongot here registers no
+# embedding model and autoEmbed indexes cannot be created. Tests that need one
+# read AUTOEMBED_UNSUPPORTED to skip.
+#
+# This file is both loaded as a dotenv by the justfiles and cat'd into
+# $GITHUB_ENV by .github/workflows/_test.yml, and $GITHUB_ENV rejects anything
+# that is not KEY=VALUE -- so no comments or blank lines below.
+{
+  echo "MONGODB_URI=$MONGODB_URI"
+  echo "AUTOEMBED_UNSUPPORTED=1"
+} > $ROOT_DIR/.local_atlas_uri
 
 # Sleep for a bit to let all services start.
 sleep 5
