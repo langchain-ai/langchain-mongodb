@@ -111,9 +111,13 @@ async def test_async_methods_reject(saver: MongoDBSaver) -> None:
 
 
 def test_string_identifiers_reach_query(saver: MongoDBSaver) -> None:
+    checkpoints, writes = MagicMock(), MagicMock()
+    saver.checkpoint_collection = checkpoints
+    saver.writes_collection = writes
+
     saver.get_tuple(_config())
-    saver.checkpoint_collection.find.assert_called_once()
-    assert saver.checkpoint_collection.find.call_args.args[0] == {
+    checkpoints.find.assert_called_once()
+    assert checkpoints.find.call_args.args[0] == {
         "thread_id": "t",
         "checkpoint_ns": "",
         "checkpoint_id": "c",
@@ -125,8 +129,8 @@ def test_string_identifiers_reach_query(saver: MongoDBSaver) -> None:
     saver.put(_config(checkpoint_id=None), empty_checkpoint(), {}, {})
 
     saver.put_writes(_config(), [("ch", "v")], "task")
-    saver.writes_collection.bulk_write.assert_called_once()
+    writes.bulk_write.assert_called_once()
 
     saver.delete_thread("t")
-    saver.checkpoint_collection.delete_many.assert_called_once_with({"thread_id": "t"})
-    saver.writes_collection.delete_many.assert_called_once_with({"thread_id": "t"})
+    checkpoints.delete_many.assert_called_once_with({"thread_id": "t"})
+    writes.delete_many.assert_called_once_with({"thread_id": "t"})
