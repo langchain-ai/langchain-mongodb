@@ -290,6 +290,11 @@ class MongoFilesystemBackend(BackendProtocol):
             GrepResult with protocol ``GrepMatch`` entries, most relevant
             first. Hybrid search ranks results, but the ranking is expressed
             by list order — ``GrepMatch`` has no score field and none is added.
+
+            ``error=None, matches=[]`` means files were searched and nothing
+            matched. ``error="[E5005] ...", matches=None`` means *path*/*glob*
+            selected no indexed files, so there was nothing to search — check
+            the scope with :meth:`glob` or :meth:`ls`.
         """
         self._wait_ready()
         return self._search.grep(pattern, path or "", glob or "")
