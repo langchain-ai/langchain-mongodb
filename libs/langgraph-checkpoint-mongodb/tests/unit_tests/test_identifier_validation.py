@@ -1,15 +1,27 @@
 """Identifiers must be strings so they cannot inject MQL operators into queries."""
 
+import re
 from typing import Any
 from unittest.mock import MagicMock
 
+import bson
 import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import empty_checkpoint
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
-PAYLOADS = [{"$ne": "nobody"}, {"$gt": ""}, ["a"], 1, True, b"bytes"]
+PAYLOADS = [
+    {"$ne": "nobody"},
+    {"$gt": ""},
+    # Regex values match by pattern in an equality filter, with no "$" key
+    re.compile(".*"),
+    bson.Regex(".*"),
+    ["a"],
+    1,
+    True,
+    b"bytes",
+]
 
 
 @pytest.fixture
