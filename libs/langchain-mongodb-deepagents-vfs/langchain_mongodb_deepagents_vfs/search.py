@@ -95,7 +95,7 @@ class SearchRouter:
         Raises:
             AdapterError(E5003): Query failure.
         """
-        prefix = path.rstrip("/")
+        prefix = path.strip("/")
         if prefix:
             prefix = prefix + "/"
         escaped = re.escape(prefix)
@@ -193,7 +193,7 @@ class SearchRouter:
             raise AdapterError(ErrorCode.E5002_GLOB_FAILED, str(exc)) from exc
 
     def _glob(self, pattern: str, path: str) -> GlobResult:
-        prefix = path.rstrip("/")
+        prefix = path.strip("/")
         if prefix:
             prefix = prefix + "/"
         match_stage: dict[str, Any] = (
@@ -238,6 +238,9 @@ class SearchRouter:
         Raises:
             AdapterError(E5001): Search failure.
         """
+        # deepagents' file tools pass absolute paths ("/mongodb_vfs/.."); S3 keys
+        # are relative, so a leading "/" would never match. Same as _key()/glob.
+        path = path.lstrip("/")
         try:
             if self._is_atlas_available():
                 return self._grep_hybrid(pattern, path, glob)
