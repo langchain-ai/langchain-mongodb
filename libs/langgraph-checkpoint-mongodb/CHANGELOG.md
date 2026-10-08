@@ -2,6 +2,11 @@
 
 ---
 
+## Unreleased
+- Add `AsyncMongoDBSaver`, a checkpointer that talks to MongoDB through pymongo's `AsyncMongoClient`.
+  Unlike `MongoDBSaver`'s async methods, which run the blocking driver in a thread executor, it performs
+  no blocking I/O and accepts an asynchronous client the application already owns.
+
 ## Changes in version 0.5.0 (2026/09/04)
 - Require Python >=3.11 (dropped support for Python 3.10, which reached End of Life this Fall).
 
