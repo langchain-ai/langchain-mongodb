@@ -24,7 +24,13 @@ from pymongo import ASCENDING, MongoClient, UpdateOne
 from pymongo.collection import Collection
 from pymongo.database import Database as MongoDatabase
 
-from .utils import DRIVER_METADATA, _validate_filter, dumps_metadata, loads_metadata
+from .utils import (
+    DRIVER_METADATA,
+    _validate_filter,
+    _validate_identifier,
+    dumps_metadata,
+    loads_metadata,
+)
 
 
 def _create_saver_indexes(
@@ -80,6 +86,12 @@ class MongoDBSaver(BaseCheckpointSaver):
         checkpoint_collection_name (Optional[str]): Name of Collection of Checkpoints
         writes_collection_name (Optional[str]): Name of Collection of intermediate writes.
         ttl (Optional[int]): Time to live in seconds. See https://www.mongodb.com/docs/manual/core/index-ttl/.
+
+    Note:
+        Identifiers (``thread_id``, ``checkpoint_ns``, ``checkpoint_id``,
+        ``task_id``, ``task_path``) must be strings. Any other type raises
+        ``ValueError`` before a query is issued, so operator documents such as
+        ``{"$ne": ""}`` cannot widen a query beyond a single thread.
 
     Examples:
 
@@ -237,9 +249,16 @@ class MongoDBSaver(BaseCheckpointSaver):
              >>> print(checkpoint_tuple)
              CheckpointTuple(...)
         """
-        thread_id = config["configurable"]["thread_id"]
-        checkpoint_ns = config["configurable"].get("checkpoint_ns", "")
-        if checkpoint_id := get_checkpoint_id(config):
+        thread_id = _validate_identifier(
+            config["configurable"]["thread_id"], "thread_id"
+        )
+        checkpoint_ns = _validate_identifier(
+            config["configurable"].get("checkpoint_ns", ""), "checkpoint_ns"
+        )
+        checkpoint_id = _validate_identifier(
+            get_checkpoint_id(config), "checkpoint_id", optional=True
+        )
+        if checkpoint_id:
             query = {
                 "thread_id": thread_id,
                 "checkpoint_ns": checkpoint_ns,
@@ -319,9 +338,13 @@ class MongoDBSaver(BaseCheckpointSaver):
         query = {}
         if config is not None:
             if "thread_id" in config["configurable"]:
-                query["thread_id"] = config["configurable"]["thread_id"]
+                query["thread_id"] = _validate_identifier(
+                    config["configurable"]["thread_id"], "thread_id"
+                )
             if "checkpoint_ns" in config["configurable"]:
-                query["checkpoint_ns"] = config["configurable"]["checkpoint_ns"]
+                query["checkpoint_ns"] = _validate_identifier(
+                    config["configurable"]["checkpoint_ns"], "checkpoint_ns"
+                )
 
         if filter:
             _validate_filter(filter)
@@ -329,7 +352,10 @@ class MongoDBSaver(BaseCheckpointSaver):
                 query[f"metadata.{key}"] = dumps_metadata(self.serde, value)
 
         if before is not None:
-            query["checkpoint_id"] = {"$lt": before["configurable"]["checkpoint_id"]}
+            before_id = _validate_identifier(
+                before["configurable"]["checkpoint_id"], "before checkpoint_id"
+            )
+            query["checkpoint_id"] = {"$lt": before_id}
 
         result = self.checkpoint_collection.find(
             query, limit=0 if limit is None else limit, sort=[("checkpoint_id", -1)]
@@ -406,13 +432,22 @@ class MongoDBSaver(BaseCheckpointSaver):
             >>> print(saved_config)
             {'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef4f797-8335-6428-8001-8a1503f9b875'}}
         """
-        thread_id = config["configurable"]["thread_id"]
-        checkpoint_ns = config["configurable"]["checkpoint_ns"]
-        checkpoint_id = checkpoint["id"]
+        thread_id = _validate_identifier(
+            config["configurable"]["thread_id"], "thread_id"
+        )
+        checkpoint_ns = _validate_identifier(
+            config["configurable"]["checkpoint_ns"], "checkpoint_ns"
+        )
+        checkpoint_id = _validate_identifier(checkpoint["id"], "checkpoint id")
+        parent_checkpoint_id = _validate_identifier(
+            config["configurable"].get("checkpoint_id"),
+            "checkpoint_id",
+            optional=True,
+        )
         type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
         metadata = get_checkpoint_metadata(config, metadata)
         doc = {
-            "parent_checkpoint_id": config["configurable"].get("checkpoint_id"),
+            "parent_checkpoint_id": parent_checkpoint_id,
             "type": type_,
             "checkpoint": serialized_checkpoint,
             "metadata": dumps_metadata(self.serde, metadata),
@@ -451,9 +486,17 @@ class MongoDBSaver(BaseCheckpointSaver):
             task_id (str): Identifier for the task creating the writes.
             task_path (str): Path of the task creating the writes.
         """
-        thread_id = config["configurable"]["thread_id"]
-        checkpoint_ns = config["configurable"]["checkpoint_ns"]
-        checkpoint_id = config["configurable"]["checkpoint_id"]
+        thread_id = _validate_identifier(
+            config["configurable"]["thread_id"], "thread_id"
+        )
+        checkpoint_ns = _validate_identifier(
+            config["configurable"]["checkpoint_ns"], "checkpoint_ns"
+        )
+        checkpoint_id = _validate_identifier(
+            config["configurable"]["checkpoint_id"], "checkpoint_id"
+        )
+        _validate_identifier(task_id, "task_id")
+        _validate_identifier(task_path, "task_path")
         set_method = (  # Allow replacement on existing writes only if there were errors.
             "$set" if all(w[0] in WRITES_IDX_MAP for w in writes) else "$setOnInsert"
         )
@@ -498,6 +541,8 @@ class MongoDBSaver(BaseCheckpointSaver):
         Args:
             thread_id (str): The thread ID whose checkpoints should be deleted.
         """
+        _validate_identifier(thread_id, "thread_id")
+
         # Delete all checkpoints associated with the thread ID
         self.checkpoint_collection.delete_many({"thread_id": thread_id})
 
