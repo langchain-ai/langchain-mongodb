@@ -138,22 +138,19 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
             if self.history_size is None:
                 cursor = self.collection.find({self.session_id_key: self.session_id})
             else:
-                skip_count = max(
-                    0,
-                    self.collection.count_documents(
-                        {self.session_id_key: self.session_id}
-                    )
-                    - self.history_size,
+                # Use sort + limit instead of count_documents + skip so that only
+                # one round-trip to MongoDB is needed instead of two.
+                cursor = (
+                    self.collection.find({self.session_id_key: self.session_id})
+                    .sort("_id", -1)
+                    .limit(self.history_size)
                 )
-                cursor = self.collection.find(
-                    {self.session_id_key: self.session_id}, skip=skip_count
-                )
+            items = [
+                json.loads(document[self.history_key])
+                for document in reversed(list(cursor))
+            ]
         except errors.OperationFailure as error:
             logger.error(error)
-
-        if cursor:
-            items = [json.loads(document[self.history_key]) for document in cursor]
-        else:
             items = []
 
         messages = messages_from_dict(items)
