@@ -66,8 +66,7 @@ def test_filters(collection: Collection) -> None:
 
     index_config = create_vector_index_config(
         name=INDEX_NAME,
-        dims=DIMENSIONS,
-        relevance_score_fn=None,
+        dims=None,
         fields=["product"],
         embed=AutoEmbeddings(model="voyage-4"),  # embedding
         filters=["metadata.available"],
