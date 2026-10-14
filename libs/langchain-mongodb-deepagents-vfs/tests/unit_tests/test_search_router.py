@@ -275,7 +275,37 @@ class TestSearchRouterLeadingSlash:
             [_make_doc("docs/api.txt", content="authentication flow diagram")],
         )
         router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
-        with_slash = [m["path"] for m in router.grep("authentication", path="/docs").matches]
-        without = [m["path"] for m in router.grep("authentication", path="docs").matches]
+        with_slash = [
+            m["path"] for m in router.grep("authentication", path="/docs").matches
+        ]
+        without = [
+            m["path"] for m in router.grep("authentication", path="docs").matches
+        ]
         assert with_slash == without
         assert with_slash  # empty before the fix
+
+    def test_root_slash_is_the_whole_collection(self, mongo_collection, mock_embedder):
+        _seed(
+            mongo_collection,
+            [
+                _make_doc("docs/a.txt", content="alpha"),
+                _make_doc("b.txt", content="alpha"),
+            ],
+        )
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert router.ls("/").entries == router.ls("").entries
+        assert (
+            router.glob("**/*.txt", path="/").matches
+            == router.glob("**/*.txt", path="").matches
+        )
+        assert len(router.grep("alpha", path="/").matches) == 2
+
+    def test_repeated_leading_slashes_are_ignored(
+        self, mongo_collection, mock_embedder
+    ):
+        _seed(mongo_collection, [_make_doc("docs/a.txt", content="alpha")])
+        router = SearchRouter(mongo_collection, mock_embedder, atlas_available=False)
+        assert router.ls("//docs").entries == router.ls("docs").entries
+        assert router.grep("alpha", path="//docs").matches == (
+            router.grep("alpha", path="docs").matches
+        )
