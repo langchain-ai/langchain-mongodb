@@ -253,19 +253,16 @@ class SearchRouter:
             # Only probe the scope when the search came back empty, so the hit
             # path costs nothing extra. An unscoped grep over an empty
             # collection genuinely searched everything, so it stays matches=[].
-            scope = self._scope_filter(path, glob)
-            if (
-                not result.matches
-                and scope
-                and self._col.find_one(scope, {"_id": 1}) is None
-            ):
-                return GrepResult(
-                    error=user_message(
-                        ErrorCode.E5005_GREP_EMPTY_SCOPE,
-                        f"path={path!r} glob={glob!r}",
-                    ),
-                    matches=None,
-                )
+            if not result.matches:
+                scope = self._scope_filter(path, glob)
+                if scope and self._col.find_one(scope, {"_id": 1}) is None:
+                    return GrepResult(
+                        error=user_message(
+                            ErrorCode.E5005_GREP_EMPTY_SCOPE,
+                            f"path={path!r} glob={glob!r}",
+                        ),
+                        matches=None,
+                    )
             return result
         except AdapterError:
             raise
