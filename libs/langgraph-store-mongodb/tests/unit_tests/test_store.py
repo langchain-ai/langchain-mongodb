@@ -2,6 +2,7 @@ import os
 import time
 from collections.abc import Generator
 from datetime import datetime
+from unittest.mock import MagicMock
 
 import pytest
 from bson import SON
@@ -13,6 +14,7 @@ from langgraph.store.base import (
     PutOp,
     TTLConfig,
 )
+from langgraph.store.memory import InMemoryStore
 from pymongo import MongoClient
 
 from langgraph.store.mongodb import (
@@ -138,6 +140,109 @@ def test_list_namespaces(store: MongoDBStore) -> None:
 
     result = store.list_namespaces()
     assert len(result) == store.collection.count_documents({})
+
+
+def test_list_namespaces_pipeline() -> None:
+    """Check the aggregation pipeline offline, using a mocked collection."""
+    collection = MagicMock()
+    collection.aggregate.return_value = []
+    mdbstore = MongoDBStore(collection)
+
+    mdbstore.list_namespaces(suffix=("users", "*", "prefs"), limit=5)
+    pipeline = collection.aggregate.call_args.args[0]
+    size = {"$size": "$namespace"}
+    assert pipeline[0] == {
+        "$match": {
+            "$expr": {
+                "$and": [
+                    {"$gte": [size, 3]},
+                    {
+                        "$eq": [
+                            {
+                                "$arrayElemAt": [
+                                    "$namespace",
+                                    {"$subtract": [size, 3]},
+                                ]
+                            },
+                            "users",
+                        ]
+                    },
+                    {
+                        "$eq": [
+                            {
+                                "$arrayElemAt": [
+                                    "$namespace",
+                                    {"$subtract": [size, 1]},
+                                ]
+                            },
+                            "prefs",
+                        ]
+                    },
+                ]
+            }
+        }
+    }
+    stages = [next(iter(stage)) for stage in pipeline]
+    assert stages.index("$limit") > stages.index("$group")
+    assert pipeline[-1] == {"$limit": 5}
+
+    mdbstore.list_namespaces(prefix=("*", "*", "f"))
+    pipeline = collection.aggregate.call_args.args[0]
+    assert pipeline[0]["$match"]["$expr"]["$and"][0] == {"$gte": [size, 3]}
+
+
+def test_list_namespaces_suffix_wildcard(store: MongoDBStore) -> None:
+    result = store.list_namespaces(suffix=("users", "*"))
+    assert sorted(result) == [("admin", "users", "789"), ("users", "123")]
+
+    result = store.list_namespaces(suffix=("*", "users", "*"))
+    assert result == [("admin", "users", "789")]
+
+    result = store.list_namespaces(suffix=("users", "*", "settings"))
+    assert result == [("users", "456", "settings")]
+
+    result = store.list_namespaces(suffix=("b", "*", "i"))
+    assert result == [("a", "b", "d", "i")]
+
+    result = store.list_namespaces(suffix=("*", "*", "*", "*", "*"))
+    assert result == []
+
+    result = store.list_namespaces(prefix=("*", "*", "*", "*"))
+    assert sorted(result) == [("a", "b", "d", "e"), ("a", "b", "d", "i")]
+
+
+def test_list_namespaces_parity_with_in_memory(store: MongoDBStore) -> None:
+    memory = InMemoryStore()
+    for doc in store.collection.find({}, {"namespace": 1, "key": 1}):
+        memory.put(tuple(doc["namespace"]), doc["key"], {})
+
+    cases: list[dict] = [
+        {},
+        {"prefix": ("a",)},
+        {"prefix": ("a", "*", "f")},
+        {"prefix": ("*", "*")},
+        {"suffix": ("*",)},
+        {"suffix": ("users", "*")},
+        {"suffix": ("*", "users", "*")},
+        {"suffix": ("b", "*", "e")},
+        {"prefix": ("a", "*"), "suffix": ("d", "*")},
+        {"prefix": ("a",), "max_depth": 2},
+        {"suffix": ("*", "f"), "max_depth": 1},
+    ]
+    for kwargs in cases:
+        expected = memory.list_namespaces(**kwargs)
+        assert sorted(store.list_namespaces(**kwargs)) == sorted(expected), kwargs
+
+
+def test_list_namespaces_limit_counts_unique_namespaces(store: MongoDBStore) -> None:
+    for i in range(5):
+        store.put(namespace=("users", "123"), key=f"extra_{i}", value={"i": i})
+
+    result = store.list_namespaces(limit=9)
+    assert len(result) == len(set(result)) == 9
+
+    result = store.list_namespaces(max_depth=1, limit=4)
+    assert sorted(result) == [("a",), ("admin",), ("b",), ("users",)]
 
 
 def test_get(store: MongoDBStore) -> None:
