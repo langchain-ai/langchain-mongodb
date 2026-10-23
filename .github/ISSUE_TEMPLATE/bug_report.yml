@@ -1,0 +1,78 @@
+name: "🐛 Bug report"
+description: Report a problem or unexpected behavior.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve the project. Tell us what went wrong and how we can reproduce it. Include exact error messages and a short code example when relevant. Do not include credentials, connection strings, or private data.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package is affected?
+      options:
+        - langchain-mongodb
+        - langgraph-checkpoint-mongodb
+        - langgraph-store-mongodb
+        - langchain-mongodb-deepagents-vfs
+        - Cross-package / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: What happened?
+      description: Describe what went wrong, including any error messages or unexpected output.
+      placeholder: When I ..., the result is ...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Show us how to reproduce the problem. Include any setup, commands, or code we need.
+      placeholder: |
+        ```python
+        # Code that reproduces the problem
+        ...
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+      placeholder: I expected ...
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: If you found a workaround, describe it and what makes it inconvenient or incomplete.
+      placeholder: Today I ..., but ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in the relevant versions and deployment details below. Add or remove lines as needed. Do not include credentials or connection strings.
+      value: |
+        - Python version:
+        - Operating system:
+        - Affected package and version:
+        - Related package versions (LangChain, LangGraph, DeepAgents, or PyMongo):
+        - MongoDB version and deployment (Atlas or self-managed):
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add anything else that may help us investigate, such as logs, screenshots, or a link to a small reproduction. Do not include credentials, connection strings, or private data.
+      placeholder: Add any other helpful context here.
+    validations:
+      required: false
