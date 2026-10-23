@@ -283,7 +283,8 @@ class MongoFilesystemBackend(BackendProtocol):
 
         Args:
             pattern: Natural-language or keyword query.
-            path: Restrict search to this path prefix.
+            path: Restrict search to this path prefix. A leading ``/`` is
+                ignored, since indexed keys are relative.
             glob: Restrict to filenames matching this glob pattern.
 
         Returns:
@@ -300,7 +301,8 @@ class MongoFilesystemBackend(BackendProtocol):
 
         Args:
             pattern: Glob pattern (e.g. ``"*.pdf"``).
-            path: Restrict to this path prefix.
+            path: Restrict to this path prefix. A leading ``/`` is ignored,
+                since indexed keys are relative.
 
         Returns:
             GlobResult with a ``FileInfo`` per matching file.
@@ -313,7 +315,8 @@ class MongoFilesystemBackend(BackendProtocol):
         """List immediate children of *path*.
 
         Args:
-            path: Virtual directory path (e.g. ``"docs/"``).
+            path: Virtual directory path (e.g. ``"docs/"``). A leading ``/``
+                is ignored, since indexed keys are relative.
 
         Returns:
             LsResult with file and directory entries.
