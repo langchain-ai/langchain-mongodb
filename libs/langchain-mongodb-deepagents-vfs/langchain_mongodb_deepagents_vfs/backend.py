@@ -128,8 +128,6 @@ class MongoFilesystemBackend(BackendProtocol):
             )
 
         self.debug = debug
-        # Normalized once here so the store, sync and watcher all enforce the
-        # same segment-bounded prefix ("tenant_1" must not match "tenant_10/").
         s3_prefix = normalize_prefix(s3_prefix)
         self._prefix = s3_prefix
 

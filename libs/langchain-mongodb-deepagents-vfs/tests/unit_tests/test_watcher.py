@@ -67,12 +67,10 @@ class TestPollingWatcher:
         watcher._poll()
         assert "docs/a.txt" in created_keys
 
-    def test_prefix_without_trailing_slash_is_segment_bounded(
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
         self, mongo_collection, mock_embedder, chunker
     ):
-        """S3 ListObjectsV2(Prefix=...) is a raw string match, so "tenant_1"
-        would also list "tenant_10/..." into this tenant's index.
-        """
+        """prefix="docs" lists with "docs/", so "docs2/" keys aren't included."""
         store = MagicMock()
         store.list_keys.return_value = iter([])
         watcher = PollingWatcher(
@@ -80,10 +78,10 @@ class TestPollingWatcher:
             chunker=chunker,
             embedder=mock_embedder,
             collection=mongo_collection,
-            prefix="tenant_1",
+            prefix="docs",
         )
         watcher._poll()
-        store.list_keys.assert_called_once_with("tenant_1/")
+        store.list_keys.assert_called_once_with("docs/")
 
     def test_detects_deleted_key(self, mongo_collection, mock_embedder, chunker):
         store = MagicMock()
@@ -288,14 +286,12 @@ class TestSQSWatcherMessageParsing:
             watcher._process_message("not json at all {{{")
         assert exc_info.value.code == ErrorCode.E6002_EVENT_PARSE_FAILED
 
-    def test_prefix_without_trailing_slash_is_segment_bounded(
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
         self, mongo_collection, mock_embedder, chunker
     ):
-        """A queue on a shared bucket delivers every tenant's events; with
-        prefix="tenant_1" a "tenant_10/..." key must still be dropped.
-        """
+        """prefix="docs" ingests "docs/" events, not "docs2/"."""
         watcher, _ = self._make_sqs_watcher(
-            mongo_collection, mock_embedder, chunker, prefix="tenant_1"
+            mongo_collection, mock_embedder, chunker, prefix="docs"
         )
         created_keys = []
         watcher.on_created = lambda key: created_keys.append(key)
@@ -307,9 +303,9 @@ class TestSQSWatcherMessageParsing:
                         "eventName": "ObjectCreated:Put",
                         "s3": {"object": {"key": key}},
                     }
-                    for key in ("tenant_1/a.txt", "tenant_10/secret.txt")
+                    for key in ("docs/a.txt", "docs2/b.txt")
                 ]
             }
         )
         watcher._process_message(body)
-        assert created_keys == ["tenant_1/a.txt"]
+        assert created_keys == ["docs/a.txt"]

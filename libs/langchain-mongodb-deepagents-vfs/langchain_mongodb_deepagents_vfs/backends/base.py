@@ -32,13 +32,7 @@ DEFAULT_PREFIX = "mongodb_vfs/"
 
 
 def normalize_prefix(prefix: str) -> str:
-    """Return *prefix* with a trailing ``/`` so it bounds a whole path segment.
-
-    Prefix checks are plain string comparisons (``startswith``, and S3's own
-    ``ListObjectsV2(Prefix=...)``), so a bare ``"tenant_1"`` would also match
-    ``"tenant_10/secret.txt"`` — another tenant's keys on a shared bucket.
-    ``""`` is returned unchanged: it is the explicit whole-bucket opt-out.
-    """
+    """Return *prefix* with a trailing ``/`` so it bounds a whole path segment."""
     if prefix and not prefix.endswith("/"):
         return prefix + "/"
     return prefix

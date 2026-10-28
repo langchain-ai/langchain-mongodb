@@ -204,8 +204,8 @@ class TestReadSizeCap:
     ("prefix", "expected"),
     [
         ("", ""),
-        ("tenant_1", "tenant_1/"),
-        ("tenant_1/", "tenant_1/"),
+        ("docs", "docs/"),
+        ("docs/", "docs/"),
         ("a/b", "a/b/"),
     ],
 )
@@ -325,27 +325,25 @@ class TestPrefixScopeEnforcement:
             )
             assert backend.read("anywhere/f.txt") == b"ok"
 
-    def test_prefix_without_trailing_slash_is_segment_bounded(self, aws_credentials):
-        """prefix="tenant_1" must not reach a sibling tenant like "tenant_10/":
-        a raw startswith() check treats the shared characters as a match.
-        """
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
+        self, aws_credentials
+    ):
+        """prefix="docs" covers "docs/" keys, not "docs2/"."""
         with mock_aws():
             client = boto3.client("s3", region_name="us-east-1")
             client.create_bucket(Bucket="scoped-bkt")
-            client.put_object(Bucket="scoped-bkt", Key="tenant_1/a.txt", Body=b"mine")
-            client.put_object(
-                Bucket="scoped-bkt", Key="tenant_10/secret.txt", Body=b"theirs"
-            )
+            client.put_object(Bucket="scoped-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="scoped-bkt", Key="docs2/b.txt", Body=b"b")
             backend = S3Backend(
-                bucket_name="scoped-bkt", region_name="us-east-1", prefix="tenant_1"
+                bucket_name="scoped-bkt", region_name="us-east-1", prefix="docs"
             )
 
-            assert backend.read("tenant_1/a.txt") == b"mine"
+            assert backend.read("docs/a.txt") == b"a"
             for op in (
-                lambda: backend.read("tenant_10/secret.txt"),
-                lambda: backend.write("tenant_10/planted.txt", b"payload"),
-                lambda: backend.edit("tenant_10/secret.txt", "theirs", "pwned"),
-                lambda: backend.get_size("tenant_10/secret.txt"),
+                lambda: backend.read("docs2/b.txt"),
+                lambda: backend.write("docs2/c.txt", b"c"),
+                lambda: backend.edit("docs2/b.txt", "b", "x"),
+                lambda: backend.get_size("docs2/b.txt"),
             ):
                 with pytest.raises(AdapterError) as ei:
                     op()
@@ -354,7 +352,7 @@ class TestPrefixScopeEnforcement:
                 o["Key"]
                 for o in client.list_objects_v2(Bucket="scoped-bkt")["Contents"]
             }
-            assert keys == {"tenant_1/a.txt", "tenant_10/secret.txt"}
+            assert keys == {"docs/a.txt", "docs2/b.txt"}
 
 
 @pytest.mark.unit
