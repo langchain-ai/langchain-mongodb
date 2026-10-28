@@ -13,6 +13,7 @@ from langchain_mongodb_deepagents_vfs.backends.base import (
     DEFAULT_PREFIX,
     MAX_READ_BYTES,
     ObjectStoreBackend,
+    normalize_prefix,
 )
 from langchain_mongodb_deepagents_vfs.dtypes import (
     FileDownloadResponse,
@@ -58,7 +59,7 @@ class S3Backend(ObjectStoreBackend):
         **boto_kwargs: Any,
     ) -> None:
         self._bucket = bucket_name
-        self._prefix = prefix
+        self._prefix = normalize_prefix(prefix)
         self._client: Any = boto3.client(
             "s3",
             region_name=region_name,

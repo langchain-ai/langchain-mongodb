@@ -29,6 +29,7 @@ from pymongo.driver_info import DriverInfo
 from langchain_mongodb_deepagents_vfs.backends.base import (
     DEFAULT_PREFIX,
     MAX_READ_BYTES,
+    normalize_prefix,
 )
 from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 from langchain_mongodb_deepagents_vfs.chunker import Chunker
@@ -127,6 +128,9 @@ class MongoFilesystemBackend(BackendProtocol):
             )
 
         self.debug = debug
+        # Normalized once here so the store, sync and watcher all enforce the
+        # same segment-bounded prefix ("tenant_1" must not match "tenant_10/").
+        s3_prefix = normalize_prefix(s3_prefix)
         self._prefix = s3_prefix
 
         # Build internal components

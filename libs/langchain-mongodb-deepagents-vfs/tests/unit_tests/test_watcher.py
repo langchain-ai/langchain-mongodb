@@ -67,6 +67,24 @@ class TestPollingWatcher:
         watcher._poll()
         assert "docs/a.txt" in created_keys
 
+    def test_prefix_without_trailing_slash_is_segment_bounded(
+        self, mongo_collection, mock_embedder, chunker
+    ):
+        """S3 ListObjectsV2(Prefix=...) is a raw string match, so "tenant_1"
+        would also list "tenant_10/..." into this tenant's index.
+        """
+        store = MagicMock()
+        store.list_keys.return_value = iter([])
+        watcher = PollingWatcher(
+            store=store,
+            chunker=chunker,
+            embedder=mock_embedder,
+            collection=mongo_collection,
+            prefix="tenant_1",
+        )
+        watcher._poll()
+        store.list_keys.assert_called_once_with("tenant_1/")
+
     def test_detects_deleted_key(self, mongo_collection, mock_embedder, chunker):
         store = MagicMock()
         store.read.return_value = b"content"
@@ -155,7 +173,7 @@ class TestPollingWatcher:
 @pytest.mark.unit
 class TestSQSWatcherMessageParsing:
     def _make_sqs_watcher(
-        self, mongo_collection, mock_embedder, chunker, sqs_client=None
+        self, mongo_collection, mock_embedder, chunker, sqs_client=None, prefix=""
     ):
         store = MagicMock()
         store.read.return_value = b"file content"
@@ -170,6 +188,7 @@ class TestSQSWatcherMessageParsing:
             # this they pass only where the environment happens to supply a
             # region, and fail on CI with NoRegionError.
             region_name="us-east-1",
+            prefix=prefix,
         )
         if sqs_client:
             watcher._sqs = sqs_client
@@ -268,3 +287,29 @@ class TestSQSWatcherMessageParsing:
         with pytest.raises(AdapterError) as exc_info:
             watcher._process_message("not json at all {{{")
         assert exc_info.value.code == ErrorCode.E6002_EVENT_PARSE_FAILED
+
+    def test_prefix_without_trailing_slash_is_segment_bounded(
+        self, mongo_collection, mock_embedder, chunker
+    ):
+        """A queue on a shared bucket delivers every tenant's events; with
+        prefix="tenant_1" a "tenant_10/..." key must still be dropped.
+        """
+        watcher, _ = self._make_sqs_watcher(
+            mongo_collection, mock_embedder, chunker, prefix="tenant_1"
+        )
+        created_keys = []
+        watcher.on_created = lambda key: created_keys.append(key)
+
+        body = json.dumps(
+            {
+                "Records": [
+                    {
+                        "eventName": "ObjectCreated:Put",
+                        "s3": {"object": {"key": key}},
+                    }
+                    for key in ("tenant_1/a.txt", "tenant_10/secret.txt")
+                ]
+            }
+        )
+        watcher._process_message(body)
+        assert created_keys == ["tenant_1/a.txt"]

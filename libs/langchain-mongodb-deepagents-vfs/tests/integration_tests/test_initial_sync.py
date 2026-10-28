@@ -183,3 +183,22 @@ class TestInitialSyncBasic:
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run(prefix="docs/")
             assert report.seen == 1
+
+    def test_sync_prefix_without_trailing_slash_is_segment_bounded(
+        self, aws_credentials, mongo_collection, mock_embedder, chunker
+    ):
+        """A bare "tenant_1" prefix must not ingest a sibling "tenant_10/"."""
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="prefixed-bucket")
+            client.put_object(Bucket="prefixed-bucket", Key="tenant_1/a.txt", Body=b"A")
+            client.put_object(
+                Bucket="prefixed-bucket", Key="tenant_10/secret.txt", Body=b"S"
+            )
+            store = S3Backend(
+                bucket_name="prefixed-bucket", region_name="us-east-1", prefix=""
+            )
+            sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
+            report = sync.run(prefix="tenant_1")
+            assert report.seen == 1
+            assert mongo_collection.distinct("source_path") == ["tenant_1/a.txt"]

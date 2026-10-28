@@ -6,6 +6,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
+from langchain_mongodb_deepagents_vfs.backends.base import normalize_prefix
 from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 from langchain_mongodb_deepagents_vfs.errors import AdapterError, ErrorCode
 
@@ -199,6 +200,21 @@ class TestReadSizeCap:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("prefix", "expected"),
+    [
+        ("", ""),
+        ("tenant_1", "tenant_1/"),
+        ("tenant_1/", "tenant_1/"),
+        ("a/b", "a/b/"),
+    ],
+)
+def test_normalize_prefix(prefix, expected):
+    assert normalize_prefix(prefix) == expected
+    assert normalize_prefix(expected) == expected
+
+
+@pytest.mark.unit
 class TestPrefixScopeEnforcement:
     """A configured prefix is an isolation boundary: every operation that
     touches a key — not just sync/watch listing — must refuse keys outside
@@ -308,6 +324,37 @@ class TestPrefixScopeEnforcement:
                 bucket_name="scoped-bkt", region_name="us-east-1", prefix=""
             )
             assert backend.read("anywhere/f.txt") == b"ok"
+
+    def test_prefix_without_trailing_slash_is_segment_bounded(self, aws_credentials):
+        """prefix="tenant_1" must not reach a sibling tenant like "tenant_10/":
+        a raw startswith() check treats the shared characters as a match.
+        """
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="scoped-bkt")
+            client.put_object(Bucket="scoped-bkt", Key="tenant_1/a.txt", Body=b"mine")
+            client.put_object(
+                Bucket="scoped-bkt", Key="tenant_10/secret.txt", Body=b"theirs"
+            )
+            backend = S3Backend(
+                bucket_name="scoped-bkt", region_name="us-east-1", prefix="tenant_1"
+            )
+
+            assert backend.read("tenant_1/a.txt") == b"mine"
+            for op in (
+                lambda: backend.read("tenant_10/secret.txt"),
+                lambda: backend.write("tenant_10/planted.txt", b"payload"),
+                lambda: backend.edit("tenant_10/secret.txt", "theirs", "pwned"),
+                lambda: backend.get_size("tenant_10/secret.txt"),
+            ):
+                with pytest.raises(AdapterError) as ei:
+                    op()
+                assert ei.value.code == ErrorCode.E2009_PATH_OUTSIDE_PREFIX
+            keys = {
+                o["Key"]
+                for o in client.list_objects_v2(Bucket="scoped-bkt")["Contents"]
+            }
+            assert keys == {"tenant_1/a.txt", "tenant_10/secret.txt"}
 
 
 @pytest.mark.unit
