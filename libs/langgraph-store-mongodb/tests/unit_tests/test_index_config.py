@@ -66,4 +66,3 @@ def test_store_creates_autoembedding_index_from_raw_config() -> None:
     assert kwargs["dimensions"] == -1
     assert kwargs["similarity"] is None
     assert kwargs["auto_embedding_model"] == "voyage-4"
-
