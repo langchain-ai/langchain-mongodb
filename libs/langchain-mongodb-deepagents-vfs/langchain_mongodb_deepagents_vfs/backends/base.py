@@ -33,9 +33,8 @@ DEFAULT_PREFIX = "mongodb_vfs/"
 
 def normalize_prefix(prefix: str) -> str:
     """Return *prefix* with a trailing ``/`` so it bounds a whole path segment."""
-    if prefix and not prefix.endswith("/"):
-        return prefix + "/"
-    return prefix
+    stripped = prefix.strip("/")
+    return stripped + "/" if stripped else ""
 
 
 class ObjectStoreBackend(ABC):

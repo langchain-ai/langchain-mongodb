@@ -235,6 +235,7 @@ class S3Backend(ObjectStoreBackend):
 
     def list_keys(self, prefix: str = "") -> Iterator[tuple[str, str]]:
         paginator = self._client.get_paginator("list_objects_v2")
+        prefix = normalize_prefix(prefix)
         try:
             for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix):
                 for obj in page.get("Contents", []):
@@ -243,7 +244,11 @@ class S3Backend(ObjectStoreBackend):
             raise AdapterError(ErrorCode.E2005_LIST_FAILED, str(exc)) from exc
 
     def get_etag(self, key: str) -> str | None:
-        """Return the current ETag for *key*, or None if not found."""
+        """Return the ETag for *key*, or None if missing or outside the prefix."""
+        try:
+            key = self._key(key)
+        except AdapterError:
+            return None
         try:
             head = self._client.head_object(Bucket=self._bucket, Key=key)
             etag: str = head["ETag"].strip('"')

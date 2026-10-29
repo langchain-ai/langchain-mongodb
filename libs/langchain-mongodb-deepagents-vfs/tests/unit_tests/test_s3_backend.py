@@ -206,6 +206,8 @@ class TestReadSizeCap:
         ("", ""),
         ("docs", "docs/"),
         ("docs/", "docs/"),
+        ("/docs", "docs/"),
+        ("/docs/", "docs/"),
         ("a/b", "a/b/"),
     ],
 )
@@ -354,6 +356,18 @@ class TestPrefixScopeEnforcement:
             }
             assert keys == {"docs/a.txt", "docs2/b.txt"}
 
+    def test_get_etag_respects_prefix(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="scoped-bkt")
+            client.put_object(Bucket="scoped-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="scoped-bkt", Key="docs2/b.txt", Body=b"b")
+            backend = S3Backend(
+                bucket_name="scoped-bkt", region_name="us-east-1", prefix="docs"
+            )
+            assert backend.get_etag("docs/a.txt")
+            assert backend.get_etag("docs2/b.txt") is None
+
 
 @pytest.mark.unit
 class TestS3BackendWrite:
@@ -445,6 +459,19 @@ class TestS3BackendListKeys:
             keys = list(backend.list_keys(prefix="docs/"))
             assert all(k.startswith("docs/") for k, _ in keys)
             assert len(keys) == 1
+
+    def test_list_keys_normalizes_prefix(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="test-bkt")
+            client.put_object(Bucket="test-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="test-bkt", Key="docs2/b.txt", Body=b"b")
+            backend = S3Backend(
+                bucket_name="test-bkt", region_name="us-east-1", prefix=""
+            )
+            for prefix in ("docs", "/docs"):
+                keys = [k for k, _ in backend.list_keys(prefix=prefix)]
+                assert keys == ["docs/a.txt"]
 
     def test_list_keys_includes_etag(self, aws_credentials):
         with mock_aws():
