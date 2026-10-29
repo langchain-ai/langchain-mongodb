@@ -338,6 +338,8 @@ class MongoDBStore(BaseStore):
                     for ix in collection.list_search_indexes()
                 ]
             ):
+                if dimensions is None:
+                    raise ValueError("dims is required when using manual embeddings.")
                 create_vector_search_index(
                     collection=collection,
                     index_name=self._index_name,
