@@ -1281,7 +1281,7 @@ dev = [
 
 [[package]]
 name = "langchain-mongodb-deepagents-vfs"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "libs/langchain-mongodb-deepagents-vfs" }
 dependencies = [
     { name = "boto3" },
