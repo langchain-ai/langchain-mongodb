@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.1  (2026/10/30)
 
+- `s3_prefix` now gets a trailing `/` if it is missing, so it matches whole
+  path segments only: `s3_prefix="docs"` covers `docs/...` but no longer
+  `docs2/...`. This applies to read, write, edit, sync, and watch.
+- Raised the `pymongo` floor to `>=4.18.2`.
 - `grep`, `glob`, and `ls` now ignore a leading `/` on `path`. Deep Agents'
   file tools pass absolute paths such as `/docs`, but indexed keys are
   relative, so these calls previously matched nothing and returned empty
