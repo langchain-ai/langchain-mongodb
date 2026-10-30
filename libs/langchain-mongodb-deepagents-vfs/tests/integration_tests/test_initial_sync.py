@@ -183,3 +183,20 @@ class TestInitialSyncBasic:
             sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
             report = sync.run(prefix="docs/")
             assert report.seen == 1
+
+    def test_sync_prefix_without_trailing_slash_excludes_sibling_prefix(
+        self, aws_credentials, mongo_collection, mock_embedder, chunker
+    ):
+        """prefix="docs" lists "docs/" keys, not "docs2/"."""
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="prefixed-bucket")
+            client.put_object(Bucket="prefixed-bucket", Key="docs/a.txt", Body=b"A")
+            client.put_object(Bucket="prefixed-bucket", Key="docs2/b.txt", Body=b"B")
+            store = S3Backend(
+                bucket_name="prefixed-bucket", region_name="us-east-1", prefix=""
+            )
+            sync = InitialSync(store, chunker, mock_embedder, mongo_collection)
+            report = sync.run(prefix="docs")
+            assert report.seen == 1
+            assert mongo_collection.distinct("source_path") == ["docs/a.txt"]

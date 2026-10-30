@@ -31,6 +31,12 @@ MAX_READ_BYTES = 64 * 1024 * 1024
 DEFAULT_PREFIX = "mongodb_vfs/"
 
 
+def normalize_prefix(prefix: str) -> str:
+    """Return *prefix* with a trailing ``/`` so it bounds a whole path segment."""
+    stripped = prefix.strip("/")
+    return stripped + "/" if stripped else ""
+
+
 class ObjectStoreBackend(ABC):
     """Filesystem-like interface over an arbitrary object store."""
 
