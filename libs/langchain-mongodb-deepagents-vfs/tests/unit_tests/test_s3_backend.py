@@ -6,6 +6,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
+from langchain_mongodb_deepagents_vfs.backends.base import normalize_prefix
 from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 from langchain_mongodb_deepagents_vfs.errors import AdapterError, ErrorCode
 
@@ -199,6 +200,23 @@ class TestReadSizeCap:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("prefix", "expected"),
+    [
+        ("", ""),
+        ("docs", "docs/"),
+        ("docs/", "docs/"),
+        ("/docs", "docs/"),
+        ("/docs/", "docs/"),
+        ("a/b", "a/b/"),
+    ],
+)
+def test_normalize_prefix(prefix, expected):
+    assert normalize_prefix(prefix) == expected
+    assert normalize_prefix(expected) == expected
+
+
+@pytest.mark.unit
 class TestPrefixScopeEnforcement:
     """A configured prefix is an isolation boundary: every operation that
     touches a key — not just sync/watch listing — must refuse keys outside
@@ -309,6 +327,47 @@ class TestPrefixScopeEnforcement:
             )
             assert backend.read("anywhere/f.txt") == b"ok"
 
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
+        self, aws_credentials
+    ):
+        """prefix="docs" covers "docs/" keys, not "docs2/"."""
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="scoped-bkt")
+            client.put_object(Bucket="scoped-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="scoped-bkt", Key="docs2/b.txt", Body=b"b")
+            backend = S3Backend(
+                bucket_name="scoped-bkt", region_name="us-east-1", prefix="docs"
+            )
+
+            assert backend.read("docs/a.txt") == b"a"
+            for op in (
+                lambda: backend.read("docs2/b.txt"),
+                lambda: backend.write("docs2/c.txt", b"c"),
+                lambda: backend.edit("docs2/b.txt", "b", "x"),
+                lambda: backend.get_size("docs2/b.txt"),
+            ):
+                with pytest.raises(AdapterError) as ei:
+                    op()
+                assert ei.value.code == ErrorCode.E2009_PATH_OUTSIDE_PREFIX
+            keys = {
+                o["Key"]
+                for o in client.list_objects_v2(Bucket="scoped-bkt")["Contents"]
+            }
+            assert keys == {"docs/a.txt", "docs2/b.txt"}
+
+    def test_get_etag_respects_prefix(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="scoped-bkt")
+            client.put_object(Bucket="scoped-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="scoped-bkt", Key="docs2/b.txt", Body=b"b")
+            backend = S3Backend(
+                bucket_name="scoped-bkt", region_name="us-east-1", prefix="docs"
+            )
+            assert backend.get_etag("docs/a.txt")
+            assert backend.get_etag("docs2/b.txt") is None
+
 
 @pytest.mark.unit
 class TestS3BackendWrite:
@@ -400,6 +459,19 @@ class TestS3BackendListKeys:
             keys = list(backend.list_keys(prefix="docs/"))
             assert all(k.startswith("docs/") for k, _ in keys)
             assert len(keys) == 1
+
+    def test_list_keys_normalizes_prefix(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name="us-east-1")
+            client.create_bucket(Bucket="test-bkt")
+            client.put_object(Bucket="test-bkt", Key="docs/a.txt", Body=b"a")
+            client.put_object(Bucket="test-bkt", Key="docs2/b.txt", Body=b"b")
+            backend = S3Backend(
+                bucket_name="test-bkt", region_name="us-east-1", prefix=""
+            )
+            for prefix in ("docs", "/docs"):
+                keys = [k for k, _ in backend.list_keys(prefix=prefix)]
+                assert keys == ["docs/a.txt"]
 
     def test_list_keys_includes_etag(self, aws_credentials):
         with mock_aws():

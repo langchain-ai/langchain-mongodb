@@ -1,7 +1,7 @@
 import pytest
 from langchain_mongodb.embeddings import AutoEmbeddings
 
-from langgraph.store.mongodb import create_vector_index_config
+from langgraph.store.mongodb import VectorIndexConfig, create_vector_index_config
 
 
 def test_create_vector_index_config_with_autoembeddings() -> None:
@@ -54,16 +54,15 @@ def test_store_creates_autoembedding_index_from_raw_config() -> None:
     with patch("langgraph.store.mongodb.base.create_vector_search_index") as create:
         MongoDBStore(
             collection,
-            index_config={
-                "dims": None,
-                "embed": AutoEmbeddings("voyage-4"),
-                "fields": ["question"],
-                "filters": [],
-            },
+            index_config=VectorIndexConfig(
+                dims=None,
+                embed=AutoEmbeddings("voyage-4"),
+                fields=["question"],
+                filters=[],
+            ),
         )
 
     kwargs = create.call_args.kwargs
     assert kwargs["dimensions"] == -1
     assert kwargs["similarity"] is None
     assert kwargs["auto_embedding_model"] == "voyage-4"
-
