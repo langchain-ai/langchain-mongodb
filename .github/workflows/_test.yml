@@ -20,6 +20,7 @@ jobs:
         python-version:
           - "3.11"
           - "3.13"
+          - "3.15"
     name: "run test #${{ matrix.python-version }}"
     steps:
       - uses: actions/checkout@v7
