@@ -2,9 +2,13 @@ import os
 import time
 from collections.abc import Generator
 from datetime import datetime
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from bson import SON
+from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
+from langchain_mongodb.embeddings import AutoEmbeddings
 from langgraph.store.base import (
     GetOp,
     Item,
@@ -13,10 +17,12 @@ from langgraph.store.base import (
     PutOp,
     TTLConfig,
 )
-from pymongo import MongoClient
+from pymongo import DeleteOne, MongoClient, UpdateOne
+from pymongo.collection import Collection
 
 from langgraph.store.mongodb import (
     MongoDBStore,
+    create_vector_index_config,
 )
 
 MONGODB_URI = os.environ.get(
@@ -622,3 +628,96 @@ def test_upgrade_idempotent(legacy_collection) -> None:  # type: ignore[no-untyp
 
     assert docs_after_first == docs_after_second
     assert indexes_after_first == indexes_after_second
+
+
+# ---------------------------------------------------------------------------
+# Issue #479: puts that are not indexed (index=False, or value lacks the
+# configured index field) must not break the batch. Offline, mocked Collection.
+# ---------------------------------------------------------------------------
+
+EMBED_DIMS = 8
+
+
+@pytest.fixture(
+    params=[DeterministicFakeEmbedding(size=EMBED_DIMS), AutoEmbeddings("voyage-4")],
+    ids=["vectors", "autoembedding"],
+)
+def indexed_store(request: pytest.FixtureRequest) -> MongoDBStore:
+    collection = MagicMock(spec=Collection)
+    collection.list_indexes.return_value = []
+    collection.find.return_value = []
+    collection.list_search_indexes.return_value = [{"name": "vector_index"}]
+    return MongoDBStore(
+        collection,
+        index_config=create_vector_index_config(
+            dims=EMBED_DIMS, embed=request.param, fields=["text"], filters=[]
+        ),
+    )
+
+
+def _written(store: MongoDBStore) -> list[Any]:
+    store.collection.bulk_write.assert_called_once()  # type: ignore[attr-defined]
+    return store.collection.bulk_write.call_args.args[0]  # type: ignore[attr-defined]
+
+
+def _upserts(store: MongoDBStore) -> dict[str, dict[str, Any]]:
+    upserts: dict[str, dict[str, Any]] = {}
+    for w in _written(store):
+        if isinstance(w, UpdateOne):
+            update: Any = w._doc
+            upserts[w._filter["key"]] = update["$set"]
+    return upserts
+
+
+def _expected_embedding(store: MongoDBStore, text: str) -> Any:
+    if store._is_autoembedding:
+        return text
+    embeddings: Embeddings = store.embeddings
+    return embeddings.embed_documents([text])[0]
+
+
+def test_put_index_false_not_embedded(indexed_store: MongoDBStore) -> None:
+    indexed_store.put(("docs",), "k", {"text": "hello"}, index=False)
+    upserts = _upserts(indexed_store)
+    assert list(upserts) == ["k"]
+    assert upserts["k"]["value"] == {"text": "hello"}
+    assert indexed_store._embedding_key not in upserts["k"]
+
+
+def test_put_missing_index_field_not_embedded(indexed_store: MongoDBStore) -> None:
+    indexed_store.put(("docs",), "k", {"title": "no text field"})
+    upserts = _upserts(indexed_store)
+    assert list(upserts) == ["k"]
+    assert upserts["k"]["value"] == {"title": "no text field"}
+    assert indexed_store._embedding_key not in upserts["k"]
+
+
+MIXED_OPS = [
+    PutOp(("docs",), "skip", {"text": "not indexed"}, index=False),
+    PutOp(("docs",), "missing", {"title": "no text field"}),
+    PutOp(("docs",), "indexed", {"text": "embed me"}),
+    PutOp(("docs",), "gone", None),
+]
+
+
+def _assert_mixed_writes(store: MongoDBStore) -> None:
+    writes = _written(store)
+    assert len(writes) == len(MIXED_OPS)
+    assert sum(isinstance(w, DeleteOne) for w in writes) == 1
+    upserts = _upserts(store)
+    assert set(upserts) == {"skip", "missing", "indexed"}
+    assert all(u["namespace_prefix"] == ["docs"] for u in upserts.values())
+    key = store._embedding_key
+    assert upserts["indexed"][key] == _expected_embedding(store, "embed me")
+    assert key not in upserts["skip"]
+    assert key not in upserts["missing"]
+
+
+def test_batch_mixed_index_eligibility(indexed_store: MongoDBStore) -> None:
+    indexed_store.batch(MIXED_OPS)
+    _assert_mixed_writes(indexed_store)
+
+
+async def test_abatch_mixed_index_eligibility(indexed_store: MongoDBStore) -> None:
+    await indexed_store.abatch(MIXED_OPS)
+    _assert_mixed_writes(indexed_store)
