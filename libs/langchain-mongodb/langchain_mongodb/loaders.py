@@ -38,7 +38,8 @@ class MongoDBLoader(BaseLoader):
             filter_criteria (Optional[Dict]): MongoDB filter criteria for querying
             documents.
             field_names (Optional[Sequence[str]]): List of field names to retrieve
-            from documents.
+            from documents. If not provided, the entire document is used as
+            page content.
             metadata_names (Optional[Sequence[str]]): Additional metadata fields to
             extract from documents.
             include_db_collection_in_metadata (bool): Flag to include database and
@@ -79,7 +80,8 @@ class MongoDBLoader(BaseLoader):
             filter_criteria (Optional[Dict]): MongoDB filter criteria for querying
             documents.
             field_names (Optional[Sequence[str]]): List of field names to retrieve
-            from documents.
+            from documents. If not provided, the entire document is used as
+            page content.
             metadata_names (Optional[Sequence[str]]): Additional metadata fields to
             extract from documents.
             include_db_collection_in_metadata (bool): Flag to include database and
@@ -119,7 +121,7 @@ class MongoDBLoader(BaseLoader):
                 )
 
             # Extract text content from filtered fields or use the entire document
-            if self.field_names is not None:
+            if self.field_names:
                 fields = self._extract_fields(doc, self.field_names, default="")
                 texts = [str(value) for value in fields.values()]
                 text = " ".join(texts)
@@ -142,11 +144,14 @@ class MongoDBLoader(BaseLoader):
 
     def _construct_projection(self) -> Optional[Dict]:
         """Constructs the projection dictionary for MongoDB query based
-        on the specified field names and metadata names."""
-        field_names = list(self.field_names) or []
-        metadata_names = list(self.metadata_names) or []
-        all_fields = field_names + metadata_names
-        return {field: 1 for field in all_fields} if all_fields else None
+        on the specified field names and metadata names.
+
+        Returns None (fetch the entire document) when no field names are given,
+        since the entire document is then used as page content."""
+        if not self.field_names:
+            return None
+        all_fields = list(self.field_names) + list(self.metadata_names)
+        return {field: 1 for field in all_fields}
 
     def _extract_fields(
         self,
