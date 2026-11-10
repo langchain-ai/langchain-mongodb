@@ -1,5 +1,5 @@
 import warnings
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
@@ -14,6 +14,7 @@ from langchain_mongodb.pipelines import (
     combine_pipelines,
     final_hybrid_stage,
     reciprocal_rank_stage,
+    rerank_stage,
     text_search_stage,
     vector_search_stage,
 )
@@ -52,6 +53,12 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
     """Weight applied to full-text search results in RRF: score = weight * (1 / (rank + penalty + 1))"""
     show_embeddings: float = False
     """If true, returned Document metadata will include vectors."""
+    rerank_path: Optional[Union[str, List[str]]] = None
+    """Field or list of fields to rerank on. Enables $rerank when set."""
+    rerank_model: Optional[str] = None
+    """Voyage AI reranking model (e.g. 'rerank-2.5'). Uses latest model if omitted."""
+    num_docs_to_rerank: Optional[int] = None
+    """Candidates passed to the reranker. Defaults to k. Max 1000."""
     top_k: Annotated[
         Optional[int], Field(deprecated='top_k is deprecated, use "k" instead')
     ] = None
@@ -71,6 +78,9 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
         vector_weight: float = 1.0,
         fulltext_weight: float = 1.0,
         show_embeddings: float = False,
+        rerank_path: Optional[Union[str, List[str]]] = None,
+        rerank_model: Optional[str] = None,
+        num_docs_to_rerank: Optional[int] = None,
         top_k: Optional[int] = None,
         auto_create_index: bool = True,
         auto_index_timeout: int = 15,
@@ -90,6 +100,9 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             vector_weight: Weight applied to vector search results in RRF: score = weight * (1 / (rank + penalty + 1)). Defaults to 1.0.
             fulltext_weight: Weight applied to full-text search results in RRF: score = weight * (1 / (rank + penalty + 1)). Defaults to 1.0.
             show_embeddings: If true, returned Document metadata will include vectors. Defaults to False.
+            rerank_path: Field or list of fields to rerank on. Enables $rerank when set.
+            rerank_model: Voyage AI reranking model. Uses latest model if omitted.
+            num_docs_to_rerank: Candidates passed to the reranker. Defaults to k. Max 1000.
             top_k: (Deprecated) Number of documents to return. Use k instead.
             auto_create_index: Whether to automatically create the full-text search index if it does not exist. Defaults to True.
             auto_index_timeout: How long to wait for the automatic index creation to complete, in seconds. Defaults to 15.
@@ -108,6 +121,9 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
             vector_weight=vector_weight,
             fulltext_weight=fulltext_weight,
             show_embeddings=show_embeddings,
+            rerank_path=rerank_path,
+            rerank_model=rerank_model,
+            num_docs_to_rerank=num_docs_to_rerank,
             top_k=top_k,
             **kwargs,
         )
@@ -221,12 +237,25 @@ class MongoDBAtlasHybridSearchRetriever(BaseRetriever):
 
         combine_pipelines(pipeline, text_pipeline, self.collection.name)
 
-        # Sum and sort stage
-        pipeline.extend(final_hybrid_stage(scores_fields=scores_fields, limit=k))
+        # Sum and sort stage — expand limit when reranking so the reranker has candidates.
+        n_to_rerank = self.num_docs_to_rerank or k
+        hybrid_limit = n_to_rerank if self.rerank_path else k
+        pipeline.extend(
+            final_hybrid_stage(scores_fields=scores_fields, limit=hybrid_limit)
+        )
 
         # Removal of embeddings unless requested.
         if not self.show_embeddings and not is_autoembedding:
             pipeline.append({"$project": {self.vectorstore._embedding_key: 0}})
+
+        # Native Reranking via $rerank (requires MongoDB 8.3+ and Atlas project setting).
+        if self.rerank_path is not None:
+            pipeline.extend(
+                rerank_stage(query, self.rerank_path, n_to_rerank, self.rerank_model)
+            )
+            if n_to_rerank > k:
+                pipeline.append({"$limit": k})
+
         # Post filtering
         if self.post_filter is not None:
             pipeline.extend(self.post_filter)

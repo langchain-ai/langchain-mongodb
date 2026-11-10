@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import pymongo
 from langchain_classic.retrievers.parent_document_retriever import (
@@ -22,6 +22,7 @@ from langchain_mongodb.docstores import MongoDBDocStore
 from langchain_mongodb.index import create_fulltext_search_index
 from langchain_mongodb.pipelines import (
     autoembedding_vector_search_stage,
+    rerank_stage,
     vector_search_stage,
 )
 from langchain_mongodb.utils import (
@@ -88,6 +89,13 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
 
     search_kwargs: dict = Field(default_factory=dict)
     """Kwargs to be passed to vector_search_stage. e.g. {'top_k': 5}. """
+
+    rerank_path: Optional[Union[str, List[str]]] = None
+    """Field or list of fields on the parent document to rerank on. Enables $rerank when set."""
+    rerank_model: Optional[str] = None
+    """Voyage AI reranking model (e.g. 'rerank-2.5'). Uses latest model if omitted."""
+    num_docs_to_rerank: Optional[int] = None
+    """Candidates passed to the reranker. Defaults to search_kwargs top_k (or 4). Max 1000."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         auto_create_index = kwargs.pop("auto_create_index", True)
@@ -163,6 +171,14 @@ class MongoDBAtlasParentDocumentRetriever(ParentDocumentRetriever):
             },
             {"$replaceRoot": {"newRoot": "$uniqueDocument"}},
         ]
+
+        # Native Reranking via $rerank on parent documents (requires MongoDB 8.3+).
+        if self.rerank_path is not None:
+            n_to_rerank = self.num_docs_to_rerank or self.search_kwargs.get("top_k", 4)
+            pipeline.extend(
+                rerank_stage(query, self.rerank_path, n_to_rerank, self.rerank_model)
+            )
+
         # Execute
         cursor = self.vectorstore._collection.aggregate(pipeline)  # type: ignore[arg-type]
         docs = []

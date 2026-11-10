@@ -4,6 +4,7 @@ from collections.abc import Generator
 from datetime import datetime
 
 import pytest
+from bson import SON
 from langgraph.store.base import (
     GetOp,
     Item,
@@ -269,6 +270,49 @@ def test_put(store: MongoDBStore) -> None:
     store.put(("a",), "idx", {"data": "val"}, index=["data"])
 
 
+def test_put_no_multikey_collision(store: MongoDBStore) -> None:
+    """Regression test for INTPYTHON-948.
+
+    namespace is stored as an array; indexing it directly creates a multikey
+    index whose entries are individual elements, so two documents that share
+    any element (e.g. "users" or "preferences") and have the same key would
+    collide.  The fix stores a joined namespace_str and indexes that instead.
+    """
+    store.put(("users", "alice", "preferences"), "food", {"likes": "pizza"})
+    store.put(("users", "bob", "preferences"), "food", {"likes": "tacos"})
+
+    alice = store.get(("users", "alice", "preferences"), "food")
+    bob = store.get(("users", "bob", "preferences"), "food")
+    assert alice is not None and alice.value == {"likes": "pizza"}
+    assert bob is not None and bob.value == {"likes": "tacos"}
+
+
+def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
+    """Namespace parts containing the separator or empty parts must be rejected.
+
+    Allowing them would make the namespace_str join non-injective:
+    e.g. ('a/b', 'c') and ('a', 'b/c') both map to 'a/b/c' with sep='/'.
+    Empty parts cause the same problem: ('a', '', 'b') maps to 'a//b',
+    which collides with any other tuple that also joins to 'a//b'.
+    """
+    sep = store.sep
+    bad_namespace = (f"a{sep}b", "c")
+    empty_namespace = ("a", "", "b")
+
+    for ns in (bad_namespace, empty_namespace):
+        with pytest.raises(ValueError):
+            store.put(ns, "key", {"v": 1})
+
+        with pytest.raises(ValueError):
+            store.get(ns, "key")
+
+        with pytest.raises(ValueError):
+            store.delete(ns, "key")
+
+        with pytest.raises(ValueError):
+            store.batch([PutOp(namespace=ns, key="key", value={"v": 1})])
+
+
 def test_delete(store: MongoDBStore) -> None:
     n_items = store.collection.count_documents({})
     store.delete(namespace=("a", "b", "c"), key="id_0")
@@ -349,3 +393,232 @@ def test_search_basic(store: MongoDBStore) -> None:
     store.put(namespace=namespace, key="id_foo", value={"data": "value_foo"})
     result = store.search(namespace, filter={"data": "value_foo"})
     assert len(result) == 1
+
+
+def test_search_rejects_mql_operator_keys(store: MongoDBStore) -> None:
+    # nested operator value — $exists bypass leaks all docs
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"user_id": {"$exists": True}})
+    # $ne leaks other tenants' data
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"user_id": {"$ne": "alice"}})
+    # $gt bypasses numeric filter
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"step": {"$gt": 0}})
+    # $in enumerates across tenants
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"user_id": {"$in": ["alice", "bob"]}})
+    # $regex pattern match
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"status": {"$regex": ".*"}})
+    # top-level $where injection
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"$where": "sleep(1000)"})
+    # top-level $or injection
+    with pytest.raises(ValueError, match="MongoDB operator keys are not allowed"):
+        store.search(("a",), filter={"$or": [{"user_id": "alice"}]})
+
+
+def test_search_filter_normal_behavior(store: MongoDBStore) -> None:
+    """Safe filters — including nested dicts with non-$ keys — work unchanged after the patch."""
+    ns = ("users", "filter-test")
+    store.put(ns, "alice-0", {"user_id": "alice", "step": 0})
+    store.put(ns, "alice-1", {"user_id": "alice", "step": 1})
+    store.put(ns, "bob-0", {"user_id": "bob", "step": 0})
+    store.put(ns, "bob-1", {"user_id": "bob", "step": 1})
+
+    # no filter: returns all items in namespace
+    assert len(store.search(ns)) == 4
+
+    # string scalar filter: only alice's items
+    results = store.search(ns, filter={"user_id": "alice"})
+    assert len(results) == 2
+    assert all(r.value["user_id"] == "alice" for r in results)
+
+    # numeric scalar filter: step==0 across both users
+    results = store.search(ns, filter={"step": 0})
+    assert len(results) == 2
+    assert all(r.value["step"] == 0 for r in results)
+
+    # multiple scalar filters (AND): alice AND step==1
+    results = store.search(ns, filter={"user_id": "alice", "step": 1})
+    assert len(results) == 1
+    assert results[0].value["user_id"] == "alice" and results[0].value["step"] == 1
+
+    # no match returns empty list
+    results = store.search(ns, filter={"user_id": "charlie"})
+    assert len(results) == 0
+
+    # namespace isolation: different namespace returns empty
+    results = store.search(("other", "ns"), filter={"user_id": "alice"})
+    assert len(results) == 0
+
+    # nested dict with safe (non-$) keys is allowed — not rejected as injection
+    store.put(
+        ns,
+        "alice-meta",
+        {"user_id": "alice", "meta": {"source": "api", "version": "v1"}},
+    )
+    results = store.search(ns, filter={"meta": {"source": "api", "version": "v1"}})
+    assert len(results) == 1
+    assert results[0].value["user_id"] == "alice"
+
+
+# ---------------------------------------------------------------------------
+# INTPYTHON-957: upgrade path from the legacy (namespace, key) multikey index
+# to the new (namespace_str, key) unique index, plus namespace_str backfill.
+# ---------------------------------------------------------------------------
+
+LEGACY_COLLECTION_NAME = "long_term_memory_legacy"
+
+NS_KEY = SON([("namespace", 1), ("key", 1)])
+NS_STR_KEY = SON([("namespace_str", 1), ("key", 1)])
+
+
+@pytest.fixture
+def legacy_collection() -> Generator:
+    """A clean collection for legacy/upgrade tests, isolated from the shared fixture."""
+    client: MongoClient = MongoClient(MONGODB_URI)
+    collection = client[DB_NAME][LEGACY_COLLECTION_NAME]
+    collection.delete_many({})
+    collection.drop_indexes()
+    try:
+        yield collection
+    finally:
+        collection.delete_many({})
+        collection.drop_indexes()
+        client.close()
+
+
+def _index_by_key(collection, key_pattern):  # type: ignore[no-untyped-def]
+    return next(
+        (idx for idx in collection.list_indexes() if idx["key"] == key_pattern), None
+    )
+
+
+def test_upgrade_from_legacy_index(legacy_collection) -> None:  # type: ignore[no-untyped-def]
+    """Existing collection with the legacy (namespace, key) unique multikey index
+    and pre-existing documents lacking namespace_str should be migrated on init:
+
+    - Every legacy document gains namespace_str = "/".join(namespace).
+    - The legacy (namespace, key) index is dropped.
+    - A unique (namespace_str, key) index is created.
+    - Reads and writes against the migrated docs work correctly.
+    """
+    legacy_collection.create_index([("namespace", 1), ("key", 1)], unique=True)
+
+    now = datetime.now()
+    legacy_docs = [
+        {
+            "namespace": list(ns),
+            "key": key,
+            "value": value,
+            "created_at": now,
+            "updated_at": now,
+        }
+        for ns, key, value in [
+            (("users", "alice", "preferences"), "food", {"likes": "pizza"}),
+            (("users", "bob"), "profile", {"name": "Bob"}),
+            (("admin",), "root", {"role": "superuser"}),
+            (("a", "b", "c"), "x", {"v": 1}),
+        ]
+    ]
+    legacy_collection.insert_many(legacy_docs)
+    assert legacy_collection.count_documents({"namespace_str": {"$exists": True}}) == 0
+
+    store = MongoDBStore(legacy_collection)
+
+    # Every doc backfilled.
+    assert legacy_collection.count_documents({"namespace_str": {"$exists": False}}) == 0
+    for doc in legacy_collection.find({}):
+        assert doc["namespace_str"] == "/".join(doc["namespace"])
+
+    # Legacy index gone, new unique index present.
+    assert _index_by_key(legacy_collection, NS_KEY) is None
+    new_idx = _index_by_key(legacy_collection, NS_STR_KEY)
+    assert new_idx is not None
+    assert new_idx.get("unique") is True
+
+    # Reads return the original values.
+    alice = store.get(("users", "alice", "preferences"), "food")
+    assert alice is not None and alice.value == {"likes": "pizza"}
+
+    # Writes against a legacy (namespace, key) update in place rather than insert,
+    # proving uniqueness now keys off namespace_str.
+    n_before = legacy_collection.count_documents({})
+    store.put(("a", "b", "c"), "x", {"v": 2})
+    assert legacy_collection.count_documents({}) == n_before
+    updated = store.get(("a", "b", "c"), "x")
+    assert updated is not None and updated.value == {"v": 2}
+
+
+def test_upgrade_with_conflicting_non_unique_index(legacy_collection) -> None:  # type: ignore[no-untyped-def]
+    """A pre-existing non-unique (namespace_str, key) index should be dropped
+    and replaced with the unique variant on init."""
+    legacy_collection.create_index([("namespace_str", 1), ("key", 1)], unique=False)
+
+    pre = _index_by_key(legacy_collection, NS_STR_KEY)
+    assert pre is not None and not pre.get("unique", False)
+
+    MongoDBStore(legacy_collection)
+
+    # Exactly one index on (namespace_str, key), and it must be unique.
+    matches = [
+        idx for idx in legacy_collection.list_indexes() if idx["key"] == NS_STR_KEY
+    ]
+    assert len(matches) == 1
+    assert matches[0].get("unique") is True
+
+
+def test_upgrade_idempotent(legacy_collection) -> None:  # type: ignore[no-untyped-def]
+    """Re-initializing MongoDBStore against an already-migrated collection
+    should be a no-op: no doc changes, no index churn."""
+    legacy_collection.create_index([("namespace", 1), ("key", 1)], unique=True)
+    now = datetime.now()
+    legacy_collection.insert_many(
+        [
+            {
+                "namespace": ["users", "alice"],
+                "key": "k",
+                "value": {"v": 1},
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "namespace": ["a", "b"],
+                "key": "k",
+                "value": {"v": 2},
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+    )
+
+    MongoDBStore(legacy_collection)
+
+    docs_after_first = sorted(
+        (
+            (d["namespace_str"], d["key"], d["value"])
+            for d in legacy_collection.find({})
+        ),
+    )
+    indexes_after_first = sorted(
+        (idx["name"], dict(idx["key"]), idx.get("unique", False))
+        for idx in legacy_collection.list_indexes()
+    )
+
+    MongoDBStore(legacy_collection)
+
+    docs_after_second = sorted(
+        (
+            (d["namespace_str"], d["key"], d["value"])
+            for d in legacy_collection.find({})
+        ),
+    )
+    indexes_after_second = sorted(
+        (idx["name"], dict(idx["key"]), idx.get("unique", False))
+        for idx in legacy_collection.list_indexes()
+    )
+
+    assert docs_after_first == docs_after_second
+    assert indexes_after_first == indexes_after_second

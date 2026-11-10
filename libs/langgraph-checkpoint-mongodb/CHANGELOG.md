@@ -2,6 +2,17 @@
 
 ---
 
+## Changes in version 0.5.1 (2026/10/08)
+- Require `thread_id`, `checkpoint_ns`, `checkpoint_id`, `task_id`, and `task_path` to be strings in `MongoDBSaver`, raising `ValueError` otherwise. Non-string values (e.g. `{"$ne": ""}` or a regex) previously reached MongoDB queries and could match other threads' checkpoints when an application called the saver directly with unvalidated input.
+- Raise the minimum pymongo version to 4.18.2 and remove the upper bound.
+
+## Changes in version 0.5.0 (2026/09/04)
+- Require Python >=3.11 (dropped support for Python 3.10, which reached End of Life this Fall).
+
+## Changes in version 0.4.0 (2026/05/11)
+- Reject MQL operator keys (any key containing a "$") in filter dicts.
+- Add links to mongodb.com documentation.
+
 ## Changes in version 0.3.1 (2026/01/22)
 - Fixes issue #287 to migrate checkpoint data created with v<0.2.2 with a migration script: [migrate_checkpoints_to_typed_metadata.py](./scripts/migrate_checkpoints_to_typed_metadata.py).
 - Fixes issue #299 to ensure TTL indexes are always created on initialization of MongoDBSaver if enabled.

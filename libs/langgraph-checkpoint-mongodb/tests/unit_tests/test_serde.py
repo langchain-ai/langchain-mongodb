@@ -32,6 +32,7 @@ def test_custom_serde(input_data: dict[str, Any]) -> None:
     client: MongoClient = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
     db.drop_collection(COLLECTION_NAME)
+    client.close()
 
     custom_serializer = CustomSerializer()
 

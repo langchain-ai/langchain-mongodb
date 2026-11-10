@@ -43,6 +43,34 @@ def loads_metadata(
         return serde.loads_typed(metadata)
 
 
+def _validate_filter(filter_dict: dict[str, Any]) -> None:
+    for key, value in filter_dict.items():
+        if not isinstance(key, str) or key.startswith("$"):
+            raise ValueError(
+                f"Invalid filter key '{key}': MongoDB operator keys are not allowed."
+            )
+        if isinstance(value, dict):
+            _validate_filter(value)
+
+
+def _validate_identifier(value: Any, name: str, *, optional: bool = False) -> Any:
+    """Ensure an identifier destined for a MongoDB query is a plain string.
+
+    Identifiers such as ``thread_id`` are placed directly into query documents,
+    so a non-string value (e.g. ``{"$ne": ""}``) would be interpreted as an
+    MQL operator and match documents belonging to other threads.
+
+    Returns the value unchanged. ``None`` is accepted only when ``optional``.
+    """
+    if value is None and optional:
+        return value
+    if not isinstance(value, str):
+        raise ValueError(
+            f"Invalid {name}: expected a string, got {type(value).__name__}."
+        )
+    return value
+
+
 def dumps_metadata(
     serde: SerializerProtocol,
     metadata: Union[CheckpointMetadata, Any],

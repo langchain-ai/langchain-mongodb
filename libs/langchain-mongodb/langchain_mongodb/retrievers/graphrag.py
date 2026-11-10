@@ -27,6 +27,8 @@ class MongoDBGraphRAGRetriever(BaseRetriever):
             query: String to find relevant documents for
             run_manager: The callback handler to use if desired
         Returns:
-            List of relevant documents.
+            List of relevant documents, reranked by relevance if ``rerank_path``
+            is set on the underlying ``graph_store``.
         """
-        return [Document(str(e)) for e in self.graph_store.similarity_search(query)]
+        entities = self.graph_store.similarity_search(query)
+        return [Document(str(e)) for e in entities]

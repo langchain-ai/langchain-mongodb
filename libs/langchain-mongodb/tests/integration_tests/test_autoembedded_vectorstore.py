@@ -25,13 +25,12 @@ from ..utils import (
     PatchedMongoDBAtlasVectorSearch,
 )
 
+if "AUTOEMBEDDING" not in os.environ:
+    pytest.skip("autoembedding not configured", allow_module_level=True)
+
 DIMENSIONS = 5
 
-COMMUNITY_WITH_SEARCH = os.environ.get("COMMUNITY_WITH_SEARCH", "")
-
-pytestmark = pytest.mark.skipif(
-    COMMUNITY_WITH_SEARCH == "", reason="Only run in COMMUNITY_WITH_SEARCH is set"
-)
+pytestmark = pytest.mark.usefixtures("autoembedding_or_skip")
 
 
 @pytest.fixture(scope="module")

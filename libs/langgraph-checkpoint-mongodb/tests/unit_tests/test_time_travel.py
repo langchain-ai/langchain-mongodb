@@ -1,14 +1,13 @@
 import os
 from collections.abc import Generator
 from operator import add
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import StateSnapshot
 from pymongo import MongoClient
-from typing_extensions import NotRequired
 
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
@@ -94,7 +93,7 @@ def test(checkpointer: MongoDBSaver) -> None:
     graph = workflow.compile(checkpointer=checkpointer)
 
     # Run the graph
-    graph.invoke(input=initial_state, config=config, stream_mode="checkpoints")  # type:ignore[arg-type]
+    graph.invoke(input=initial_state, config=config, stream_mode="checkpoints")
 
     # Check to see whether the final state is approved
     final_state = graph.get_state(config=config)

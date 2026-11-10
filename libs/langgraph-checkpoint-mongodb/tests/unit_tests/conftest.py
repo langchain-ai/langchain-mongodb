@@ -15,8 +15,8 @@ def input_data() -> dict:
     inputs: dict[str, Any] = {}
 
     inputs["config_1"] = RunnableConfig(
-        configurable=dict(thread_id="thread-1", thread_ts="1", checkpoint_ns="")
-    )  # config_1 tests deprecated thread_ts
+        configurable=dict(thread_id="thread-1", checkpoint_ns="")
+    )
 
     inputs["config_2"] = RunnableConfig(
         configurable=dict(thread_id="thread-2", checkpoint_id="2", checkpoint_ns="")

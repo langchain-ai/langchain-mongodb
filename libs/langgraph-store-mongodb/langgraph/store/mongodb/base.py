@@ -1,8 +1,8 @@
 import logging
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Any, Literal, Optional, Union
+from datetime import UTC, datetime
+from typing import Any, Literal, Optional, TypedDict, Union
 
 from bson import SON
 from langchain_core.embeddings import Embeddings
@@ -46,6 +46,51 @@ from langgraph.store.mongodb.utils import DRIVER_METADATA
 logger = logging.getLogger(__name__)
 
 
+def _validate_filter(filter_dict: dict[str, Any]) -> None:
+    for key, value in filter_dict.items():
+        if not isinstance(key, str) or key.startswith("$"):
+            raise ValueError(
+                f"Invalid filter key '{key}': MongoDB operator keys are not allowed."
+            )
+        if isinstance(value, dict):
+            _validate_filter(value)
+
+
+class RerankConfig(TypedDict, total=False):
+    """Configuration for native reranking via the $rerank aggregation stage.
+
+    Reranking runs entirely server-side on MongoDB Atlas — no Voyage AI SDK or
+    client-side API key is required.  Atlas calls the Voyage AI reranker API on
+    your behalf using a key you configure in Atlas Project Settings.
+
+    Prerequisites (all must be satisfied before results are reranked):
+      1. MongoDB Atlas cluster running MongoDB 8.3+.
+      2. Native Reranking enabled in Atlas Project Settings.
+      3. A Voyage AI API key configured in Atlas Project Settings.
+
+    If any prerequisite is missing, ``search()`` will return constant scores
+    (e.g. ``0.5987``) for all documents rather than raising an error.
+
+    Attributes:
+        model: Voyage AI reranking model (e.g. ``"rerank-2.5-lite"``).
+            Omit to use the latest available model.
+        num_docs_to_rerank: Number of candidates passed from $vectorSearch to the
+            reranker. Must be >= the ``limit`` passed to ``search()`` and <= 1000
+            (the MongoDB maximum for ``$rerank``). Defaults to
+            ``min(limit * oversampling_factor, 1000)``, which satisfies both
+            constraints as long as ``limit`` itself is <= 1000. Passing
+            ``limit > 1000`` with reranking enabled raises a ``ValueError`` at
+            search time.
+        oversampling_factor: Multiplier applied to ``limit`` when computing the
+            default ``num_docs_to_rerank``. Ignored when ``num_docs_to_rerank``
+            is set explicitly. Defaults to 10.
+    """
+
+    model: str
+    num_docs_to_rerank: int
+    oversampling_factor: int
+
+
 class VectorIndexConfig(IndexConfig, total=False):
     """Configuration for a MongoDB Atlas Vector Index providing semantic search.
 
@@ -74,7 +119,6 @@ class VectorIndexConfig(IndexConfig, total=False):
     It is designed to have one vector per document.
 
     NOTE: If using AutoEmbeddings, the vectors are not explicitly stored in the Collection.
-    Set dims to -1, relevance_score_fn to None.
     The embedding_key will not store vectors. Instead, it will be the texts to be embedded.
     """
 
@@ -98,23 +142,36 @@ def create_vector_index_config(
     embed: Union[Embeddings, EmbeddingsFunc, AEmbeddingsFunc, str],
     fields: Optional[list[str]] = None,
     name: str = "vector_index",
-    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = "cosine",
+    relevance_score_fn: Literal["euclidean", "cosine", "dotProduct", None] = None,
     embedding_key: str | None = "embedding",
     filters: Optional[list[str]] = None,
 ) -> VectorIndexConfig:
     """Factory function creates a VectorIndexConfig instance with sensible defaults.
 
     Args:
-        dims: Dimensions of the embedding vectors.
+        dims: Dimensions of the embedding vectors. Must be None for AutoEmbeddings.
         embed: Embedding model.
         fields: Field to extract text from for embedding generation (list of length 1).
         name: Arbitrary name to give to the index in Atlas.
         relevance_score_fn: Function used to establish similarity of vectors.
+            Defaults to cosine. Must be None for AutoEmbeddings.
         embedding_key: Name of the field used in the collection to store vectors.
         filters: List of (possibly nested) fields to index allowing filtering.
 
     Returns: VectorIndexConfig to be passed to MongoDBStore constructor.
     """
+
+    if isinstance(embed, AutoEmbeddings):
+        if dims not in (None, -1):
+            raise ValueError("dimensions cannot be set when using AutoEmbeddings.")
+        if relevance_score_fn is not None:
+            raise ValueError("similarity cannot be set when using AutoEmbeddings.")
+        dims = -1
+    else:
+        if dims is None:
+            raise ValueError("dims is required when using manual embeddings.")
+        if relevance_score_fn is None:
+            relevance_score_fn = "cosine"
 
     MongoDBStore.ensure_index_filters(filters)
     if filters and "namespace_prefix" not in filters:
@@ -152,6 +209,7 @@ class MongoDBStore(BaseStore):
         index_config: Optional[VectorIndexConfig] = None,
         auto_index_timeout: int = 15,
         query_model: str | None = None,
+        rerank_config: Optional[RerankConfig] = None,
         **kwargs: Any,
     ):
         """Construct store and its indexes.
@@ -165,24 +223,76 @@ class MongoDBStore(BaseStore):
             index_config: Optionally define a VectorIndexConfig for semantic search.
             auto_index_timeout: Optional timeout for creation of indexes.
             query_model: For semantic search, optionally provide a different model for search than indexing.
+            rerank_config: Optionally enable native reranking via $rerank after vector
+                search. Requires MongoDB Atlas 8.3+, Native Reranking enabled in
+                Atlas Project Settings, and a Voyage AI API key configured in Atlas.
+                ``index_config`` must also be set. See ``RerankConfig`` for details.
 
         Returns:
             Instance of MongoDBStore.
         """
+        if rerank_config is not None and not index_config:
+            raise ValueError("rerank_config requires index_config to be set")
+        self._rerank_config: Optional[RerankConfig] = rerank_config or {}
 
         self.collection = collection
         self.ttl_config = {} if ttl_config is None else ttl_config
         self.index_config = {} if index_config is None else index_config
+        self.sep = kwargs.get("sep", "/")
 
         append_client_metadata(
             client=self.collection.database.client, driver_info=DRIVER_METADATA
         )
 
         # Create indexes if not present
-        # Create a unique index, akin to primary key, on namespace + key
-        idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
-        if SON([("namespace", 1), ("key", 1)]) not in idx_keys:
-            self.collection.create_index(keys=["namespace", "key"], unique=True)
+        # Unique compound index on (namespace_str, key) acts as the primary key.
+        # namespace_str is the namespace tuple joined into a single string (e.g.
+        # "users/alice/preferences"), which avoids the multikey-index collision
+        # that occurs when indexing the namespace array directly.
+        indexes = list(self.collection.list_indexes())
+        idx_keys = [idx["key"] for idx in indexes]
+        # Always backfill namespace_str on legacy documents. Reads and deletes
+        # now filter on namespace_str, so any document missing it is unreachable.
+        # This also runs if the index already exists but an old client wrote new
+        # documents without namespace_str after the migration.
+        backfill_batch: list[UpdateOne] = []
+        for doc in self.collection.find(
+            {"namespace_str": {"$exists": False}},
+            {"_id": 1, "namespace": 1},
+        ):
+            namespace = doc.get("namespace") or ()
+            self._validate_namespace(namespace)
+            backfill_batch.append(
+                UpdateOne(
+                    {"_id": doc["_id"], "namespace_str": {"$exists": False}},
+                    {"$set": {"namespace_str": self.sep.join(namespace)}},
+                )
+            )
+            if len(backfill_batch) >= 1000:
+                self.collection.bulk_write(backfill_batch, ordered=False)
+                backfill_batch = []
+        if backfill_batch:
+            self.collection.bulk_write(backfill_batch, ordered=False)
+        # Check for the unique index by both key pattern and unique option, so
+        # a non-unique index with the same key pattern does not suppress creation.
+        # If a conflicting non-unique index exists, drop it first — otherwise
+        # create_index(..., unique=True) raises IndexOptionsConflict.
+        ns_str_key = SON([("namespace_str", 1), ("key", 1)])
+        ns_str_indexes = [idx for idx in indexes if idx["key"] == ns_str_key]
+        has_unique_ns_idx = any(idx.get("unique", False) for idx in ns_str_indexes)
+        if not has_unique_ns_idx:
+            conflicting = next(
+                (idx for idx in ns_str_indexes if not idx.get("unique", False)), None
+            )
+            if conflicting is not None:
+                self.collection.drop_index(conflicting["name"])
+            self.collection.create_index(keys=["namespace_str", "key"], unique=True)
+        # Drop the legacy multikey index only after the new unique index exists,
+        # so there is never a window with no uniqueness enforcement.
+        # Re-query to avoid acting on a stale snapshot (e.g. concurrent init).
+        current_idx_keys = [idx["key"] for idx in self.collection.list_indexes()]
+        if SON([("namespace", 1), ("key", 1)]) in current_idx_keys:
+            self.collection.drop_index([("namespace", 1), ("key", 1)])
 
         # Optionally, expire values using [TTL Index](https://www.mongodb.com/docs/manual/core/index-ttl/)
         if (
@@ -210,14 +320,16 @@ class MongoDBStore(BaseStore):
             self._embedding_key = self.index_config.get("embedding_key", "embedding")
             auto_embedding_model = None
             self._is_autoembedding = False
+            dimensions = self.index_config.get("dims")
             if isinstance(self.embeddings, AutoEmbeddings):
                 self._is_autoembedding = True
                 auto_embedding_model = self.embeddings.model
+                # Atlas determines dimensions and similarity for auto-embedding indexes
+                dimensions = -1
+                self._relevance_score_fn = None
                 self.query_model = (
                     self.embeddings.model if query_model is None else query_model
                 )
-
-            self.sep = kwargs.get("sep", "/")  # used for prefix denormalization/search
 
             # Create the vector index if it does not yet exist
             if not any(
@@ -226,10 +338,12 @@ class MongoDBStore(BaseStore):
                     for ix in collection.list_search_indexes()
                 ]
             ):
+                if dimensions is None:
+                    raise ValueError("dims is required when using manual embeddings.")
                 create_vector_search_index(
                     collection=collection,
                     index_name=self._index_name,
-                    dimensions=self.index_config["dims"],
+                    dimensions=dimensions,
                     path=self._embedding_key,
                     similarity=self._relevance_score_fn,
                     filters=self.index_filters,
@@ -250,9 +364,12 @@ class MongoDBStore(BaseStore):
     ) -> Iterator["MongoDBStore"]:
         """Context manager to create a persistent MongoDB key-value store.
 
-        A unique compound index as shown below will be added to the collections
-        backing the store (namespace, key). If the collection exists,
-        and have indexes already, nothing will be done during initialization.
+        A unique compound index will be added to the collections backing the
+        store on (namespace_str, key). On first initialization of an existing
+        collection, legacy documents are backfilled with a namespace_str field
+        and the old (namespace, key) index is replaced. On every initialization,
+        documents missing namespace_str are backfilled; all other steps are
+        no-ops if the collection is already up to date.
 
         If the `ttl` argument is provided, TTL functionality will be employed.
         This is done automatically via MongoDB's TTL Indexes, based on the
@@ -311,16 +428,18 @@ class MongoDBStore(BaseStore):
         Returns:
             The retrieved item or None if not found.
         """
+        self._validate_namespace(namespace)
+        ns_str = self.sep.join(namespace)
         if refresh_ttl is False or (
             self.ttl_config and not self.ttl_config["refresh_on_read"]
         ):
             res = self.collection.find_one(
-                filter={"namespace": namespace, "key": key},
+                filter={"namespace_str": ns_str, "key": key},
             )
         else:
             res = self.collection.find_one_and_update(
-                filter={"namespace": namespace, "key": key},
-                update={"$set": {"updated_at": datetime.now(tz=timezone.utc)}},
+                filter={"namespace_str": ns_str, "key": key},
+                update={"$set": {"updated_at": datetime.now(tz=UTC)}},
                 return_document=ReturnDocument.AFTER,
             )
         if res:
@@ -339,7 +458,23 @@ class MongoDBStore(BaseStore):
             namespace: Hierarchical path for the item.
             key: Unique identifier within the namespace.
         """
-        self.collection.delete_one({"namespace": list(namespace), "key": key})
+        self._validate_namespace(namespace)
+        self.collection.delete_one(
+            {"namespace_str": self.sep.join(namespace), "key": key}
+        )
+
+    def _validate_namespace(self, namespace: Sequence[str]) -> None:
+        """Raise ValueError if any namespace part is empty or contains the separator."""
+        for part in namespace:
+            if not part:
+                raise ValueError(
+                    f"Namespace parts must not be empty. Got namespace: {namespace}"
+                )
+            if self.sep in part:
+                raise ValueError(
+                    f"Namespace parts must not contain the separator {self.sep!r}. "
+                    f"Got namespace: {namespace}"
+                )
 
     @staticmethod
     def _match_prefix(prefix: NamespacePath) -> dict[str, Any]:
@@ -461,6 +596,7 @@ class MongoDBStore(BaseStore):
 
         for op in ops:
             if isinstance(op, PutOp):
+                self._validate_namespace(op.namespace)
                 dedupped_putops[(op.namespace, op.key)] = op
                 results.append(None)
 
@@ -515,16 +651,23 @@ class MongoDBStore(BaseStore):
                 vectors = self.embeddings.embed_documents(texts)
             v = 0
         for op in dedupped_putops.values():
+            ns_str = self.sep.join(op.namespace)
             if op.value is None:
                 # mark the item for deletion.
                 writes.append(
-                    DeleteOne(filter={"namespace": list(op.namespace), "key": op.key})
+                    DeleteOne(
+                        filter={
+                            "namespace_str": ns_str,
+                            "key": op.key,
+                        }
+                    )
                 )
             else:
                 # Add or Upsert the value
                 to_set = {
+                    "namespace_str": ns_str,
                     "value": op.value,
-                    "updated_at": datetime.now(tz=timezone.utc),
+                    "updated_at": datetime.now(tz=UTC),
                 }
                 if self.index_config:
                     embed = texts[v] if self._is_autoembedding else vectors[v]
@@ -534,11 +677,15 @@ class MongoDBStore(BaseStore):
 
                 writes.append(
                     UpdateOne(
-                        filter={"namespace": list(op.namespace), "key": op.key},
+                        filter={
+                            "namespace_str": ns_str,
+                            "key": op.key,
+                        },
                         update={
                             "$set": to_set,
                             "$setOnInsert": {
-                                "created_at": datetime.now(tz=timezone.utc),
+                                "namespace": list(op.namespace),
+                                "created_at": datetime.now(tz=UTC),
                             },
                         },
                         upsert=True,
@@ -623,6 +770,7 @@ class MongoDBStore(BaseStore):
         if filter:
             if any(f.startswith("value") for f in filter):
                 raise ValueError("filters should be specified without `value`")
+            _validate_filter(filter)
 
         if query is None:
             # Case 1. $match namespace and filter
@@ -646,6 +794,25 @@ class MongoDBStore(BaseStore):
                 filter_cond = [{f"value.{k}": v} for k, v in filter.items()]
                 filter_vec = {"$and": [filter_vec] + filter_cond}
 
+            # Expand the vector search limit so the reranker has enough candidates.
+            if self._rerank_config and limit > 1000:
+                raise ValueError(
+                    f"search(limit={limit}) exceeds the $rerank maximum of 1000. "
+                    "Reduce limit or disable reranking."
+                )
+            n_to_rerank = (
+                self._rerank_config.get(
+                    "num_docs_to_rerank",
+                    min(
+                        limit * self._rerank_config.get("oversampling_factor", 10),
+                        1000,
+                    ),
+                )
+                if self._rerank_config
+                else limit
+            )
+            vector_limit = n_to_rerank if self._rerank_config else limit
+
             if not self._is_autoembedding:
                 query_vector = self.embeddings.embed_query(query)
                 pipeline = [
@@ -653,7 +820,7 @@ class MongoDBStore(BaseStore):
                         query_vector=query_vector,
                         search_field=self._embedding_key,
                         index_name=self._index_name,
-                        top_k=limit,
+                        top_k=vector_limit,
                         filter=filter_vec,
                     ),
                     {"$set": {"score": {"$meta": "vectorSearchScore"}}},
@@ -667,11 +834,36 @@ class MongoDBStore(BaseStore):
                         search_field=self._embedding_key,
                         index_name=self._index_name,
                         model=self.query_model,
-                        top_k=limit,
+                        top_k=vector_limit,
                         filter=filter_vec,
                     ),
                     {"$set": {"score": {"$meta": "vectorSearchScore"}}},
                 ]
+
+            # Native Reranking via $rerank. Requires MongoDB 8.3+, Native Reranking
+            # enabled in Atlas Project Settings, and a Voyage AI API key configured
+            # in Atlas. Will migrate to pymongo_search_utils once available there.
+            #
+            # $rerank only supports top-level field paths, so we temporarily surface
+            # value.<index_field> as a top-level field, rerank on it, then remove it.
+            if self._rerank_config:
+                _rerank_text = "_rerank_text"
+                rerank_spec: dict[str, Any] = {
+                    "query": {"text": query},
+                    "path": _rerank_text,
+                    "numDocsToRerank": n_to_rerank,
+                }
+                if "model" in self._rerank_config:
+                    rerank_spec["model"] = self._rerank_config["model"]
+                pipeline.extend(
+                    [
+                        {"$addFields": {_rerank_text: f"$value.{self.index_field}"}},
+                        {"$rerank": rerank_spec},
+                        {"$set": {"score": {"$meta": "score"}}},
+                        {"$unset": _rerank_text},
+                        {"$limit": limit},
+                    ]
+                )
 
         results = self.collection.aggregate(pipeline)
 
