@@ -647,9 +647,14 @@ class MongoDBStore(BaseStore):
         # Extract texts to embed for each op
         if self.index_config:
             texts = self._extract_texts(list(dedupped_putops.values()))
-            if not self._is_autoembedding:
-                vectors = self.embeddings.embed_documents(texts)
-            v = 0
+            if not self._is_autoembedding and texts:
+                vectors = dict(
+                    zip(
+                        texts,
+                        self.embeddings.embed_documents(list(texts.values())),
+                        strict=True,
+                    )
+                )
         for op in dedupped_putops.values():
             ns_str = self.sep.join(op.namespace)
             if op.value is None:
@@ -670,10 +675,12 @@ class MongoDBStore(BaseStore):
                     "updated_at": datetime.now(tz=UTC),
                 }
                 if self.index_config:
-                    embed = texts[v] if self._is_autoembedding else vectors[v]
-                    to_set[self._embedding_key] = embed
                     to_set["namespace_prefix"] = self._denormalize_path(op.namespace)
-                    v += 1
+                    op_key = (op.namespace, op.key)
+                    if op_key in texts:
+                        to_set[self._embedding_key] = (
+                            texts[op_key] if self._is_autoembedding else vectors[op_key]
+                        )
 
                 writes.append(
                     UpdateOne(
@@ -891,10 +898,12 @@ class MongoDBStore(BaseStore):
         """
         return [self.sep.join(paths[:i]) for i in range(1, len(paths) + 1)]
 
-    def _extract_texts(self, put_ops: Optional[list[PutOp]]) -> list[str]:
-        """Extract text to embed according to index config."""
+    def _extract_texts(
+        self, put_ops: Optional[list[PutOp]]
+    ) -> dict[tuple[tuple[str, ...], str], str]:
+        """Extract text to embed according to index config, keyed by (namespace, key)."""
         if put_ops and self.index_config and self.embeddings:
-            to_embed = []
+            to_embed = {}
             for op in put_ops:
                 if op.value is not None and op.index is not False:
                     if op.index is None:
@@ -907,10 +916,10 @@ class MongoDBStore(BaseStore):
                             raise ValueError("Got multiple texts. Report as bug.")
 
                         else:
-                            to_embed.append(texts[0])
+                            to_embed[(op.namespace, op.key)] = texts[0]
             return to_embed
         else:
-            return []
+            return {}
 
     @staticmethod
     def _ensure_index_fields(fields: Optional[list[str]]) -> str:
