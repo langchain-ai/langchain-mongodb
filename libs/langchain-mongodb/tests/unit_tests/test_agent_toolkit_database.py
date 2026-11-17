@@ -193,6 +193,23 @@ def test_run_no_throw_hides_driver_error_details(db: MongoDBDatabase) -> None:
     assert "private value" not in result
 
 
+def test_run_no_throw_hides_parser_error_details(db: MongoDBDatabase) -> None:
+    result = db.run_no_throw(
+        'db.allowed.aggregate([{"$match": {"_id": ObjectId("private-invalid-id")}}])'
+    )
+
+    assert result == "Error: Invalid aggregation pipeline."
+    _aggregate_mock(db).assert_not_called()
+
+
+def test_run_no_throw_hides_execution_value_error(db: MongoDBDatabase) -> None:
+    _aggregate_mock(db).side_effect = ValueError("private driver details")
+
+    result = db.run_no_throw("db.allowed.aggregate([])")
+
+    assert result == "Error: Error executing aggregation."
+
+
 def test_collection_info_no_throw_hides_driver_error_details(
     db: MongoDBDatabase,
 ) -> None:

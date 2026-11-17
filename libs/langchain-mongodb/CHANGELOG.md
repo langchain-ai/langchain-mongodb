@@ -2,6 +2,12 @@
 
 ---
 
+## Unreleased
+
+- Validate agent aggregation pipelines to reject write and server-side JavaScript
+  operators and enforce configured collection boundaries in nested pipelines.
+- Return errors from no-throw database helpers without exposing parser or driver details.
+
 ## Changes in version 0.12.0 (2026/08/24)
 
 - Fix MongoDBStructuredQueryTranslator to convert LangChain's internal ISO 8601

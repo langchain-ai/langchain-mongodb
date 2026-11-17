@@ -304,14 +304,17 @@ class MongoDBDatabase:
         if ".aggregate(" not in command:
             raise ValueError("Only aggregate(...) queries are currently supported.")
 
-        agg_pipeline = parse_command(command)
+        try:
+            agg_pipeline = parse_command(command)
+        except ValueError as e:
+            raise ValueError("Invalid aggregation pipeline.") from e
         self._validate_pipeline(agg_pipeline)
 
         try:
             coll = self._db[col_name]
             result = coll.aggregate(agg_pipeline)
             return dumps(list(result), indent=2)
-        except PyMongoError as e:
+        except (PyMongoError, ValueError) as e:
             raise ValueError("Error executing aggregation.") from e
 
     def get_collection_info_no_throw(
