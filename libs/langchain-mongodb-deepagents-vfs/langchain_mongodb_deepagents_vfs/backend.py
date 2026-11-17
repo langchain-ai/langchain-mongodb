@@ -29,6 +29,7 @@ from pymongo.driver_info import DriverInfo
 from langchain_mongodb_deepagents_vfs.backends.base import (
     DEFAULT_PREFIX,
     MAX_READ_BYTES,
+    normalize_prefix,
 )
 from langchain_mongodb_deepagents_vfs.backends.s3 import S3Backend
 from langchain_mongodb_deepagents_vfs.chunker import Chunker
@@ -127,6 +128,7 @@ class MongoFilesystemBackend(BackendProtocol):
             )
 
         self.debug = debug
+        s3_prefix = normalize_prefix(s3_prefix)
         self._prefix = s3_prefix
 
         # Build internal components
@@ -291,6 +293,11 @@ class MongoFilesystemBackend(BackendProtocol):
             GrepResult with protocol ``GrepMatch`` entries, most relevant
             first. Hybrid search ranks results, but the ranking is expressed
             by list order — ``GrepMatch`` has no score field and none is added.
+
+            ``error=None, matches=[]`` means files were searched and nothing
+            matched. ``error="[E5005] ...", matches=None`` means *path*/*glob*
+            selected no indexed files, so there was nothing to search — check
+            the scope with :meth:`glob` or :meth:`ls`.
         """
         self._wait_ready()
         return self._search.grep(pattern, path or "", glob or "")

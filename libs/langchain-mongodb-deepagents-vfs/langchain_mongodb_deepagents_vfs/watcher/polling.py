@@ -14,7 +14,10 @@ from typing import Any
 
 from pymongo.collection import Collection
 
-from langchain_mongodb_deepagents_vfs.backends.base import ObjectStoreBackend
+from langchain_mongodb_deepagents_vfs.backends.base import (
+    ObjectStoreBackend,
+    normalize_prefix,
+)
 from langchain_mongodb_deepagents_vfs.chunker import Chunker
 from langchain_mongodb_deepagents_vfs.embedder import Embedder
 from langchain_mongodb_deepagents_vfs.errors import AdapterError
@@ -48,7 +51,7 @@ class PollingWatcher(S3Watcher):
     ) -> None:
         super().__init__(store, chunker, embedder, collection)
         self._interval = interval_seconds
-        self._prefix = prefix
+        self._prefix = normalize_prefix(prefix)
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         # key → etag snapshot of last poll

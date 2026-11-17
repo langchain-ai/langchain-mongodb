@@ -16,7 +16,10 @@ from pathlib import PurePosixPath
 from pymongo.collection import Collection
 from pymongo.operations import UpdateOne
 
-from langchain_mongodb_deepagents_vfs.backends.base import ObjectStoreBackend
+from langchain_mongodb_deepagents_vfs.backends.base import (
+    ObjectStoreBackend,
+    normalize_prefix,
+)
 from langchain_mongodb_deepagents_vfs.chunker import Chunker
 from langchain_mongodb_deepagents_vfs.dtypes import FileRecord, SyncReport
 from langchain_mongodb_deepagents_vfs.embedder import Embedder
@@ -67,6 +70,7 @@ class InitialSync:
         Returns:
             SyncReport with seen / processed / skipped / failed counters.
         """
+        prefix = normalize_prefix(prefix)
         report = SyncReport()
         keys_etags = list(self._store.list_keys(prefix))
         report.seen = len(keys_etags)

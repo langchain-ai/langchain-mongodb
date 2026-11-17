@@ -67,6 +67,22 @@ class TestPollingWatcher:
         watcher._poll()
         assert "docs/a.txt" in created_keys
 
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
+        self, mongo_collection, mock_embedder, chunker
+    ):
+        """prefix="docs" lists with "docs/", so "docs2/" keys aren't included."""
+        store = MagicMock()
+        store.list_keys.return_value = iter([])
+        watcher = PollingWatcher(
+            store=store,
+            chunker=chunker,
+            embedder=mock_embedder,
+            collection=mongo_collection,
+            prefix="docs",
+        )
+        watcher._poll()
+        store.list_keys.assert_called_once_with("docs/")
+
     def test_detects_deleted_key(self, mongo_collection, mock_embedder, chunker):
         store = MagicMock()
         store.read.return_value = b"content"
@@ -155,7 +171,7 @@ class TestPollingWatcher:
 @pytest.mark.unit
 class TestSQSWatcherMessageParsing:
     def _make_sqs_watcher(
-        self, mongo_collection, mock_embedder, chunker, sqs_client=None
+        self, mongo_collection, mock_embedder, chunker, sqs_client=None, prefix=""
     ):
         store = MagicMock()
         store.read.return_value = b"file content"
@@ -170,6 +186,7 @@ class TestSQSWatcherMessageParsing:
             # this they pass only where the environment happens to supply a
             # region, and fail on CI with NoRegionError.
             region_name="us-east-1",
+            prefix=prefix,
         )
         if sqs_client:
             watcher._sqs = sqs_client
@@ -268,3 +285,27 @@ class TestSQSWatcherMessageParsing:
         with pytest.raises(AdapterError) as exc_info:
             watcher._process_message("not json at all {{{")
         assert exc_info.value.code == ErrorCode.E6002_EVENT_PARSE_FAILED
+
+    def test_prefix_without_trailing_slash_excludes_sibling_prefix(
+        self, mongo_collection, mock_embedder, chunker
+    ):
+        """prefix="docs" ingests "docs/" events, not "docs2/"."""
+        watcher, _ = self._make_sqs_watcher(
+            mongo_collection, mock_embedder, chunker, prefix="docs"
+        )
+        created_keys = []
+        watcher.on_created = lambda key: created_keys.append(key)
+
+        body = json.dumps(
+            {
+                "Records": [
+                    {
+                        "eventName": "ObjectCreated:Put",
+                        "s3": {"object": {"key": key}},
+                    }
+                    for key in ("docs/a.txt", "docs2/b.txt")
+                ]
+            }
+        )
+        watcher._process_message(body)
+        assert created_keys == ["docs/a.txt"]
