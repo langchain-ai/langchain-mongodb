@@ -2,6 +2,12 @@
 
 ---
 
+## Changes in version 0.4.1 (2026/11/17)
+
+- Coerce item keys to `str` in `MongoDBStore.get()`, `delete()`, and `batch()`,
+  consistent with `BaseStore`.
+- Require `pymongo>=4.18.2`.
+
 ## Changes in version 0.4.0 (2026/09/04)
 
 - Fix `create_vector_index_config` so `AutoEmbeddings` indexes can be configured
