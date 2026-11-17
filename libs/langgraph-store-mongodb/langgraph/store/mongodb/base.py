@@ -598,10 +598,7 @@ class MongoDBStore(BaseStore):
         for op in ops:
             if isinstance(op, PutOp):
                 self._validate_namespace(op.namespace)
-                if not isinstance(op.key, str):
-                    raise TypeError(
-                        f"PutOp key must be a string. Got {type(op.key).__name__}"
-                    )
+                op = op._replace(key=str(op.key))
                 dedupped_putops[(op.namespace, op.key)] = op
                 results.append(None)
 

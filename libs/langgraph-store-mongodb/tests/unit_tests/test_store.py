@@ -314,11 +314,7 @@ def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
 
 
 def test_non_string_key(store: MongoDBStore) -> None:
-    """Keys are matched as strings, consistent with BaseStore.
-
-    get/delete coerce the key with str(); PutOps passed directly to batch
-    must already carry a string key.
-    """
+    """Keys are coerced with str(), consistent with BaseStore."""
     ns = ("a", "b", "c")
     n_items = store.collection.count_documents({})
 
@@ -326,12 +322,15 @@ def test_non_string_key(store: MongoDBStore) -> None:
         assert store.get(ns, key) is None  # type: ignore[arg-type]
         assert store.batch([GetOp(namespace=ns, key=key)]) == [None]  # type: ignore[arg-type]
         store.delete(ns, key)  # type: ignore[arg-type]
+        store.batch([PutOp(namespace=ns, key=key, value=None)])  # type: ignore[arg-type]
         assert store.collection.count_documents({}) == n_items
 
-        with pytest.raises(TypeError):
-            store.batch([PutOp(namespace=ns, key=key, value=None)])  # type: ignore[arg-type]
-        with pytest.raises(TypeError):
-            store.batch([PutOp(namespace=ns, key=key, value={"v": 1})])  # type: ignore[arg-type]
+        store.batch([PutOp(namespace=ns, key=key, value={"v": 1})])  # type: ignore[arg-type]
+        item = store.get(ns, str(key))
+        assert item is not None and item.key == str(key)
+        coerced = store.get(ns, key)  # type: ignore[arg-type]
+        assert coerced is not None and coerced.value == item.value == {"v": 1}
+        store.batch([PutOp(namespace=ns, key=key, value=None)])  # type: ignore[arg-type]
         assert store.collection.count_documents({}) == n_items
 
     store.put(ns, 7, {"v": 7})  # type: ignore[arg-type]
