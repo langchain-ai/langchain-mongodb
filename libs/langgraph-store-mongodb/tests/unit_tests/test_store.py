@@ -313,6 +313,33 @@ def test_namespace_separator_collision_raises(store: MongoDBStore) -> None:
             store.batch([PutOp(namespace=ns, key="key", value={"v": 1})])
 
 
+def test_non_string_key(store: MongoDBStore) -> None:
+    """Keys are coerced with str(), consistent with BaseStore."""
+    ns = ("a", "b", "c")
+    n_items = store.collection.count_documents({})
+
+    for key in ({"$ne": "id_x"}, ["id_0"], None):
+        assert store.get(ns, key) is None  # type: ignore[arg-type]
+        assert store.batch([GetOp(namespace=ns, key=key)]) == [None]  # type: ignore[arg-type]
+        store.delete(ns, key)  # type: ignore[arg-type]
+        store.batch([PutOp(namespace=ns, key=key, value=None)])  # type: ignore[arg-type]
+        assert store.collection.count_documents({}) == n_items
+
+        store.batch([PutOp(namespace=ns, key=key, value={"v": 1})])  # type: ignore[arg-type]
+        item = store.get(ns, str(key))
+        assert item is not None and item.key == str(key)
+        coerced = store.get(ns, key)  # type: ignore[arg-type]
+        assert coerced is not None and coerced.value == item.value == {"v": 1}
+        store.batch([PutOp(namespace=ns, key=key, value=None)])  # type: ignore[arg-type]
+        assert store.collection.count_documents({}) == n_items
+
+    store.put(ns, 7, {"v": 7})  # type: ignore[arg-type]
+    item = store.get(ns, 7)  # type: ignore[arg-type]
+    assert item is not None and item.key == "7"
+    store.delete(ns, 7)  # type: ignore[arg-type]
+    assert store.get(ns, "7") is None
+
+
 def test_delete(store: MongoDBStore) -> None:
     n_items = store.collection.count_documents({})
     store.delete(namespace=("a", "b", "c"), key="id_0")

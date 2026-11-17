@@ -429,6 +429,7 @@ class MongoDBStore(BaseStore):
             The retrieved item or None if not found.
         """
         self._validate_namespace(namespace)
+        key = str(key)
         ns_str = self.sep.join(namespace)
         if refresh_ttl is False or (
             self.ttl_config and not self.ttl_config["refresh_on_read"]
@@ -460,7 +461,7 @@ class MongoDBStore(BaseStore):
         """
         self._validate_namespace(namespace)
         self.collection.delete_one(
-            {"namespace_str": self.sep.join(namespace), "key": key}
+            {"namespace_str": self.sep.join(namespace), "key": str(key)}
         )
 
     def _validate_namespace(self, namespace: Sequence[str]) -> None:
@@ -597,6 +598,7 @@ class MongoDBStore(BaseStore):
         for op in ops:
             if isinstance(op, PutOp):
                 self._validate_namespace(op.namespace)
+                op = op._replace(key=str(op.key))
                 dedupped_putops[(op.namespace, op.key)] = op
                 results.append(None)
 
