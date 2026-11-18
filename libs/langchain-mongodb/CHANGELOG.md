@@ -2,6 +2,12 @@
 
 ---
 
+## Unreleased
+
+- Fix `MongoDBLoader` returning documents with empty `page_content` when
+  `field_names` is not provided. The entire document is now used as page
+  content, as intended, and is fetched in full even when `metadata_names` is set.
+
 ## Changes in version 0.12.0 (2026/08/24)
 
 - Fix MongoDBStructuredQueryTranslator to convert LangChain's internal ISO 8601
