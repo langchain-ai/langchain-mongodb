@@ -484,7 +484,9 @@ class MongoDBStore(BaseStore):
             return {}
         if "*" not in prefix:
             return {"$eq": [{"$slice": ["$namespace", len(prefix)]}, list(prefix)]}
-        matches = []
+        matches: list[dict[str, Any]] = [
+            {"$gte": [{"$size": "$namespace"}, len(prefix)]}
+        ]
         for i, p in enumerate(prefix):
             if p != "*":
                 matches.append({"$eq": [{"$arrayElemAt": ["$namespace", i]}, p]})
@@ -497,7 +499,9 @@ class MongoDBStore(BaseStore):
             return {}
         if "*" not in suffix:
             return {"$eq": [{"$slice": ["$namespace", -1 * len(suffix)]}, list(suffix)]}
-        matches = []
+        matches: list[dict[str, Any]] = [
+            {"$gte": [{"$size": "$namespace"}, len(suffix)]}
+        ]
         for i, p in enumerate(suffix):
             if p != "*":
                 matches.append(
@@ -506,7 +510,12 @@ class MongoDBStore(BaseStore):
                             {
                                 "$arrayElemAt": [
                                     "$namespace",
-                                    {"$subtract": [{"$size": "$namespace"}, i]},
+                                    {
+                                        "$subtract": [
+                                            {"$size": "$namespace"},
+                                            len(suffix) - i,
+                                        ]
+                                    },
                                 ]
                             },
                             p,
@@ -560,8 +569,6 @@ class MongoDBStore(BaseStore):
         else:
             pipeline.append({"$project": {"namespace": 1, "_id": 0}})
 
-        if limit:
-            pipeline.append({"$limit": limit})
         # Deduplicate
         pipeline.extend(
             [
@@ -569,6 +576,9 @@ class MongoDBStore(BaseStore):
                 {"$project": {"_id": 0, "namespace": "$_id"}},
             ]
         )
+        # Limit unique namespaces, not documents
+        if limit:
+            pipeline.append({"$limit": limit})
 
         if offset:
             raise NotImplementedError("offset is not implemented")
