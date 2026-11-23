@@ -34,17 +34,25 @@ Thought: I should look at the collections in the database to see what I can quer
 MONGODB_FUNCTIONS_SUFFIX = """I should look at the collections in the database to see what I can query.  Then I should query the schema of the most relevant collections."""
 
 
-MONGODB_QUERY_CHECKER = """
+MONGODB_QUERY_CHECKER = MONGODB_QUERY_CHECKER = """
 {query}
 
 Double check the MongoDB query above for common mistakes, including:
 - Missing content in the aggegregation pipeline
 - Improperly quoting identifiers
 - Improperly quoting operators
-- The content in the aggregation pipeline is not valid JSON
-
+- The query must be using pymongo syntax, so make sure the syntax is correct.
+Example: 
+```python
+db.CollectionName.aggregate([
+    {{ "$match": {{ "field": "value" }} }},
+    {{ "$group": {{ "_id": "$field", "count": {{ "$sum": 1 }} }} }},
+    {{ "$sort": {{ "count": -1 }} }}
+])
+```
 If there are any of the above mistakes, rewrite the query. If there are no mistakes, just reproduce the original query.
 
 Output the final MongoDB query only.
 
 MongoDB Query: """
+
