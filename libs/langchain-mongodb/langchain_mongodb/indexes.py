@@ -78,17 +78,38 @@ class MongoDBRecordManager(RecordManager):
         group_ids: Optional[Sequence[Optional[str]]] = None,
         time_at_least: Optional[float] = None,
     ) -> None:
-        """Upsert documents into the MongoDB collection."""
+        """Upsert documents into the MongoDB collection.
+
+        Args:
+            keys: The record keys to upsert.
+            group_ids: Group IDs corresponding to the keys.
+            time_at_least: If given, verify the server clock has reached this
+                timestamp before writing.
+
+        Raises:
+            ValueError: If the number of keys and group_ids differ.
+            AssertionError: If the server time is behind ``time_at_least``.
+        """
         if group_ids is None:
             group_ids = [None] * len(keys)
 
         if len(keys) != len(group_ids):
             raise ValueError("Number of keys does not match number of group_ids")
 
+        # Read the server clock once: every record in a batch should carry the
+        # same timestamp, and the indexing API compares these against the time
+        # it recorded before the run. One round trip instead of one per key.
+        update_time = self.get_time()
+
+        if time_at_least and update_time < time_at_least:
+            # Safeguard against time sync issues, which would otherwise let
+            # `index(..., cleanup="full")` delete records it had just written.
+            raise AssertionError(f"Time sync issue: {update_time} < {time_at_least}")
+
         for key, group_id in zip(keys, group_ids, strict=True):
             self._collection.find_one_and_update(
                 {"namespace": self.namespace, "key": key},
-                {"$set": {"group_id": group_id, "updated_at": self.get_time()}},
+                {"$set": {"group_id": group_id, "updated_at": update_time}},
                 upsert=True,
             )
 
