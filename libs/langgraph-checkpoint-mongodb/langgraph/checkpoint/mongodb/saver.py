@@ -348,8 +348,36 @@ class MongoDBSaver(BaseCheckpointSaver):
 
         if filter:
             _validate_filter(filter)
+            dotted_key_exprs: list[dict[str, Any]] = []
             for key, value in filter.items():
-                query[f"metadata.{key}"] = dumps_metadata(self.serde, value)
+                serialized_value = dumps_metadata(self.serde, value)
+                if "." in key:
+                    # Filter keys are top-level metadata keys, as in the
+                    # other checkpoint savers. A plain "metadata.<key>" query
+                    # path would make MongoDB traverse nested documents
+                    # instead of matching a literal key containing dots,
+                    # so compare the literal field via $getField.
+                    dotted_key_exprs.append(
+                        {
+                            "$eq": [
+                                {
+                                    "$getField": {
+                                        "field": key,
+                                        "input": "$metadata",
+                                    }
+                                },
+                                serialized_value,
+                            ]
+                        }
+                    )
+                else:
+                    query[f"metadata.{key}"] = serialized_value
+            if dotted_key_exprs:
+                query["$expr"] = (
+                    dotted_key_exprs[0]
+                    if len(dotted_key_exprs) == 1
+                    else {"$and": dotted_key_exprs}
+                )
 
         if before is not None:
             before_id = _validate_identifier(

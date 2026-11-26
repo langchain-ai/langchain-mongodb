@@ -124,7 +124,8 @@ def test_nested_filter() -> None:
     with the caveat that all keys are strings.
 
     We use a HumanMessage instance as found in the examples.
-    The MQL query created is {metadata.writes.message: <serde dumped HumanMessage>}
+    The nested value is filtered with a nested dict, the same form the
+    other checkpoint savers use: filter keys are top-level metadata keys.
 
     We also use the same message to check values in the Checkpoint.
     """
@@ -146,7 +147,7 @@ def test_nested_filter() -> None:
     with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, clxn_name) as saver:
         saver.put(config, chkpt, metadata, {})
 
-        results = list(saver.list(None, filter={"writes.message": input_message}))
+        results = list(saver.list(None, filter={"writes": {"message": input_message}}))
         for cptpl in results:
             assert cptpl.metadata["writes"]["message"] == input_message
             break
@@ -171,6 +172,49 @@ def test_nested_filter() -> None:
         assert chkpt_db["channel_values"] == input_message
 
         # Drop collections
+        saver.checkpoint_collection.drop()
+        saver.writes_collection.drop()
+
+
+def test_dotted_metadata_key_filter() -> None:
+    """Filter keys are literal top-level metadata keys, as in the other
+    checkpoint savers: a key containing a dot must match a metadata field
+    whose name literally contains that dot, and must not traverse into a
+    nested metadata document.
+    """
+    clxn_name = "dotted_metadata_key"
+    with MongoDBSaver.from_conn_string(MONGODB_URI, DB_NAME, clxn_name) as saver:
+        flat_cfg: RunnableConfig = {
+            "configurable": {"thread_id": "thread-flat", "checkpoint_ns": ""}
+        }
+        saver.put(
+            flat_cfg,
+            empty_checkpoint(),
+            {"group.sub": "alpha"},  # type: ignore[arg-type]
+            {},
+        )
+        nested_cfg: RunnableConfig = {
+            "configurable": {"thread_id": "thread-nested", "checkpoint_ns": ""}
+        }
+        saver.put(
+            nested_cfg,
+            empty_checkpoint(),
+            {"group": {"sub": "a"}},  # type: ignore[arg-type]
+            {},
+        )
+
+        # Flat dotted key matches the literal top-level field.
+        flat_results = list(saver.list(flat_cfg, filter={"group.sub": "alpha"}))
+        assert len(flat_results) == 1
+        assert flat_results[0].metadata["group.sub"] == "alpha"
+
+        # The same dotted filter must not match a nested document.
+        nested_results = list(saver.list(nested_cfg, filter={"group.sub": "a"}))
+        assert len(nested_results) == 0
+
+        # A dotted key with a non-matching value matches nothing.
+        assert list(saver.list(flat_cfg, filter={"group.sub": "beta"})) == []
+
         saver.checkpoint_collection.drop()
         saver.writes_collection.drop()
 
